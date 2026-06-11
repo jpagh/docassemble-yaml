@@ -1,5 +1,5 @@
-node_modules
-*.vsix
 .vscode-test
-dist
+*.vsix
 bundled
+dist
+node_modules
