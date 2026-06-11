@@ -10,3 +10,12 @@ test-versions:
 
 type:
     uv run mypy .
+
+lint:
+    uv run ruff check --fix
+
+format:
+    uv run ruff format
+
+check:
+    cd "$(justfile_directory())" && prek run -a

@@ -17,28 +17,25 @@ highlighting.
 
 ## Language Server
 
-Three ways to run the server, controlled by
-`docassemble-lsp.importStrategy`:
+Python 3.10+ must be available on `PATH` or installed via the
+[Python extension](https://marketplace.visualstudio.com/items?itemName=ms-python.python).
+The bundled server uses Python to launch even though its dependencies
+are self-contained.
 
-| Strategy | What it does |
-|---|---|
-| `"useBundled"` (default) | Runs the server shipped in the extension. Dependencies are pure Python (no compiled extensions). |
-| `"fromEnvironment"` | Runs `python -m docassemble_lsp lsp` from the active Python environment, or the `docassemble-lsp.command` string if set. |
+Controlled by `docassemble-lsp.importStrategy`:
+
+- **`"useBundled"`** (default) — runs the server shipped in the extension. Dependencies are pure Python (no compiled extensions).
+- **`"fromEnvironment"`** — runs `python -m docassemble_lsp lsp` from the active Python environment, or the `docassemble-lsp.command` string if set.
 
 ## Settings
 
-| Setting | Description |
-|---|---|
-| `docassemble-lsp.enabled` | Enable or disable the language server. |
-| `docassemble-lsp.importStrategy` | `"useBundled"` (default) or `"fromEnvironment"`. |
-| `docassemble-lsp.command` | Shell command used when `importStrategy` is `"fromEnvironment"`. Examples: |
-| | `docassemble-lsp lsp` |
-| | `/path/to/venv/bin/python -m docassemble_lsp lsp` |
-| | `uv run --project ~/Projects/docassemble-lsp docassemble-lsp lsp` |
-| `docassemble-lsp.interpreter` | Python interpreter override for `"useBundled"` or `"fromEnvironment"` (when no `command` is set). Defaults to the Python extension's active environment. |
-| `docassemble-lsp.env` | Extra environment variables merged into the server process. |
-| `docassemble-lsp.trace.server` | Protocol trace level for debugging. |
-| `docassemble-lsp.showNotifications` | When to show server notifications. |
+- **`docassemble-lsp.enabled`** — enable or disable the language server.
+- **`docassemble-lsp.importStrategy`** — `"useBundled"` (default) or `"fromEnvironment"`.
+- **`docassemble-lsp.command`** — shell command used when `importStrategy` is `"fromEnvironment"`. Examples: `docassemble-lsp lsp`, `/path/to/venv/bin/python -m docassemble_lsp lsp`, `uv run --project ~/Projects/docassemble-lsp docassemble-lsp lsp`.
+- **`docassemble-lsp.interpreter`** — Python interpreter override for `"useBundled"` or `"fromEnvironment"` (when no `command` is set). Defaults to the Python extension's active environment.
+- **`docassemble-lsp.env`** — extra environment variables merged into the server process.
+- **`docassemble-lsp.trace.server`** — protocol trace level for debugging.
+- **`docassemble-lsp.showNotifications`** — when to show server notifications.
 
 ## Log Level
 

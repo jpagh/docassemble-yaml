@@ -4,12 +4,10 @@ compile:
 build:
     npm run build
 
-test:
-    npm run build
+test: build
     npm test
 
-test-real:
-    npm run build
+test-real: build
     DOCASSEMBLE_LSP_ENABLE_REAL_TEST=1 npm test
 
 watch:
