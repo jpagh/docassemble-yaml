@@ -14,7 +14,7 @@ gate: lsp::lint lsp::type lsp::test-versions test-real-smoke test-real-ext
 
 # Bump unified version (default: patch). Pass 'minor' or 'major' for larger bumps.
 bump *part="patch":
-    bump-my-version {{part}}
+    bump-my-version bump {{part}}
 
 # Run real-LSP CLI+LSP smoke test (no VS Code needed)
 test-real-smoke:

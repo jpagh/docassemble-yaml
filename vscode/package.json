@@ -1,7 +1,7 @@
 {
     "name": "vscode-docassemble",
     "displayName": "Docassemble YAML",
-    "version": "1.0.0",
+    "version": "26.6.0",
     "description": "Syntax highlighting for Docassemble YAML with optional docassemble-lsp integration.",
     "main": "./dist/extension.js",
     "categories": [
@@ -15,7 +15,7 @@
     "author": "Jack Adamson",
     "repository": {
         "type": "git",
-        "url": "https://github.com/jpagh/vscode-docassemble"
+        "url": "https://github.com/jpagh/docassemble-yaml"
     },
     "publisher": "jackadamson",
     "scripts": {

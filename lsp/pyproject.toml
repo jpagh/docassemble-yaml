@@ -32,8 +32,7 @@
         docassemble-lsp = "docassemble_lsp.cli:main"
 
     [project.urls]
-        Homepage   = "https://github.com/jpagh/docassemble-lsp"
-        Repository = "https://github.com/jpagh/docassemble-lsp"
+        Repository = "https://github.com/jpagh/docassemble-yaml"
 
 [dependency-groups]
     dev = [
