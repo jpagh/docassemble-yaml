@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Changed
+
+- Version numbering will now be Calendar Versioning
+
 ## [1.0.0] - 2026-06-10
 
 ### Added
