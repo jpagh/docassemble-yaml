@@ -1,0 +1,9 @@
+---
+include:
+  - shared.yml
+  - docassemble.demo:data/questions/shared.yml
+---
+attachment:
+  - docx template file: docassemble.demo:data/questions/templates/letter.docx
+    content file: docassemble.demo:data/questions/content/disclaimer.md
+---

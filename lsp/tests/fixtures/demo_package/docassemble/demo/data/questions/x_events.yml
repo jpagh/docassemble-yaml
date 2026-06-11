@@ -1,0 +1,19 @@
+---
+modules:
+  - .workflow
+---
+imports:
+  - docassemble.demo.workflow
+---
+code: |
+  menu_items.append(
+    action_menu_item(
+      "Reset workflow",
+      "workflow_reset",
+    )
+  )
+---
+event: workflow_reset
+code: |
+  interview_state.title = workflow.case_title("Reset")
+  interview_state.label = workflow.WorkflowState.status_label("Reset")

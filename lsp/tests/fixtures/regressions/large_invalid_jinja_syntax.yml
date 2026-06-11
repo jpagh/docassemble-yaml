@@ -1,0 +1,6 @@
+# use jinja
+---
+id: E201_jinja_syntax_error
+question: {% if %}
+
+---

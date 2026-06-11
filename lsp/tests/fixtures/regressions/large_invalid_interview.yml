@@ -1,0 +1,621 @@
+# Intentionally broken docassemble interview fixture.
+#
+# This file covers a broad set of current non-Jinja regression cases.
+# Each document id encodes the expected finding codes for that block.
+
+---
+id: E301_unknown_keys
+question: |
+  Fixture screen with unknown keys.
+field: user_name
+not_a_real_key: true
+another_bad_key: nope
+
+---
+id: E101_yaml_duplicate_key
+question: |
+  First version.
+question: |
+  Duplicate version.
+
+---
+id: E102_yaml_parse_error
+question: Hello
+field: x
+bad: [unclosed
+
+---
+id: E103_yaml_string_type
+ga id:
+  - not
+  - a string
+question: |
+  Non-string ga id should trigger YAMLStr validation.
+field: ga_id_value
+
+---
+id: E111_mako_syntax_error
+question: Hello
+subquestion: |
+  % endfor
+field: x
+
+---
+id: E112_mako_compile_error
+question: Hello
+subquestion: |
+  % if True
+field: x
+
+---
+id: E121_python_code_type
+code:
+  - some_list_item
+
+---
+id: E122_python_syntax_error
+code: |
+  if True
+    x = 1
+
+---
+id: E203_js_modifier_type
+question: Test
+fields:
+  - A: a
+  - B: b
+    js show if:
+      - nope
+
+---
+id: E206_js_unknown_screen_field
+question: Test
+fields:
+  - A: a
+  - B: b
+    js show if: |
+      val("missing_field") === true
+
+---
+id: E302_show_if_malformed
+question: Test
+field: top_level_show_if_malformed
+show if: variable:a
+
+---
+id: E303_show_if_code_type
+question: Test
+field: top_level_show_if_code_type
+show if:
+  code:
+    - a
+    - b
+
+---
+id: E304_show_if_code_syntax
+question: Test
+field: top_level_show_if_code_syntax
+show if:
+  code: |
+    if True
+      x = 1
+
+---
+id: E305_show_if_dict_keys
+question: Test
+field: top_level_show_if_dict_keys
+show if:
+  unknown_key: something
+
+---
+id: E401_E934_python_var_type
+def: 123
+code: |
+  x = 1
+
+---
+id: E402_python_var_whitespace
+question: |
+  Fixture screen with a top-level field name containing whitespace.
+field: some var name
+
+---
+id: E403_invalid_objects_block
+objects: "MyObj: DAObject"
+
+---
+id: E404_fields_code_type
+question: |
+  Fixture screen with a non-string fields: code reference.
+fields:
+  code: 123
+
+---
+id: VALID_fields_single_mapping_shorthand
+question: |
+  Fixture screen with an invalid fields dict.
+fields:
+  not_code: value
+
+---
+id: E406_fields_scalar
+question: |
+  Fixture screen with scalar fields.
+fields: nope
+
+---
+id: E407_field_modifier_variable_type
+question: Test
+fields:
+  - A: a
+  - B: b
+    show if:
+      variable:
+        - a
+      is: yes
+
+---
+id: E408_field_modifier_unknown_variable_dict
+question: Test
+fields:
+  - A: a
+  - B: b
+    show if:
+      variable: prior_var
+      is: yes
+
+---
+id: E409_field_modifier_code_error
+question: Test
+fields:
+  - A: a
+  - B: b
+    show if:
+      code: |
+        if True
+          x = 1
+
+---
+id: E410_field_modifier_same_screen_code
+question: Test
+fields:
+  - A: a
+  - B: b
+    show if:
+      code: |
+        a == 1
+
+---
+id: E411_E417_field_modifier_dict_keys
+question: |
+  Fixture screen with malformed field metadata.
+fields:
+  - Name: user name
+    datatype: text
+  - Follow up: follow_up
+    show if:
+      unknown_key: something
+
+---
+id: E412_field_modifier_unknown_variable_string
+question: Test
+fields:
+  - A: a
+  - B: b
+    show if: prior_var
+
+---
+id: E413_object_field_choices_code_dict
+question: |
+  Choose enclosures
+fields:
+  - no label: s3_enclosure_object.selected_enclosures
+    datatype: object_checkboxes
+    choices:
+      code: |
+        s3_enclosure_object.choices()
+
+---
+id: E414_field_item_missing_target
+question: |
+  Fixture screen with a label-only field item.
+fields:
+  - label: Just a label
+
+---
+id: E415_field_item_missing_label
+question: |
+  Fixture screen with a field-only field item.
+fields:
+  - field: user.name
+
+---
+id: E416_field_target_not_plain_text
+question: |
+  Fixture screen with a non-string field target.
+fields:
+  - field:
+      bad: true
+    label: Name
+
+---
+id: E418_field_label_overwrite
+question: |
+  Fixture screen with shorthand overwriting an explicit label.
+fields:
+  - label: Explicit
+    Name: user.name
+    field: user.name
+
+---
+id: E419_multiple_choice_field_missing_choices
+question: |
+  Fixture screen with an object field missing choices.
+fields:
+  - label: Pick one
+    field: selected_thing
+    datatype: object
+
+---
+id: E420_ajax_field_missing_action
+question: |
+  Fixture screen with an ajax field missing an action.
+fields:
+  - label: Pick one
+    field: selected_thing
+    input type: ajax
+
+---
+id: E421_ajax_field_cannot_declare_choices
+question: |
+  Fixture screen with an ajax field that declares choices directly.
+fields:
+  - label: Pick one
+    field: selected_thing
+    input type: ajax
+    action: choose_thing
+    choices:
+      - A
+
+---
+id: E422_object_labeler_requires_object_datatype
+question: |
+  Fixture screen with object labeler on a non-object field.
+fields:
+  - label: Pick one
+    field: selected_thing
+    datatype: text
+    object labeler: label_for_thing
+
+---
+id: E423_field_presentation_key_conflict
+question: |
+  Fixture screen with conflicting presentation keys.
+fields:
+  - note: Hello
+    html: <b>Hello</b>
+
+---
+id: E424_field_item_must_be_dict
+question: |
+  Fixture screen with a non-dictionary field item.
+fields:
+  - just text
+
+---
+id: E425_hidden_field_invalid_datatype
+question: |
+  Fixture screen with an invalid hidden field datatype.
+fields:
+  - field: uploaded_file
+    input type: hidden
+    datatype: file
+
+---
+id: E426_field_exclude_invalid_format
+question: |
+  Fixture screen with an object field whose exclude is a dictionary.
+fields:
+  - label: Pick one
+    field: selected_thing
+    datatype: object
+    choices: things
+    exclude:
+      bad: 1
+
+---
+id: E427_field_default_invalid_format
+question: |
+  Fixture screen with an object field whose default is a dictionary.
+fields:
+  - label: Pick one
+    field: selected_thing
+    datatype: object
+    choices: things
+    default:
+      bad: 1
+
+---
+id: E428_need_type
+question: |
+  Fixture screen with an invalid need mapping.
+need:
+  invalid: value
+
+---
+id: E429_need_dict_keys
+question: |
+  Fixture screen with an invalid need dict item.
+need:
+  - wrong: value
+
+---
+id: E430_need_phase_type
+question: |
+  Fixture screen with a non-text/list need post value.
+need:
+  - post:
+      bad: value
+
+---
+id: E431_need_item_string
+question: |
+  Fixture screen with a non-string item inside need.
+need:
+  - pre:
+      - ok
+      - 5
+
+---
+id: E432_E433_on_change_type
+on change: nope
+
+---
+id: E433_on_change_extra_keys
+on change:
+  user.name: |
+    x = 1
+
+---
+id: E433_E434_on_change_entry_type
+on change:
+  user.name:
+    bad: value
+
+---
+id: E435_action_buttons_type
+question: Hi
+action buttons: nope
+
+---
+id: E436_action_button_item_type
+question: Hi
+action buttons:
+  - nope
+
+---
+id: E437_action_button_action_type
+question: Hi
+action buttons:
+  - label: Run
+
+---
+id: E438_action_button_new_window_type
+question: Hi
+action buttons:
+  - label: Run
+    action: go
+    new window:
+      bad: true
+
+---
+id: E439_action_button_arguments_type
+question: Hi
+action buttons:
+  - label: Run
+    action: go
+    arguments: nope
+
+---
+id: E440_action_button_label_type
+question: Hi
+action buttons:
+  - action: go
+
+---
+id: E441_action_button_color_type
+question: Hi
+action buttons:
+  - label: Run
+    action: go
+    color:
+      bad: true
+
+---
+id: E442_action_button_icon_type
+question: Hi
+action buttons:
+  - label: Run
+    action: go
+    icon:
+      bad: true
+
+---
+id: E443_action_button_placement_type
+question: Hi
+action buttons:
+  - label: Run
+    action: go
+    placement:
+      bad: true
+
+---
+id: E444_action_button_css_class_type
+question: Hi
+action buttons:
+  - label: Run
+    action: go
+    css class:
+      bad: true
+
+---
+id: E445_action_button_forget_prior_type
+question: Hi
+action buttons:
+  - label: Run
+    action: go
+    forget prior: nope
+
+---
+id: E446_action_button_argument_item_type
+question: Hi
+action buttons:
+  - label: Run
+    action: go
+    arguments:
+      bad:
+        nested: value
+
+---
+id: E447_translations_type
+translations: nope
+
+---
+id: E448_translations_item_type
+translations:
+  - 5
+
+---
+id: E449_translations_suffix
+translations:
+  - wrong.txt
+
+---
+id: E450_translations_path
+translations:
+  - package:wrong.xlsx
+
+---
+id: E451_if_type
+question: Hi
+if:
+  bad: value
+
+---
+id: E452_require_type
+question: Hi
+require: nope
+
+---
+id: E453_require_orelse_missing
+question: Hi
+require:
+  - user.name
+
+---
+id: E454_require_orelse_type
+question: Hi
+require:
+  - user.name
+orelse: nope
+
+---
+id: E455_terms_type
+terms: nope
+
+---
+id: E456_terms_item_type
+terms:
+  - nope
+
+---
+id: E457_auto_terms_type
+auto terms: nope
+
+---
+id: E458_auto_terms_item_type
+auto terms:
+  - nope
+
+---
+id: E306_no_possible_types
+buttons:
+  - continue: true
+
+---
+id: E307_too_many_types
+question: hi
+code: |
+  x = 1
+
+---
+id: E204_E205_E207_E309_nested_js_visibility
+question: |
+  Fixture screen with nested visibility and JavaScript modifier issues.
+fields:
+  - Fruit: fruit
+    datatype: yesnoradio
+  - Vegetable: vegetable
+    datatype: yesnoradio
+    show if: fruit
+  - Grain: grain
+    datatype: yesnoradio
+    show if: vegetable
+  - Dairy: dairy
+    datatype: yesnoradio
+    show if: grain
+  - Broken JS syntax: broken_js_syntax
+    js show if: |
+      (val("fruit") === "apple"
+  - Missing val call: missing_val_call
+    js show if: |
+      true && false
+  - Unquoted val arg: unquoted_val
+    js show if: |
+      val(fruit) === "apple"
+
+---
+id: VALID_interview_order_source_for_unmatched_guard
+question: Test
+fields:
+  - First: a
+    datatype: yesnoradio
+  - Second: b
+    show if: a
+
+---
+# This tests W603_interview_order_unmatched_guard using the conditional field
+# defined in VALID_interview_order_source_for_unmatched_guard above.
+id: WHOLEFILE_W603_interview_order_unmatched_guard
+mandatory: True
+code: |
+  a
+  b
+
+---
+id: E534_boolean_datatype_choices_ignored
+question: |
+  Fixture screen with a built-in yes or no datatype shadowed by choices.
+fields:
+  - label: May we text you?
+    field: texting_allowed
+    datatype: yesnoradio
+    choices:
+      - "A"
+      - "B"
+    required: False
+
+---
+id: C101_missing_validation_error
+question: |
+  Fixture screen with validation code that never calls validation_error().
+fields:
+  - Apples: number_apples
+    datatype: integer
+  - Oranges: number_oranges
+    datatype: integer
+validation code: |
+  if number_apples + number_oranges != 10:
+    raise Exception("Bad total")
+
+---

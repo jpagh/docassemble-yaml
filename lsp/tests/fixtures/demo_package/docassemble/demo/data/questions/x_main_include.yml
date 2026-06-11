@@ -1,0 +1,13 @@
+---
+modules:
+  - .workflow
+---
+imports:
+  - docassemble.demo.workflow
+---
+include:
+  - x_events.yml
+---
+objects:
+  - interview_state: DAObject
+---

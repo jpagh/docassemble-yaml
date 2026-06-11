@@ -1,0 +1,41 @@
+# Intentionally non-error docassemble interview fixture.
+#
+# This file is for end-to-end CLI checks where normal mode should pass but
+# strict mode should fail because it contains warnings and conventions only.
+
+---
+id: VALID_interview_order_source_for_unmatched_guard
+question: Test
+fields:
+  - label: First
+    field: a
+    datatype: yesnoradio
+  - label: Second
+    field: b
+    show if: a
+
+---
+# This tests W603_interview_order_unmatched_guard using the conditional field
+# defined in VALID_interview_order_source_for_unmatched_guard above.
+id: W603_interview_order_unmatched_guard
+mandatory: True
+code: |
+  a
+  b
+
+---
+id: C101_missing_validation_error
+question: |
+  Fixture screen with validation code that never calls validation_error().
+fields:
+  - label: Apples
+    field: number_apples
+    datatype: integer
+  - label: Oranges
+    field: number_oranges
+    datatype: integer
+validation code: |
+  if number_apples + number_oranges != 10:
+    raise Exception("Bad total")
+
+---

@@ -1,0 +1,22 @@
+---
+metadata:
+  title: Demo Workflow
+---
+include:
+  - x_main_include.yml
+---
+id: demo workflow
+mandatory: True
+question: |
+  ${ case_title(client_name) }
+subquestion: |
+  ${ WorkflowState.status_label(current_stage) }
+  ${ workflow_summary(current_stage) }
+under: |
+  ${ action_button_html(url_action("workflow_reset"), label="Reset workflow", color="warning") }
+fields:
+  - Client name: client_name
+  - Current stage: current_stage
+action buttons:
+  - label: Reset workflow
+    action: workflow_reset

@@ -1,0 +1,11 @@
+attachment:
+  - docx template file: templates/letter.docx
+attachment options:
+  additional yaml:
+    - shared.yml
+help:
+  content file: content/disclaimer.md
+---
+objects from file:
+  - secondary_claims: objects/object-map.yml
+---

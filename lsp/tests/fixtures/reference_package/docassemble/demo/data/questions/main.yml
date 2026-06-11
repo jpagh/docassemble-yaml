@@ -1,0 +1,18 @@
+---
+include:
+  - shared.yml
+---
+attachment:
+  - docx template file: templates/letter.docx
+    pdf template file: forms/notice.pdf
+    content file: content/disclaimer.md
+attachment options:
+  initial yaml:
+    - shared.yml
+---
+objects from file:
+  - claim_map: objects/object-map.yml
+---
+event: show_result
+question: Done
+---
