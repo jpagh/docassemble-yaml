@@ -1,6 +1,5 @@
 __pycache__/
 .#*
-.coverage
 .dir-locals.el
 .dmypy.json
 .DS_Store
