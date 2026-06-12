@@ -260,11 +260,9 @@ def resolve_document_link_target_at(
     current_path = path_from_uri_or_path(uri_or_path)
     if current_path is None:
         return None
-    templates_dir = (
-        workspace_index.templates_dir
-        if workspace_index is not None and workspace_index.templates_dir is not None
-        else templates_dir_for_path(current_path)
-    )
+    templates_dir = workspace_index.templates_dir_for(current_path) if workspace_index is not None else None
+    if templates_dir is None:
+        templates_dir = templates_dir_for_path(current_path)
     template_file_names = resolve_template_names(templates_dir)
     lines = _document_lines(source)
     if not (0 <= line < len(lines)):
@@ -296,11 +294,9 @@ def resolve_document_link_targets(
     if current_path is None:
         return []
 
-    templates_dir = (
-        workspace_index.templates_dir
-        if workspace_index is not None and workspace_index.templates_dir is not None
-        else templates_dir_for_path(current_path)
-    )
+    templates_dir = workspace_index.templates_dir_for(current_path) if workspace_index is not None else None
+    if templates_dir is None:
+        templates_dir = templates_dir_for_path(current_path)
     template_file_names = resolve_template_names(templates_dir)
 
     logger.debug(

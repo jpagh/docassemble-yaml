@@ -268,7 +268,7 @@ def test_collect_template_file_names_empty(tmp_path) -> None:
 
 
 def test_workspace_index_templates_dir_populated(tmp_path) -> None:
-    """WorkspaceIndex eagerly populates templates_dir and template_file_names."""
+    """WorkspaceIndex eagerly populates package_templates_dirs and template_file_names."""
     pkg_dir = tmp_path / "docassemble" / "demo"
     questions_dir = pkg_dir / "data" / "questions"
     template_dir = pkg_dir / "data" / "templates"
@@ -285,7 +285,9 @@ def test_workspace_index_templates_dir_populated(tmp_path) -> None:
     index = build_workspace_index([tmp_path], current_path=source_path, current_source="question: Hi\n")
 
     assert index.package_root == tmp_path
-    assert index.templates_dir == template_dir.resolve()
+    assert tmp_path.resolve() in index.package_templates_dirs
+    assert index.package_templates_dirs[tmp_path.resolve()] == template_dir.resolve()
+    assert index.templates_dir_for(source_path) == template_dir.resolve()
     assert index.template_file_names == frozenset({"letter.docx", "form.pdf"})
 
 
@@ -303,12 +305,12 @@ def test_workspace_index_templates_dir_none_when_no_templates(tmp_path) -> None:
     index = build_workspace_index([tmp_path], current_path=source_path, current_source="question: Hi\n")
 
     assert index.package_root == tmp_path
-    assert index.templates_dir is None
+    assert index.package_templates_dirs == {}
     assert index.template_file_names == frozenset()
 
 
 def test_workspace_index_templates_propagate_through_with_overlays(tmp_path) -> None:
-    """templates_dir and template_file_names propagate through with_overlays()."""
+    """package_templates_dirs and template_file_names propagate through with_overlays()."""
     pkg_dir = tmp_path / "docassemble" / "demo"
     questions_dir = pkg_dir / "data" / "questions"
     template_dir = pkg_dir / "data" / "templates"
@@ -324,12 +326,13 @@ def test_workspace_index_templates_propagate_through_with_overlays(tmp_path) -> 
     index = build_workspace_index([tmp_path], current_path=source_path, current_source="question: Saved\n")
     overlaid = index.with_overlays({source_path: "question: Overlaid\n"})
 
-    assert overlaid.templates_dir == template_dir.resolve()
+    assert tmp_path.resolve() in overlaid.package_templates_dirs
+    assert overlaid.package_templates_dirs[tmp_path.resolve()] == template_dir.resolve()
     assert overlaid.template_file_names == frozenset({"letter.docx"})
 
 
 def test_workspace_index_templates_propagate_through_with_current_document(tmp_path) -> None:
-    """templates_dir and template_file_names propagate through with_current_document()."""
+    """package_templates_dirs and template_file_names propagate through with_current_document()."""
     pkg_dir = tmp_path / "docassemble" / "demo"
     questions_dir = pkg_dir / "data" / "questions"
     template_dir = pkg_dir / "data" / "templates"
@@ -345,7 +348,7 @@ def test_workspace_index_templates_propagate_through_with_current_document(tmp_p
     index = WorkspaceIndex.from_yaml_roots([tmp_path])
     updated = index.with_current_document(source_path, "question: Updated\n")
 
-    assert updated.templates_dir is None  # from_yaml_roots doesn't populate templates
+    assert updated.package_templates_dirs == {}  # from_yaml_roots doesn't populate
     assert updated.template_file_names == frozenset()
 
 
@@ -411,3 +414,51 @@ def test_discover_package_roots_mtime(tmp_path) -> None:
     # Second discovery — mtime mismatch causes re-discovery.
     roots2 = _discover_package_roots([tmp_path])
     assert roots2 == [tmp_path.resolve()]
+
+
+def test_workspace_index_templates_multi_package(tmp_path) -> None:
+    """Multi-package workspace: each file resolves to its own package's templates dir."""
+    # Package A: docassemble/alpha
+    alpha_root = tmp_path / "alpha_pkg"
+    alpha_pkg = alpha_root / "docassemble" / "alpha"
+    alpha_questions = alpha_pkg / "data" / "questions"
+    alpha_templates = alpha_pkg / "data" / "templates"
+    alpha_questions.mkdir(parents=True)
+    alpha_templates.mkdir(parents=True)
+    (alpha_templates / "alpha_form.docx").write_text("alpha", encoding="utf-8")
+    (alpha_root / "pyproject.toml").write_text("[project]\nname = 'alpha'\n", encoding="utf-8")
+    (alpha_pkg / "__init__.py").write_text("", encoding="utf-8")
+
+    # Package B: docassemble/beta
+    beta_root = tmp_path / "beta_pkg"
+    beta_pkg = beta_root / "docassemble" / "beta"
+    beta_questions = beta_pkg / "data" / "questions"
+    beta_templates = beta_pkg / "data" / "templates"
+    beta_questions.mkdir(parents=True)
+    beta_templates.mkdir(parents=True)
+    (beta_templates / "beta_form.docx").write_text("beta", encoding="utf-8")
+    (beta_templates / "shared.docx").write_text("shared", encoding="utf-8")
+    (beta_root / "pyproject.toml").write_text("[project]\nname = 'beta'\n", encoding="utf-8")
+    (beta_pkg / "__init__.py").write_text("", encoding="utf-8")
+
+    # Workspace root is the parent directory containing both packages.
+    workspace_root = tmp_path
+    alpha_source = alpha_questions / "alpha_main.yml"
+    alpha_source.write_text("question: Alpha\n", encoding="utf-8")
+    beta_source = beta_questions / "beta_main.yml"
+    beta_source.write_text("question: Beta\n", encoding="utf-8")
+
+    index = build_workspace_index([workspace_root])
+
+    # Both package roots should be in the mapping.
+    assert alpha_root.resolve() in index.package_templates_dirs
+    assert beta_root.resolve() in index.package_templates_dirs
+    assert index.package_templates_dirs[alpha_root.resolve()] == alpha_templates.resolve()
+    assert index.package_templates_dirs[beta_root.resolve()] == beta_templates.resolve()
+
+    # templates_dir_for should resolve each file to its own package.
+    assert index.templates_dir_for(alpha_source) == alpha_templates.resolve()
+    assert index.templates_dir_for(beta_source) == beta_templates.resolve()
+
+    # Aggregated template names include files from both packages.
+    assert index.template_file_names == frozenset({"alpha_form.docx", "beta_form.docx", "shared.docx"})

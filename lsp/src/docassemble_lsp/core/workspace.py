@@ -115,7 +115,7 @@ class WorkspaceIndex:
     all_field_var_names: frozenset[str] = frozenset()
     field_var_declarations: dict[str, DefinitionTarget] = field(default_factory=dict)
     all_block_ids: frozenset[str] = frozenset()
-    templates_dir: Path | None = None
+    package_templates_dirs: dict[Path, Path] = field(default_factory=dict)
     template_file_names: frozenset[str] = frozenset()
 
     @classmethod
@@ -176,6 +176,16 @@ class WorkspaceIndex:
     def as_document_fact_entries(self) -> list[tuple[Path, str, tuple[DocumentFact, ...]]]:
         return [(source.path, source.text, self.document_facts(source.path)) for source in self.yaml_sources.sources]
 
+    def templates_dir_for(self, path: Path) -> Path | None:
+        resolved = path.resolve()
+        for pkg_root, tdir in self.package_templates_dirs.items():
+            try:
+                resolved.relative_to(pkg_root)
+                return tdir
+            except ValueError:
+                continue
+        return None
+
     def with_current_document(
         self,
         current_path: Path,
@@ -201,7 +211,7 @@ class WorkspaceIndex:
             all_field_var_names=self.all_field_var_names,
             field_var_declarations=self.field_var_declarations,
             all_block_ids=self.all_block_ids,
-            templates_dir=self.templates_dir,
+            package_templates_dirs=self.package_templates_dirs,
             template_file_names=self.template_file_names,
         )
 
@@ -286,6 +296,6 @@ class WorkspaceIndex:
             all_field_var_names=frozenset(field_var_decls.keys()),
             field_var_declarations=field_var_decls,
             all_block_ids=frozenset(block_ids),
-            templates_dir=self.templates_dir,
+            package_templates_dirs=self.package_templates_dirs,
             template_file_names=self.template_file_names,
         )

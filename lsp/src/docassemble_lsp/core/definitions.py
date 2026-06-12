@@ -389,16 +389,28 @@ def build_workspace_index(
     detect_path = current_path or (search_roots[0] if search_roots else None)
     package_root = detect_docassemble_package(detect_path) if detect_path is not None else None
 
-    # If not found by walking up, scan subdirectories for docassemble packages.
-    if package_root is None and search_roots:
-        roots = _discover_package_roots(search_roots)
-        if roots:
-            package_root = roots[0]
+    # Collect ALL package roots in the workspace.
+    all_package_roots: list[Path] = []
+    if package_root is not None:
+        all_package_roots.append(package_root)
+    if search_roots:
+        discovered = _discover_package_roots(search_roots)
+        for pr in discovered:
+            if pr not in all_package_roots:
+                all_package_roots.append(pr)
 
-    templates_dir: Path | None = discover_templates_dir(package_root) if package_root is not None else None
-    template_file_names: frozenset[str] = (
-        collect_template_file_names(templates_dir) if templates_dir is not None else frozenset()
-    )
+    # Build per-package templates dir mapping (pre-computed, no filesystem at resolution time).
+    package_templates_dirs: dict[Path, Path] = {}
+    for pr in all_package_roots:
+        tdir = discover_templates_dir(pr)
+        if tdir is not None:
+            package_templates_dirs[pr.resolve()] = tdir.resolve()
+
+    # Aggregate template filenames from ALL packages (for completions).
+    all_names: set[str] = set()
+    for tdir in package_templates_dirs.values():
+        all_names.update(collect_template_file_names(tdir))
+    template_file_names: frozenset[str] = frozenset(all_names)
 
     event_decls: dict[str, DefinitionTarget] = {}
     def_decls: dict[str, DefinitionTarget] = {}
@@ -511,7 +523,7 @@ def build_workspace_index(
         all_field_var_names=all_field_var_names,
         field_var_declarations=field_var_decls,
         all_block_ids=all_block_ids_frozen,
-        templates_dir=templates_dir,
+        package_templates_dirs=package_templates_dirs,
         template_file_names=template_file_names,
     )
 
@@ -1087,30 +1099,33 @@ def resolve_definition_targets(
 
     if key_or_parent in _FILE_REFERENCE_KEYS:
         relative_base = "data/questions" if key_or_parent in _NON_ATTACHMENT_FILE_KEYS else None
+        tdir = workspace_index.templates_dir_for(current_path) if current_path is not None else None
         return _resolve_local_file_reference(
             current_path,
             value,
             workspace_index.search_roots,
-            workspace_index.templates_dir,
+            tdir,
             relative_base=relative_base,
         )
 
     if key_or_parent in _FILE_REFERENCE_LIST_PARENTS:
         relative_base = "data/questions" if key_or_parent in _NON_ATTACHMENT_FILE_KEYS else None
+        tdir = workspace_index.templates_dir_for(current_path) if current_path is not None else None
         return _resolve_local_file_reference(
             current_path,
             value,
             workspace_index.search_roots,
-            workspace_index.templates_dir,
+            tdir,
             relative_base=relative_base,
         )
 
     if parent == "objects from file":
+        tdir = workspace_index.templates_dir_for(current_path) if current_path is not None else None
         return _resolve_local_file_reference(
             current_path,
             value,
             workspace_index.search_roots,
-            workspace_index.templates_dir,
+            tdir,
         )
 
     if parent == "fields" and (key_or_parent == "field" or key_or_parent not in FIELD_ITEM_KNOWN_KEYS):

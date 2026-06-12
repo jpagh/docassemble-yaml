@@ -2988,11 +2988,9 @@ def _validate_cross_document(
 
     errors: list[YAMLError] = []
     lines = _document_lines(full_content)
-    templates_dir = (
-        workspace_index.templates_dir
-        if workspace_index.templates_dir is not None
-        else (templates_dir_for_path(current_path) if current_path is not None else None)
-    )
+    templates_dir = workspace_index.templates_dir_for(current_path)
+    if templates_dir is None:
+        templates_dir = templates_dir_for_path(current_path)
     parents = _precompute_parent_keys(full_content)
     own_package = docassemble_package_name(current_path) if current_path is not None else None
 
