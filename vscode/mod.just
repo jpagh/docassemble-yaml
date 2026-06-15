@@ -4,6 +4,11 @@ compile:
 build:
     npm run build
 
+publish:
+    npm run build
+    vsce package
+    vsce publish
+
 test: build
     npm test
 
