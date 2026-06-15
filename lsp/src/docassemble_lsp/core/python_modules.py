@@ -13,6 +13,7 @@ from docassemble_lsp.core.definition_models import (
     PythonModuleSymbol,
 )
 from docassemble_lsp.core.files import _discover_package_roots, find_nearest_pyproject_dir
+from docassemble_lsp.core.line_helpers import _safe_ast_parse
 from docassemble_lsp.core.python_paths import (
     docassemble_package_dir,
     normalize_module_name,
@@ -348,7 +349,7 @@ def load_python_module_index(
         return result
 
     try:
-        tree = ast.parse(source)
+        tree = _safe_ast_parse(source)
     except SyntaxError:
         result = PythonModuleIndex(symbols={})
         _python_module_index_cache[module_path] = (result, module_path.stat().st_mtime)

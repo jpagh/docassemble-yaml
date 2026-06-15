@@ -11,6 +11,7 @@ from docassemble_lsp.core.definition_models import (
     PythonCompletionTarget,
     PythonNamespaceBinding,
 )
+from docassemble_lsp.core.line_helpers import _safe_ast_parse
 from docassemble_lsp.core.python_modules import (
     PYTHON_BUILTIN_EXCEPTIONS,
     VENDORED_MODULE_NAMES,
@@ -244,7 +245,7 @@ def _parse_import_binding(
 ) -> list[PythonNamespaceBinding]:
     statement = entry if entry.lstrip().startswith(("from ", "import ")) else f"import {entry}"
     try:
-        node = ast.parse(statement).body[0]
+        node = _safe_ast_parse(statement).body[0]
     except SyntaxError:
         return []
 

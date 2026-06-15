@@ -55,6 +55,7 @@ from docassemble_lsp.core.line_helpers import (
     _lc_key_line,
     _lc_line,
     _relative_value_line,
+    _safe_ast_parse,
 )
 from docassemble_lsp.core.messages import MessageCode, format_message, is_experimental_code
 from docassemble_lsp.core.python_paths import path_from_uri_or_path
@@ -476,7 +477,7 @@ def _invalid_field_variable_name(varname: Any) -> bool:
     if re.search(r"[\n\r\(\)\{\}\*\^\#]", varname):
         return True
     try:
-        tree = ast.parse(varname)
+        tree = _safe_ast_parse(varname)
     except SyntaxError:
         return True
     return any(isinstance(node, _ILLEGAL_VARIABLE_AST_NODES) for node in ast.walk(tree))
@@ -596,7 +597,7 @@ class PythonText:
             ]
             return
         try:
-            ast.parse(x)
+            _safe_ast_parse(x)
         except SyntaxError as ex:
             # ex.lineno gives line number within the code block
             lineno = ex.lineno or 1
@@ -639,7 +640,7 @@ class AcceptFieldValue:
             ]
             return
         try:
-            tree = ast.parse(x.strip(), mode="eval")
+            tree = _safe_ast_parse(x.strip(), mode="eval")
         except SyntaxError as ex:
             lineno = ex.lineno or 1
             msg = ex.msg or str(ex)
@@ -676,7 +677,7 @@ class ValidationCode(PythonText):
         if self.errors:
             return
         try:
-            tree = ast.parse(x)
+            tree = _safe_ast_parse(x)
         except SyntaxError:
             return
         # Walk AST and search for a call to validation_error(...)
@@ -1355,7 +1356,7 @@ class ShowIf:
                     self.errors.append(_validator_error(MessageCode.SHOW_IF_CODE_TYPE))
                 else:
                     try:
-                        ast.parse(code_block)
+                        _safe_ast_parse(code_block)
                     except SyntaxError as ex:
                         lineno = ex.lineno or 1
                         msg = ex.msg or str(ex)
@@ -1910,7 +1911,7 @@ class DAFields:
 
     def _find_screen_variable_references_in_code(self, code_text, screen_variables):
         try:
-            tree = ast.parse(code_text)
+            tree = _safe_ast_parse(code_text)
         except SyntaxError:
             return set()
 
@@ -2661,7 +2662,7 @@ def _extract_field_var_name(field_item: Any) -> Optional[str]:
 def _extract_names_from_python_expr(expr: str) -> set[str]:
     names: set[str] = set()
     try:
-        tree = ast.parse(expr)
+        tree = _safe_ast_parse(expr)
     except SyntaxError:
         return names
     for node in ast.walk(tree):
@@ -2814,7 +2815,7 @@ def _statement_span(stmts: list[ast.stmt]) -> Optional[tuple[int, int]]:
 def _extract_branch_guards_by_line(code: str) -> dict[int, list[str]]:
     guards_by_line: dict[int, list[str]] = {}
     try:
-        tree = ast.parse(code)
+        tree = _safe_ast_parse(code)
     except SyntaxError:
         return guards_by_line
 

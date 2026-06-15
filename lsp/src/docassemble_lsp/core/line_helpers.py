@@ -11,6 +11,8 @@ They are factored out into their own module to avoid circular imports between
 
 from __future__ import annotations
 
+import ast
+import warnings
 from collections.abc import Mapping
 from typing import Any
 
@@ -26,6 +28,12 @@ _INTERNAL_METADATA_KEYS = frozenset({"__line__", "__key_lines__", "__value_lines
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+
+def _safe_ast_parse(source: str, filename: str = "<unknown>", mode: str = "exec") -> Any:
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", SyntaxWarning)
+        return ast.parse(source, filename=filename, mode=mode)
 
 
 def _is_internal_metadata_key(key: Any) -> bool:

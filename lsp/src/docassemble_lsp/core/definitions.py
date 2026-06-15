@@ -52,6 +52,7 @@ from docassemble_lsp.core.schema_models import HoverInfo
 from docassemble_lsp.core.workspace import WorkspaceIndex, WorkspaceYamlSources
 from docassemble_lsp.core.workspace_navigation import WorkspaceNavigationService
 from docassemble_lsp.core.workspace_symbols import WorkspaceSymbolService
+from docassemble_lsp.core.line_helpers import _safe_ast_parse
 from docassemble_lsp.core.yaml_shared import (
     _BLOCK_SCALAR_MARKERS,
     _EVENT_REFERENCE_KEYS,
@@ -557,12 +558,12 @@ def _event_helper_occurrences(text: str) -> list[EventHelperOccurrence]:
     parse_text = text
     first_line_offset = 0
     try:
-        tree = ast.parse(parse_text)
+        tree = _safe_ast_parse(parse_text)
     except SyntaxError:
         parse_text = text.lstrip()
         first_line_offset = len(text) - len(parse_text)
         try:
-            tree = ast.parse(parse_text)
+            tree = _safe_ast_parse(parse_text)
         except SyntaxError:
             return []
 

@@ -12,7 +12,6 @@ These validators focus on specific semantic families:
 
 from __future__ import annotations
 
-import ast
 from collections.abc import Mapping
 from typing import Any
 
@@ -29,6 +28,7 @@ from docassemble_lsp.core.line_helpers import (
     _lc_key_line,
     _relative_value_line,
 )
+from docassemble_lsp.core.line_helpers import _safe_ast_parse
 from docassemble_lsp.core.messages import MessageCode, format_message
 
 
@@ -308,7 +308,7 @@ class FieldConditionValidator:
                 )
             else:
                 try:
-                    ast.parse(val_value, mode="eval")
+                    _safe_ast_parse(val_value, mode="eval")
                 except SyntaxError as ex:
                     lineno = ex.lineno or 1
                     self.errors.append(
@@ -357,7 +357,7 @@ class FieldConditionValidator:
                 )
             else:
                 try:
-                    ast.parse(hg_value, mode="eval")
+                    _safe_ast_parse(hg_value, mode="eval")
                 except SyntaxError as ex:
                     lineno = ex.lineno or 1
                     self.errors.append(
@@ -380,7 +380,7 @@ class FieldConditionValidator:
                 )
             else:
                 try:
-                    ast.parse(ig_value, mode="eval")
+                    _safe_ast_parse(ig_value, mode="eval")
                 except SyntaxError as ex:
                     lineno = ex.lineno or 1
                     self.errors.append(
