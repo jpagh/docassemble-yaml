@@ -9,7 +9,7 @@
 )
 \\.(?P<patch>\\d+)
 """
-    pre_commit_hooks = ["node vscode/scripts/update-changelog.mjs", "cd lsp && uv lock && git add uv.lock"]
+    pre_commit_hooks = ["node scripts/update-changelog.mjs", "cd lsp && uv lock && git add uv.lock"]
     serialize = ["{release}.{patch}"]
     tag = true
     tag_name = "v{new_version}"

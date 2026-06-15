@@ -13,7 +13,7 @@ DOCASSEMBLE_LSP_ENABLE_REAL_TEST=1 just vscode test  # full real-server extensio
 ```
 
 `just bump` updates `lsp/pyproject.toml`, `vscode/package.json`,
-`vscode/CHANGELOG.md`, then commits and tags (`v{new_version}`).
+`CHANGELOG.md`, then commits and tags (`v{new_version}`).
 
 Build the VSIX from `vscode/`:
 ```bash

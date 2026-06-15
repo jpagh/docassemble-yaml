@@ -75,7 +75,7 @@ If touching Docassemble YAML keys/values, check `completion_rules.py` and `valid
 
 CalVer (`YY.MM.patch`). Both `lsp/` and `vscode/` updated together.
 `just bump` (default: patch) from root. Updates `lsp/pyproject.toml`,
-`vscode/package.json`, `vscode/CHANGELOG.md`, then commits and tags.
+`vscode/package.json`, `CHANGELOG.md`, then commits and tags.
 
 ## Operational notes
 
