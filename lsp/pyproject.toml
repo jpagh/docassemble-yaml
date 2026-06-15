@@ -26,7 +26,7 @@
     name = "docassemble-lsp"
     readme = "README.md"
     requires-python = ">=3.10"
-    version = "26.6.0"
+    version = "26.6.1"
 
     [project.scripts]
         docassemble-lsp = "docassemble_lsp.cli:main"

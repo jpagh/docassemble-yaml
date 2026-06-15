@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [26.6.1] - 2026-06-15
+
 ### Fixed
 
 - [LSP] Multi-package workspace: each YAML file now resolves template references against its own package's `data/templates/` directory.
