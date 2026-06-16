@@ -350,14 +350,6 @@ def test_lsp_process_debug_log_level_emits_log_message(tmp_path: Path) -> None:
     assert "Log level set to DEBUG" in stderr
 
 
-def test_lsp_process_default_log_level_emits_log_message(tmp_path: Path) -> None:
-    with _LspSession() as session:
-        session.initialize(tmp_path)
-        stderr = _wait_for_stderr_contains(session, ["Log level set to WARNING"])
-
-    assert "Log level set to WARNING" in stderr
-
-
 def test_lsp_process_publishes_field_shorthand_convention_when_enabled(tmp_path: Path) -> None:
     source_path = tmp_path / "shorthand.yml"
     source = "question: Hi\nfields:\n  - Name: user.name\n"

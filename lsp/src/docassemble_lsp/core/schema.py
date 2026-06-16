@@ -165,6 +165,10 @@ def _resolve_non_schema_hover(
         if decl is not None:
             location = f"`{decl.path.name}:{decl.line + 1}`"
             return HoverInfo(contents=f"**event** `{request.name}`\n\nDefined in {location}")
+        if "${" in request.name:
+            return HoverInfo(
+                contents=f"**event** `{request.name}` — dynamic Mako expression, cannot be statically resolved"
+            )
         return HoverInfo(contents=f"**event** `{request.name}` — not defined in the workspace")
 
     if request.kind == "def":

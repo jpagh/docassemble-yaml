@@ -260,30 +260,6 @@ def test_run_server_debug_log_level_emits_log_message(monkeypatch, caplog) -> No
     assert "Log level set to DEBUG" in caplog.text
 
 
-def test_run_server_warning_log_level_emits_log_message(monkeypatch, caplog) -> None:
-    reset_logging()
-    caplog.set_level(logging.WARNING, logger="docassemble_lsp")
-
-    class _DummyServer:
-        def start_io(self) -> None:
-            return None
-
-    monkeypatch.setattr(
-        lsp_server,
-        "create_server",
-        lambda runtime_options=None, formatter_config=None: _DummyServer(),
-    )
-
-    exit_code = lsp_server.run_server(
-        runtime_options=RuntimeOptions(),
-        formatter_config=FormatterConfig(),
-        log_level="WARNING",
-    )
-
-    assert exit_code == 0
-    assert "Log level set to WARNING" in caplog.text
-
-
 def test_completion_list_covers_example_corpora_top_level_keys() -> None:
     completions = build_completion_list("", 0, 0)
 

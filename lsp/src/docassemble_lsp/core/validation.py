@@ -3011,7 +3011,7 @@ def _validate_cross_document(
                 continue
 
             if key_name in _EVENT_REFERENCE_KEYS:
-                if value not in workspace_index.all_event_names:
+                if not _contains_mako_syntax(value) and value not in workspace_index.all_event_names:
                     errors.append(
                         _yaml_error(
                             code=MessageCode.CROSS_DOC_UNDEFINED_EVENT,
@@ -3096,7 +3096,7 @@ def _validate_cross_document(
                 continue
 
             if parent in _EVENT_REFERENCE_KEYS:
-                if value not in workspace_index.all_event_names:
+                if not _contains_mako_syntax(value) and value not in workspace_index.all_event_names:
                     errors.append(
                         _yaml_error(
                             code=MessageCode.CROSS_DOC_UNDEFINED_EVENT,

@@ -16,6 +16,9 @@
 - [LSP] **E901** (attachment item must be a dictionary): false positive when an attachment value is a string (e.g., `${ fruit_table }` — a Mako variable reference). The docassemble parser accepts string attachment values as runtime content. `AttachmentBlockDirective` now accepts strings.
 - [LSP] **E309 → C106** (nested visibility logic): downgraded from error to convention. Three levels of `show if`/`hide if` nesting is valid YAML that works at runtime; the threshold of 2 is a style opinion, not an error or even a warning. Hidden by default; opt in with `--conventions ALL` or `--conventions C106`.
 - [LSP] New test `test_example_corpus_has_no_error_diagnostics` validates all 966 example files in the corpus produce no error-severity diagnostics.
+- [LSP] **W601** (cross-doc undefined event): no longer reported when the event name contains a Mako expression (`${...}`), since Mako expressions are dynamically resolved at runtime.
+- [LSP] **W601** hover tooltip for Mako expression event names now says "dynamic Mako expression, cannot be statically resolved" instead of the misleading "not defined in the workspace".
+- [LSP] The startup log message "Log level set to ..." is now emitted at DEBUG level instead of the configured log level, so it only appears when debugging.
 
 ## [26.6.1] - 2026-06-15
 
