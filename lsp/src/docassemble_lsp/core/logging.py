@@ -30,7 +30,7 @@ def set_log_level(level: int, *, force: bool = False) -> None:
     if not force and logger.level != _DEFAULT_LEVEL:
         return
     logger.setLevel(level)
-    logger.log(level, "Log level set to %s", logging.getLevelName(level))
+    logger.debug("Log level set to %s", logging.getLevelName(level))
 
 
 def reset_logging() -> None:
