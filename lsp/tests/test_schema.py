@@ -1694,15 +1694,96 @@ def test_include_item_completes_partial_prefix(tmp_path) -> None:
 
 
 def test_modules_item_completes_vendored_module_names(tmp_path) -> None:
-    """modules: list items suggest vendored docassemble module names."""
-    source = "modules:\n  - \n"
+    """modules: list items suggest vendored docassemble module names
+    once the user starts typing (non-empty partial)."""
+    source = "modules:\n  - doc\n"
     source_path = tmp_path / "interview.yml"
     labels = {
         item.label
-        for item in get_completions(source, 1, 4, uri_or_path=str(source_path), workspace_paths=[str(tmp_path)])
+        for item in get_completions(source, 1, 5, uri_or_path=str(source_path), workspace_paths=[str(tmp_path)])
     }
     assert "docassemble.base.util" in labels
     assert "docassemble.base.functions" in labels
+
+
+def test_modules_item_relative_prefix_matches_workspace_stems(tmp_path) -> None:
+    """A dot-prefixed partial (.func) matches workspace module stems and yields
+    dot-prefixed labels/insert_text."""
+    import dataclasses
+    from docassemble_lsp.core.workspace import WorkspaceIndex
+
+    wi = dataclasses.replace(
+        WorkspaceIndex.empty_for_roots(),
+        all_module_paths=frozenset(
+            {
+                tmp_path / "functions.py",
+                tmp_path / "dw_objects.py",
+                tmp_path / "entities.py",
+            }
+        ),
+    )
+    source = "modules:\n  - .func\n"
+    source_path = tmp_path / "interview.yml"
+    labels = {item.label for item in get_completions(source, 1, 6, uri_or_path=str(source_path), workspace_index=wi)}
+    assert ".functions" in labels
+    assert ".dw_objects" not in labels  # filtered by .func prefix
+    assert ".entities" not in labels
+    # Vendored modules should NOT appear for relative-prefixed entries
+    assert "docassemble.base.util" not in labels
+    assert "docassemble.base.functions" not in labels
+
+
+def test_modules_item_relative_prefix_excludes_vendored_modules(tmp_path) -> None:
+    """When the user types a dot prefix, vendored modules are excluded."""
+    import dataclasses
+    from docassemble_lsp.core.workspace import WorkspaceIndex
+
+    wi = dataclasses.replace(
+        WorkspaceIndex.empty_for_roots(),
+        all_module_paths=frozenset({tmp_path / "utils.py"}),
+    )
+    source = "modules:\n  - .\n"
+    source_path = tmp_path / "interview.yml"
+    # character=5 so line_prefix = "  - ." → partial = "." → is_relative = True
+    labels = {item.label for item in get_completions(source, 1, 5, uri_or_path=str(source_path), workspace_index=wi)}
+    assert ".utils" in labels
+    assert "docassemble.base.util" not in labels
+    assert "docassemble.base.functions" not in labels
+
+
+def test_modules_item_non_relative_prefix_shows_vendored_and_workspace(tmp_path) -> None:
+    """Without a dot prefix, workspace modules get the dot added and
+    vendored modules still appear without it."""
+    import dataclasses
+    from docassemble_lsp.core.workspace import WorkspaceIndex
+
+    wi = dataclasses.replace(
+        WorkspaceIndex.empty_for_roots(),
+        all_module_paths=frozenset({tmp_path / "utils.py"}),
+    )
+    source = "modules:\n  - util\n"
+    source_path = tmp_path / "interview.yml"
+    labels = {item.label for item in get_completions(source, 1, 6, uri_or_path=str(source_path), workspace_index=wi)}
+    assert ".utils" in labels
+    assert "utils" not in labels
+    assert "docassemble.base.util" in labels
+
+
+def test_modules_item_relative_prefix_snippets_without_workspace(tmp_path) -> None:
+    """Without workspace modules, a dot prefix still shows snippet templates
+    (module_name, .relative_module) — the regex in property_completion_provider
+    must allow dots."""
+    source = "modules:\n  - .\n"
+    source_path = tmp_path / "interview.yml"
+    # character=5 so line_prefix = "  - ." → partial = "." → is_relative = True,
+    # which skips vendored modules → _file_value returns None → falls through to
+    # property_completion_provider which needs the regex to allow dots.
+    labels = {
+        item.label
+        for item in get_completions(source, 1, 5, uri_or_path=str(source_path), workspace_paths=[str(tmp_path)])
+    }
+    assert "module_name" in labels
+    assert ".relative_module" in labels
 
 
 def test_objects_item_completes_da_object_subclass_names(tmp_path) -> None:

@@ -359,7 +359,7 @@ def value_completion_provider(context: CompletionContext) -> list[CompletionCand
 
 
 def property_completion_provider(context: CompletionContext) -> list[CompletionCandidate]:
-    if not re.fullmatch(r"\s*(?:-\s*)?[\w/-][\w /-]*", context.line_prefix) and not re.fullmatch(
+    if not re.fullmatch(r"\s*(?:-\s*)?[\w/.-][\w /.-]*", context.line_prefix) and not re.fullmatch(
         r"\s*(?:-\s*)?", context.line_prefix
     ):
         return []
@@ -496,25 +496,56 @@ def _complete_module_names(context: CompletionContext) -> list[CompletionCandida
     if ":" in partial:
         return None  # package-qualified file ref
 
+    # Strip leading dot for relative module references so that
+    # e.g. ".func" matches workspace stem "functions".
+    is_relative = partial.startswith(".")
+    match_partial = partial.lstrip(".") if is_relative else partial
+
     seen: set[str] = set()
     candidates: list[CompletionCandidate] = []
 
     # Vendored docassemble modules.
-    for mod in VENDORED_MODULE_NAMES:
-        if partial.lower() in mod.lower() and mod not in seen:
-            seen.add(mod)
-            candidates.append(CompletionCandidate(label=mod, insert_text=mod, is_value=True))
+    # Skip when the user is typing a relative import (".name").
+    # Also skip when partial is empty in modules_item — otherwise the
+    # initial space-triggered response includes vendored modules, and
+    # VS Code's client-side filtering inconsistently drops workspace
+    # items (filter_text set) while keeping vendored items (no filter_text).
+    if not is_relative and (partial or context.scope != "modules_item"):
+        for mod in VENDORED_MODULE_NAMES:
+            if match_partial.lower() in mod.lower() and mod not in seen:
+                seen.add(mod)
+                candidates.append(CompletionCandidate(label=mod, insert_text=mod, is_value=True))
 
     # Workspace Python module paths.
     for mod_path in sorted(context.workspace_index.all_module_paths):
         name = mod_path.stem
         if name == "__init__":
             name = mod_path.parent.name
-        if name and partial.lower() in name.lower() and name not in seen:
+        if name and match_partial.lower() in name.lower() and name not in seen:
             seen.add(name)
-            candidates.append(CompletionCandidate(label=name, insert_text=name, is_value=True))
+            # Always prefix workspace module names with "." since
+            # modules: entries reference relative module names.
+            # When the user already typed the dot, VS Code excludes
+            # it from the current word boundary — insert_text omits
+            # the dot to avoid doubling it.
+            candidates.append(
+                CompletionCandidate(
+                    label=f".{name}",
+                    insert_text=name if is_relative else f".{name}",
+                    filter_text=name,
+                    is_value=True,
+                )
+            )
 
-    candidates.sort(key=lambda c: (0 if c.label.lower().startswith(partial.lower()) else 1, c.label))
+    candidates.sort(
+        key=lambda c: (
+            0
+            if c.label.lower().startswith(partial.lower())
+            or (match_partial and c.label.startswith(".") and c.label[1:].lower().startswith(match_partial.lower()))
+            else 1,
+            c.label,
+        )
+    )
     return candidates if candidates else None
 
 

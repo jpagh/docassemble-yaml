@@ -1051,7 +1051,7 @@ def create_server(
 
     @server.feature(
         TEXT_DOCUMENT_COMPLETION,
-        CompletionOptions(trigger_characters=[":", " "]),
+        CompletionOptions(trigger_characters=[":", " ", "."]),
     )
     def completion(
         ls: LanguageServer,
