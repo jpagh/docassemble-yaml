@@ -11,6 +11,7 @@ from tests.corpus import (
     installed_example_top_level_keys,
     regression_fixture_documents,
     regression_fixture_text,
+    repo_example_corpus_root,
     standalone_installed_example_blocks,
 )
 
@@ -665,6 +666,20 @@ def test_analyze_text_accepts_installed_example_standalone_block_forms() -> None
     assert not failures
 
 
+def test_example_corpus_has_no_error_diagnostics() -> None:
+    failures: list[str] = []
+
+    for path in sorted(repo_example_corpus_root().rglob("*.yml")):
+        text = path.read_text(encoding="utf-8")
+        runtime_options = RuntimeOptions(show_warnings=False)
+        diagnostics = analyze_text(text, path=str(path), runtime_options=runtime_options)
+        errors = [d for d in diagnostics if d.code and d.code.startswith("E")]
+        for error in errors:
+            failures.append(f"{path}:{error.line}: {error.code} {error.message}")
+
+    assert not failures, "\n".join(failures)
+
+
 def test_analyze_text_accepts_response_family_block_forms() -> None:
     cases = [
         "---\nresponse: ok\n",
@@ -787,10 +802,11 @@ def test_nested_visibility_anchors_to_deepest_field_line() -> None:
     diagnostics = analyze_text(
         "---\nquestion: Test\nfields:\n  - Fruit: fruit\n    datatype: yesnoradio\n  - Vegetable: vegetable\n    datatype: yesnoradio\n    show if: fruit\n  - Grain: grain\n    datatype: yesnoradio\n    show if: vegetable\n  - Dairy: dairy\n    datatype: yesnoradio\n    show if: grain\n",
         path="sample.yml",
+        runtime_options=RuntimeOptions(enabled_conventions=frozenset({"C106"})),
     )
 
-    e309 = next(diagnostic for diagnostic in diagnostics if diagnostic.code == "E309")
-    assert e309.line == 12
+    c106 = next(diagnostic for diagnostic in diagnostics if diagnostic.code == "C106")
+    assert c106.line == 12
 
 
 def test_interview_order_unmatched_guard_is_reported_once() -> None:
@@ -825,7 +841,7 @@ code: |
 
 def test_large_invalid_fixture_documents_match_expected_codes() -> None:
     aggregate_only_ids = {"WHOLEFILE_W603_interview_order_unmatched_guard"}
-    runtime_options = RuntimeOptions(enabled_conventions=frozenset({"C101"}))
+    runtime_options = RuntimeOptions(enabled_conventions=frozenset({"C101", "C106"}))
 
     for document_id, source in regression_fixture_documents("large_invalid_interview.yml"):
         if document_id in aggregate_only_ids:
@@ -845,7 +861,7 @@ def test_large_invalid_fixture_whole_file_matches_expected_code_union() -> None:
     diagnostics = analyze_text(
         regression_fixture_text("large_invalid_interview.yml"),
         path="tests/fixtures/regressions/large_invalid_interview.yml",
-        runtime_options=RuntimeOptions(enabled_conventions=frozenset({"C101"})),
+        runtime_options=RuntimeOptions(enabled_conventions=frozenset({"C101", "C106"})),
     )
 
     codes = {diagnostic.code for diagnostic in diagnostics if diagnostic.code}
@@ -2362,7 +2378,7 @@ def test_attachment_valid_with_full_metadata() -> None:
 
 def test_attachment_non_dict_item_reports_error() -> None:
     diagnostics = analyze_text(
-        "question: Here is your document\nattachment:\n  - just a string\n",
+        "question: Here is your document\nattachment:\n  - 42\n",
         path="sample.yml",
     )
     e901 = next(diagnostic for diagnostic in diagnostics if diagnostic.code == "E901")
@@ -2371,7 +2387,7 @@ def test_attachment_non_dict_item_reports_error() -> None:
 
 def test_attachment_scalar_reports_item_error() -> None:
     diagnostics = analyze_text(
-        "question: Here is your document\nattachment: just a string\n",
+        "question: Here is your document\nattachment: 42\n",
         path="sample.yml",
     )
     e901 = next(diagnostic for diagnostic in diagnostics if diagnostic.code == "E901")

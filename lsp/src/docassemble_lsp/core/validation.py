@@ -25,6 +25,7 @@ from docassemble_lsp.core.accessibility import (
     find_accessibility_findings,
 )
 from docassemble_lsp.core.field_keys import (
+    FIELD_ITEM_KNOWN_KEYS,
     FIELD_ITEM_KNOWN_KEYS_LOWER,
     FIELD_JS_MODIFIER_KEYS,
     FIELD_MAKO_KEYS,
@@ -826,7 +827,11 @@ class ActionButtonsDirective:
                     )
                 )
             else:
-                if any(isinstance(value, (list, dict)) for value in arguments.values()):
+                if any(
+                    isinstance(value, (list, dict))
+                    for key, value in arguments.items()
+                    if not _is_internal_metadata_key(key)
+                ):
                     self.errors.append(
                         _validator_error(
                             MessageCode.ACTION_BUTTON_ARGUMENT_ITEM_TYPE,
@@ -1391,6 +1396,8 @@ class AttachmentBlockDirective:
 
     def __init__(self, x):
         self.errors = []
+        if isinstance(x, str):
+            return
         if isinstance(x, Mapping):
             items = [x]
         elif isinstance(x, list):
@@ -1633,6 +1640,7 @@ class DAFields:
     js_modifier_keys = FIELD_JS_MODIFIER_KEYS
     py_modifier_keys = FIELD_PY_MODIFIER_KEYS
     _reserved_field_keys_lower = FIELD_ITEM_KNOWN_KEYS_LOWER
+    _reserved_field_keys = FIELD_ITEM_KNOWN_KEYS
 
     def __init__(self, x, runtime_options: RuntimeOptions | None = None):
         self.errors = []
@@ -1667,7 +1675,7 @@ class DAFields:
         if isinstance(field_item.get("field"), str):
             return field_item["field"]
         for key, value in field_item.items():
-            if isinstance(key, str) and key.lower() in self._reserved_field_keys_lower:
+            if isinstance(key, str) and key in self._reserved_field_keys:
                 continue
             if isinstance(value, str):
                 return value
@@ -1679,17 +1687,15 @@ class DAFields:
         return [
             key
             for key in field_item
-            if isinstance(key, str)
-            and not _is_internal_metadata_key(key)
-            and key.lower() not in self._reserved_field_keys_lower
+            if isinstance(key, str) and not _is_internal_metadata_key(key) and key not in self._reserved_field_keys
         ]
 
     def _is_shorthand_label_key(self, field_item, field_key):
         if not isinstance(field_item, dict):
             return False
-        if (
-            isinstance(field_key, str) and field_key.lower() in self._reserved_field_keys_lower
-        ) or _is_internal_metadata_key(field_key):
+        if (isinstance(field_key, str) and field_key in self._reserved_field_keys) or _is_internal_metadata_key(
+            field_key
+        ):
             return False
         if "field" in field_item or "label" in field_item:
             return False

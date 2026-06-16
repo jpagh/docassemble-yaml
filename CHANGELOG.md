@@ -11,6 +11,11 @@
 ### Fixed
 
 - [LSP] `modules:` list items with a leading dot (`.func`) no longer show zero completions. The completion guard regex and list-item detection regex now include `.` in their character classes, and `filter_text` is set to the bare stem so client-side word-boundary filtering works correctly.
+- [LSP] **E446** (action button arguments must be plain items): false positive when arguments contain plain values — internal metadata keys (`__key_lines__`/`__value_lines__`) injected by the line-tracking helper were being treated as dict values and incorrectly flagged. The check now skips internal metadata keys.
+- [LSP] **E414** (label requires field): false positive for shorthand labels `Value`, `Code`, and `HTML` — the reserved-key filter used case-insensitive comparison (`key.lower()`), which incorrectly excluded these keys because their lowercase forms (`value`, `code`, `html`) are in the known-field-keys set. Changed to case-sensitive comparison, matching the actual docassemble parser behavior.
+- [LSP] **E901** (attachment item must be a dictionary): false positive when an attachment value is a string (e.g., `${ fruit_table }` — a Mako variable reference). The docassemble parser accepts string attachment values as runtime content. `AttachmentBlockDirective` now accepts strings.
+- [LSP] **E309 → C106** (nested visibility logic): downgraded from error to convention. Three levels of `show if`/`hide if` nesting is valid YAML that works at runtime; the threshold of 2 is a style opinion, not an error or even a warning. Hidden by default; opt in with `--conventions ALL` or `--conventions C106`.
+- [LSP] New test `test_example_corpus_has_no_error_diagnostics` validates all 966 example files in the corpus produce no error-severity diagnostics.
 
 ## [26.6.1] - 2026-06-15
 

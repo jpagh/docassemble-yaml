@@ -549,7 +549,7 @@ code: |
   x = 1
 
 ---
-id: E204_E205_E207_E309_nested_js_visibility
+id: E204_E205_E207_C106_nested_js_visibility
 question: |
   Fixture screen with nested visibility and JavaScript modifier issues.
 fields:
