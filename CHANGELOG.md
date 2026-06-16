@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [26.6.2] - 2026-06-16
+
 ### Added
 
 - [LSP] `include:` and `modules:` blocks now get `- ` auto-continuation on Enter (same behavior as `objects:` blocks).
