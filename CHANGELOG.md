@@ -10,6 +10,9 @@
 
 ### Fixed
 
+- [LSP] `action buttons:` list items now get property-key completions when the cursor is at property-indent level inside an existing item (not just at the `- ` line). Same fix applied to `need:` and `terms:`/`auto terms:` items.
+- [LSP] Pressing Enter after a `- key: value` line in `action buttons:` now indents to property level (matching the existing `fields:` behavior).
+- [LSP] Pressing Enter after a bare `- ` or `- |` line in `action buttons:`, `fields:`, `need:`, or other complex-list blocks now indents to property level instead of staying at the `- ` indent.
 - [LSP] `modules:` list items with a leading dot (`.func`) no longer show zero completions. The completion guard regex and list-item detection regex now include `.` in their character classes, and `filter_text` is set to the bare stem so client-side word-boundary filtering works correctly.
 - [LSP] **E446** (action button arguments must be plain items): false positive when arguments contain plain values — internal metadata keys (`__key_lines__`/`__value_lines__`) injected by the line-tracking helper were being treated as dict values and incorrectly flagged. The check now skips internal metadata keys.
 - [LSP] **E414** (label requires field): false positive for shorthand labels `Value`, `Code`, and `HTML` — the reserved-key filter used case-insensitive comparison (`key.lower()`), which incorrectly excluded these keys because their lowercase forms (`value`, `code`, `html`) are in the known-field-keys set. Changed to case-sensitive comparison, matching the actual docassemble parser behavior.

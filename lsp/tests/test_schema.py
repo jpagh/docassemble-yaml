@@ -1514,6 +1514,16 @@ def test_auto_terms_list_item_scope_exposes_documented_keys() -> None:
     assert labels == {"definition", "phrases"}
 
 
+def test_terms_scope_at_property_level_indent() -> None:
+    source = "terms:\n  - phrases: foo\n    \n"
+    assert completion_scope(source, 2, 4) == "terms_item"
+
+
+def test_auto_terms_scope_at_property_level_indent() -> None:
+    source = "auto terms:\n  - phrases: foo\n    \n"
+    assert completion_scope(source, 2, 4) == "terms_item"
+
+
 def test_language_key_offers_common_language_codes() -> None:
     """The `language` key should offer IETF language codes as enum completions."""
     source = "question: Hi\nlanguage: \n"
@@ -2073,6 +2083,16 @@ def test_need_scope_exposes_need_snippets() -> None:
     assert completion_scope(source, 1, 2) == "need_item"
     labels = {item.label for item in get_completions(source, 1, 2)}
     assert labels == {"post", "pre"}
+
+
+def test_need_scope_at_property_level_indent() -> None:
+    source = "need:\n  - pre: var1\n    \n"
+    assert completion_scope(source, 2, 4) == "need_item"
+
+
+def test_action_buttons_scope_at_property_level_indent() -> None:
+    source = "question: Hi\nfield: ready\naction buttons:\n  - label: Visit\n    \n"
+    assert completion_scope(source, 4, 4) == "action_button_item"
 
 
 def test_action_buttons_scope_exposes_action_button_snippets() -> None:

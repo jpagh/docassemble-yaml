@@ -142,6 +142,7 @@ class ServerFeatures:
 
 _YAML_KEY_RE = re.compile(r"^(\s*)(?:-\s*)?([^:#][^:]*?)\s*:")
 _FIELDS_KEY_RE = re.compile(r"^(\s*)fields:\s*$")
+_ACTION_BUTTONS_KEY_RE = re.compile(r"^(\s*)action buttons:\s*$")
 _OBJECTS_KEY_RE = re.compile(r"^(\s*)objects:\s*$")
 _OBJECTS_ITEM_RE = re.compile(r"^(\s*)-\s+([^:#][^:]*?)\s*:\s*(.*?)\s*$")
 _SIMPLE_LIST_ITEM_RE = re.compile(r"^(\s*)-\s+(.*)$")
@@ -348,7 +349,7 @@ def _simple_list_on_type_prefix(source: str, line: int) -> str | None:
 
     value = item_match.group(2).strip()
     if not value or value in _BLOCK_SCALAR_MARKERS:
-        return None
+        return _simple_list_empty_or_block_scalar_prefix(source, line, item_match)
 
     item_indent = item_match.group(1)
     for search_index in range(line - 2, -1, -1):
@@ -369,6 +370,32 @@ def _simple_list_on_type_prefix(source: str, line: int) -> str | None:
         if match.group(1) != candidate_indent:
             return None
         return f"{item_indent}- "
+
+    return None
+
+
+def _simple_list_empty_or_block_scalar_prefix(source: str, line: int, item_match: re.Match[str]) -> str | None:
+    item_indent = item_match.group(1)
+    indent_unit = infer_indent_unit(source, line - 1, fallback="  ")
+
+    for search_index in range(line - 2, -1, -1):
+        candidate = _document_lines(source)[search_index]
+        if not candidate.strip():
+            continue
+
+        candidate_indent = leading_whitespace(candidate)
+        if len(candidate_indent) >= len(item_indent):
+            continue
+
+        match = _YAML_KEY_RE.match(candidate)
+        if match is None:
+            return None
+        if match.group(1) != candidate_indent:
+            return None
+        key_name = match.group(2).strip()
+        if key_name in _SIMPLE_LIST_BLOCK_KEYS:
+            return f"{item_indent}- "
+        return f"{item_indent}{indent_unit}"
 
     return None
 
@@ -460,6 +487,8 @@ def _fields_on_type_prefix(source: str, line: int, *, insert_spaces: bool, tab_s
             continue
 
         match = _FIELDS_KEY_RE.match(candidate)
+        if match is None:
+            match = _ACTION_BUTTONS_KEY_RE.match(candidate)
         if match is None:
             return None
         if match.group(1) != candidate_indent:

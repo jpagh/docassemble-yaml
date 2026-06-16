@@ -898,8 +898,14 @@ def completion_scope(source: str, line: int, character: int) -> CompletionScope:
         return "fields_item"
     if enclosing_list_key == "fields" and parent not in {"attachment", "attachments"}:
         return "fields_item"
+    if enclosing_list_key == "action buttons":
+        return "action_button_item"
     if nearest == "action buttons":
         return "action_button_item"
+    if enclosing_list_key in {"terms", "auto terms"}:
+        return "terms_item"
+    if enclosing_list_key == "need":
+        return "need_item"
     if nearest == "need":
         return "need_item"
     if ancestors:

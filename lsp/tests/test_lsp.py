@@ -2213,6 +2213,90 @@ def test_on_type_formatting_ignores_simple_list_items_in_other_blocks() -> None:
     assert edits == []
 
 
+def test_on_type_formatting_indents_action_buttons_empty_item() -> None:
+    edits = build_on_type_formatting_edits(
+        "---\naction buttons:\n  - \n  \n---\n",
+        3,
+        2,
+        "\n",
+    )
+
+    assert len(edits) == 1
+    assert edits[0].new_text == "    "
+
+
+def test_on_type_formatting_indents_action_buttons_empty_item_with_existing_entry() -> None:
+    edits = build_on_type_formatting_edits(
+        "---\naction buttons:\n  - label: Visit\n    action: url\n  - \n  \n---\n",
+        5,
+        2,
+        "\n",
+    )
+
+    assert len(edits) == 1
+    assert edits[0].new_text == "    "
+
+
+def test_on_type_formatting_indents_fields_empty_item() -> None:
+    edits = build_on_type_formatting_edits(
+        "---\nfields:\n  - \n  \n---\n",
+        3,
+        2,
+        "\n",
+    )
+
+    assert len(edits) == 1
+    assert edits[0].new_text == "    "
+
+
+def test_on_type_formatting_indents_need_empty_item() -> None:
+    edits = build_on_type_formatting_edits(
+        "---\nneed:\n  - \n  \n---\n",
+        3,
+        2,
+        "\n",
+    )
+
+    assert len(edits) == 1
+    assert edits[0].new_text == "    "
+
+
+def test_on_type_formatting_continues_include_empty_item() -> None:
+    edits = build_on_type_formatting_edits(
+        "---\ninclude:\n  - \n  \n---\n",
+        3,
+        2,
+        "\n",
+    )
+
+    assert len(edits) == 1
+    assert edits[0].new_text == "  - "
+
+
+def test_on_type_formatting_continues_modules_empty_item() -> None:
+    edits = build_on_type_formatting_edits(
+        "---\nmodules:\n  - \n  \n---\n",
+        3,
+        2,
+        "\n",
+    )
+
+    assert len(edits) == 1
+    assert edits[0].new_text == "  - "
+
+
+def test_on_type_formatting_indents_action_buttons_item_properties() -> None:
+    edits = build_on_type_formatting_edits(
+        "---\naction buttons:\n  - label: Search\n  \n---\n",
+        3,
+        2,
+        "\n",
+    )
+
+    assert len(edits) == 1
+    assert edits[0].new_text == "    "
+
+
 # ---------------------------------------------------------------------------
 # Semantic tokens
 # ---------------------------------------------------------------------------
