@@ -4,6 +4,7 @@
 
 ### Added
 
+- [LSP] `DAEmpty` now appears as a completion candidate in `objects:` block values (it is a standalone class in `docassemble.base.util` that does not inherit from `DAObject`).
 - [LSP] Relative module name completions in `modules:` blocks: typing `.func` now suggests `.functions` (strips leading dot for matching, prepends it in the label). Workspace modules always get the `.` prefix. Vendored modules only appear when the user types an absolute prefix.
 
 ### Fixed

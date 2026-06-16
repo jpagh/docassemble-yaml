@@ -2245,6 +2245,25 @@ def test_get_completions_in_objects_value_include_vendored_docassemble_base_clas
     assert "Address" in labels
 
 
+def test_get_completions_in_objects_value_includes_daempty() -> None:
+    """DAEmpty should appear as a class in objects: block value completions,
+    even though it doesn't inherit from DAObject."""
+    source = "objects:\n  - physical_address: \n"
+
+    labels = {
+        item.label
+        for item in get_completions(
+            source,
+            1,
+            len("  - physical_address: "),
+            uri_or_path="sample.yml",
+            workspace_paths=["/Users/jack/Projects/docassemble-lsp"],
+        )
+    }
+
+    assert "DAEmpty" in labels
+
+
 def test_get_completions_respect_module_all_exports(tmp_path) -> None:
     package_dir = tmp_path / "docassemble" / "demo"
     questions_dir = package_dir / "data" / "questions"

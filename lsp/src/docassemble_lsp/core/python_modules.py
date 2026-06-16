@@ -517,7 +517,7 @@ def compute_da_object_subclasses(module_paths: list[Path]) -> frozenset[str]:
         for child in base_to_subclasses.get(current, set()):
             if child not in subclasses:
                 worklist.append(child)
-    return frozenset(subclasses)
+    return frozenset(subclasses | {"DAEmpty"})
 
 
 def python_module_symbol_details(module_path: Path | None) -> dict[str, str]:
