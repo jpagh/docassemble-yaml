@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+### Added
+
+- [LSP] Relative module name completions in `modules:` blocks: typing `.func` now suggests `.functions` (strips leading dot for matching, prepends it in the label). Workspace modules always get the `.` prefix. Vendored modules only appear when the user types an absolute prefix.
+
+### Fixed
+
+- [LSP] `modules:` list items with a leading dot (`.func`) no longer show zero completions. The completion guard regex and list-item detection regex now include `.` in their character classes, and `filter_text` is set to the bare stem so client-side word-boundary filtering works correctly.
+
 ## [26.6.1] - 2026-06-15
 
 ### Fixed
