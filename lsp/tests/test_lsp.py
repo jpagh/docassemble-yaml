@@ -2202,6 +2202,41 @@ def test_on_type_formatting_indents_objects_block_scalars() -> None:
     assert edits[0].new_text == "      "
 
 
+def test_on_type_formatting_continues_include_items() -> None:
+    edits = build_on_type_formatting_edits(
+        "---\ninclude:\n  - file1.yml\n  \n---\n",
+        3,
+        2,
+        "\n",
+    )
+
+    assert len(edits) == 1
+    assert edits[0].new_text == "  - "
+
+
+def test_on_type_formatting_continues_modules_items() -> None:
+    edits = build_on_type_formatting_edits(
+        "---\nmodules:\n  - docassemble.foo\n  \n---\n",
+        3,
+        2,
+        "\n",
+    )
+
+    assert len(edits) == 1
+    assert edits[0].new_text == "  - "
+
+
+def test_on_type_formatting_ignores_simple_list_items_in_other_blocks() -> None:
+    edits = build_on_type_formatting_edits(
+        "---\nchoices:\n  - Apple\n  \n---\n",
+        3,
+        2,
+        "\n",
+    )
+
+    assert edits == []
+
+
 # ---------------------------------------------------------------------------
 # Semantic tokens
 # ---------------------------------------------------------------------------

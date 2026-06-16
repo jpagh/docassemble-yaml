@@ -144,6 +144,8 @@ _YAML_KEY_RE = re.compile(r"^(\s*)(?:-\s*)?([^:#][^:]*?)\s*:")
 _FIELDS_KEY_RE = re.compile(r"^(\s*)fields:\s*$")
 _OBJECTS_KEY_RE = re.compile(r"^(\s*)objects:\s*$")
 _OBJECTS_ITEM_RE = re.compile(r"^(\s*)-\s+([^:#][^:]*?)\s*:\s*(.*?)\s*$")
+_SIMPLE_LIST_ITEM_RE = re.compile(r"^(\s*)-\s+(.*)$")
+_SIMPLE_LIST_BLOCK_KEYS = frozenset({"include", "modules"})
 _BLOCK_SCALAR_KEY_RE = re.compile(r"^(\s*)(-\s*)?([^:#][^:]*?)\s*:\s*(\||>|\|-|>-|\|\+|>\+)\s*$")
 _BLOCK_SCALAR_MARKERS = {"|", ">", "|-", ">-", "|+", ">+"}
 _PYTHON_BLOCK_KEYS = frozenset({"code", "validation code"})
@@ -331,6 +333,46 @@ def _objects_on_type_prefix(source: str, line: int) -> str | None:
     return None
 
 
+def _simple_list_on_type_prefix(source: str, line: int) -> str | None:
+    if line <= 0:
+        return None
+
+    lines = _document_lines(source)
+    if line >= len(lines):
+        return None
+
+    previous_line = lines[line - 1]
+    item_match = _SIMPLE_LIST_ITEM_RE.match(previous_line)
+    if item_match is None:
+        return None
+
+    value = item_match.group(2).strip()
+    if not value or value in _BLOCK_SCALAR_MARKERS:
+        return None
+
+    item_indent = item_match.group(1)
+    for search_index in range(line - 2, -1, -1):
+        candidate = lines[search_index]
+        if not candidate.strip():
+            continue
+
+        candidate_indent = leading_whitespace(candidate)
+        if len(candidate_indent) >= len(item_indent):
+            continue
+
+        match = _YAML_KEY_RE.match(candidate)
+        if match is None:
+            return None
+        key_name = match.group(2).strip()
+        if key_name not in _SIMPLE_LIST_BLOCK_KEYS:
+            return None
+        if match.group(1) != candidate_indent:
+            return None
+        return f"{item_indent}- "
+
+    return None
+
+
 def _default_indent_unit(*, insert_spaces: bool, tab_size: int) -> str:
     return " " * max(tab_size, 1) if insert_spaces else "\t"
 
@@ -460,6 +502,8 @@ def build_on_type_formatting_edits(
             insert_spaces=insert_spaces,
             tab_size=tab_size,
         )
+    if desired_prefix is None:
+        desired_prefix = _simple_list_on_type_prefix(source, line)
     if desired_prefix is None:
         desired_prefix = _block_scalar_on_type_prefix(
             source,
