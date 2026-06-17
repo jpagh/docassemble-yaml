@@ -53,7 +53,7 @@ class DocassembleLspController {
 
   public constructor(
     private readonly context: vscode.ExtensionContext,
-    private readonly output: vscode.OutputChannel,
+    private readonly output: vscode.LogOutputChannel,
     private readonly statusBar: vscode.StatusBarItem,
   ) {
     this.bundledLspVersion = this.readBundledLspVersion();
@@ -707,7 +707,7 @@ function isKnownClientError(reason: unknown): boolean {
 }
 
 export async function activate(context: vscode.ExtensionContext): Promise<DocassembleExtensionApi> {
-  const output = vscode.window.createOutputChannel("Docassemble Language Server");
+  const output = vscode.window.createOutputChannel("Docassemble Language Server", { log: true });
   const statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 10);
   statusBar.name = "Docassemble Language Server";
 

@@ -187,7 +187,7 @@
     },
     "dependencies": {
         "@vscode/python-extension": "^1.0.5",
-        "vscode-languageclient": "^9.0.1"
+        "vscode-languageclient": "^10.0.0"
     },
     "devDependencies": {
         "@types/node": "^22.15.30",
