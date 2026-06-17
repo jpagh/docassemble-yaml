@@ -1,5 +1,6 @@
+import * as os from "node:os";
 import * as path from "node:path";
-import { existsSync, readdirSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 
 import {
@@ -7,6 +8,24 @@ import {
   downloadAndUnzipVSCode,
   resolveCliPathFromVSCodeExecutablePath,
 } from "@vscode/test-electron";
+
+function seedTestWorkspace(): string {
+  const workspaceDir = mkdtempSync(path.join(os.tmpdir(), "docassemble-test-"));
+  const pkgDir = path.join(workspaceDir, "docassemble", "testpkg");
+  const dataDir = path.join(pkgDir, "data");
+  mkdirSync(dataDir, { recursive: true });
+
+  writeFileSync(path.join(workspaceDir, "pyproject.toml"), "", "utf8");
+  writeFileSync(path.join(pkgDir, "__init__.py"), "", "utf8");
+  writeFileSync(path.join(pkgDir, "utils.py"), "def helper():\n    pass\n", "utf8");
+  writeFileSync(path.join(pkgDir, "helpers.py"), "def do_stuff():\n    pass\n", "utf8");
+  writeFileSync(path.join(dataDir, "other.yml"), "question: Other\n", "utf8");
+  const subDir = path.join(dataDir, "sub");
+  mkdirSync(subDir, { recursive: true });
+  writeFileSync(path.join(subDir, "nested.yml"), "question: Nested\n", "utf8");
+
+  return workspaceDir;
+}
 
 async function main(): Promise<void> {
   const extensionDevelopmentPath = path.resolve(__dirname, "../..");
@@ -55,25 +74,42 @@ async function main(): Promise<void> {
     DOCASSEMBLE_LSP_PROJECT: lspProject,
   };
 
+  // Seed a temp workspace with docassemble package structure for real tests.
+  let workspaceDir: string | undefined;
+  const launchArgs: string[] = [];
+  if (process.env.DOCASSEMBLE_LSP_ENABLE_REAL_TEST === "1") {
+    workspaceDir = seedTestWorkspace();
+    launchArgs.push(workspaceDir);
+    testEnv.DOCASSEMBLE_TEST_WORKSPACE = workspaceDir;
+  }
+
   // ELECTRON_RUN_AS_NODE forces the Electron binary into Node.js mode, which
   // rejects unknown flags like --no-sandbox and --extensionTestsPath. Wrap
   // the binary to unset it and ensure VS Code / Electron app mode.
   const isMacArm = process.platform === "darwin" && process.arch === "arm64";
-  if (isMacArm && process.env.ELECTRON_RUN_AS_NODE) {
-    const wrapper = path.resolve(__dirname, "../../scripts/vscode-test-wrapper.mjs");
-    await runTests({
-      extensionDevelopmentPath,
-      extensionTestsPath,
-      vscodeExecutablePath: wrapper,
-      extensionTestsEnv: { ...testEnv, VSCODE_ELECTRON_BIN: vscodeExecutablePath },
-    });
-  } else {
-    await runTests({
-      extensionDevelopmentPath,
-      extensionTestsPath,
-      vscodeExecutablePath,
-      extensionTestsEnv: testEnv,
-    });
+  try {
+    if (isMacArm && process.env.ELECTRON_RUN_AS_NODE) {
+      const wrapper = path.resolve(__dirname, "../../scripts/vscode-test-wrapper.mjs");
+      await runTests({
+        extensionDevelopmentPath,
+        extensionTestsPath,
+        vscodeExecutablePath: wrapper,
+        extensionTestsEnv: { ...testEnv, VSCODE_ELECTRON_BIN: vscodeExecutablePath },
+        launchArgs,
+      });
+    } else {
+      await runTests({
+        extensionDevelopmentPath,
+        extensionTestsPath,
+        vscodeExecutablePath,
+        extensionTestsEnv: testEnv,
+        launchArgs,
+      });
+    }
+  } finally {
+    if (workspaceDir) {
+      rmSync(workspaceDir, { recursive: true, force: true });
+    }
   }
 }
 
