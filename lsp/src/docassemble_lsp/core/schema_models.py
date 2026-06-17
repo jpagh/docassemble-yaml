@@ -17,6 +17,10 @@ class CompletionCandidate:
     uses_snippet_text: bool = False
     display_kind: str | None = None
     trigger_suggest: bool = False
+    # (start_col, end_col) on the cursor line. When set, the server
+    # emits a TextEdit that replaces exactly this range — bypassing
+    # client-side word-boundary detection.
+    text_edit_range: tuple[int, int] | None = None
 
 
 @dataclass(frozen=True, slots=True)

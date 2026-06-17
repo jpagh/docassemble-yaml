@@ -504,36 +504,35 @@ def _complete_module_names(context: CompletionContext) -> list[CompletionCandida
     seen: set[str] = set()
     candidates: list[CompletionCandidate] = []
 
-    # Vendored docassemble modules.
-    # Skip when the user is typing a relative import (".name").
-    # Also skip when partial is empty in modules_item — otherwise the
-    # initial space-triggered response includes vendored modules, and
-    # VS Code's client-side filtering inconsistently drops workspace
-    # items (filter_text set) while keeping vendored items (no filter_text).
-    if not is_relative and (partial or context.scope != "modules_item"):
+    # Vendored modules are never applicable in modules: blocks.
+    if not is_relative and context.scope != "modules_item":
         for mod in VENDORED_MODULE_NAMES:
             if match_partial.lower() in mod.lower() and mod not in seen:
                 seen.add(mod)
                 candidates.append(CompletionCandidate(label=mod, insert_text=mod, is_value=True))
 
     # Workspace Python module paths.
+    text_edit_range: tuple[int, int] | None = None
     for mod_path in sorted(context.workspace_index.all_module_paths):
+        if text_edit_range is None:
+            # Compute lazily: TextEdit range from start of list-item value
+            # to cursor, bypassing VS Code's word-boundary heuristics for ".".
+            list_match = _LIST_ITEM_VALUE_RE.match(context.line_prefix)
+            value_start_col = list_match.start(2) if list_match else context.character
+            text_edit_range = (value_start_col, context.character)
         name = mod_path.stem
         if name == "__init__":
             name = mod_path.parent.name
         if name and match_partial.lower() in name.lower() and name not in seen:
             seen.add(name)
-            # Always prefix workspace module names with "." since
-            # modules: entries reference relative module names.
-            # When the user already typed the dot, VS Code excludes
-            # it from the current word boundary — insert_text omits
-            # the dot to avoid doubling it.
+            dotted = f".{name}"
             candidates.append(
                 CompletionCandidate(
-                    label=f".{name}",
-                    insert_text=name if is_relative else f".{name}",
+                    label=dotted,
+                    insert_text=dotted,
                     filter_text=name,
                     is_value=True,
+                    text_edit_range=text_edit_range,
                 )
             )
 

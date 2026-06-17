@@ -230,6 +230,16 @@ def build_completion_list(
             kind = CompletionItemKind.Snippet
         else:
             kind = CompletionItemKind.Property
+        text_edit = None
+        if candidate.text_edit_range is not None:
+            text_edit = TextEdit(
+                range=Range(
+                    start=Position(line=line, character=candidate.text_edit_range[0]),
+                    end=Position(line=line, character=candidate.text_edit_range[1]),
+                ),
+                new_text=candidate.insert_text,
+            )
+
         items.append(
             CompletionItem(
                 label=candidate.label,
@@ -245,6 +255,7 @@ def build_completion_list(
                 insert_text_format=(
                     InsertTextFormat.Snippet if candidate.is_snippet or candidate.uses_snippet_text else None
                 ),
+                text_edit=text_edit,
                 command=(
                     Command(title="Trigger Suggest", command="editor.action.triggerSuggest")
                     if candidate.trigger_suggest

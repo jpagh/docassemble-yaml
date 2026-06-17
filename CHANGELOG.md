@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+### Added
+
+- [LSP] Module completions in `modules:` blocks now emit a `TextEdit` with exact replacement range, bypassing VS Code's word-boundary heuristics for dotted names. Workspace modules always receive a dotted prefix (`.mymodule`) and explicit `textEdit` range. Vendored docassemble modules (`docassemble.base.*`) are excluded from `modules:` completions.
+- [VSCODE] Integration tests for module completions, include completions, and on-type formatting, gated behind `DOCASSEMBLE_LSP_ENABLE_REAL_TEST=1`.
+
+### Changed
+
+- [VSCODE] Output channel changed from `OutputChannel` to `LogOutputChannel` for structured logging.
+- [VSCODE] `vscode-languageclient` upgraded from `^9.0.1` to `^10.0.0`.
+
 ## [26.6.2] - 2026-06-16
 
 ### Added

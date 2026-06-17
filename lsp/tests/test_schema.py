@@ -1703,22 +1703,22 @@ def test_include_item_completes_partial_prefix(tmp_path) -> None:
     assert "shared.yml" not in labels
 
 
-def test_modules_item_completes_vendored_module_names(tmp_path) -> None:
-    """modules: list items suggest vendored docassemble module names
-    once the user starts typing (non-empty partial)."""
+def test_modules_item_never_includes_vendored_modules(tmp_path) -> None:
+    """modules: list items never suggest vendored docassemble module names,
+    even with a non-empty partial."""
     source = "modules:\n  - doc\n"
     source_path = tmp_path / "interview.yml"
     labels = {
         item.label
         for item in get_completions(source, 1, 5, uri_or_path=str(source_path), workspace_paths=[str(tmp_path)])
     }
-    assert "docassemble.base.util" in labels
-    assert "docassemble.base.functions" in labels
+    assert "docassemble.base.util" not in labels
+    assert "docassemble.base.functions" not in labels
 
 
 def test_modules_item_relative_prefix_matches_workspace_stems(tmp_path) -> None:
     """A dot-prefixed partial (.func) matches workspace module stems and yields
-    dot-prefixed labels/insert_text."""
+    dot-prefixed labels/insert_text with explicit text_edit_range."""
     import dataclasses
     from docassemble_lsp.core.workspace import WorkspaceIndex
 
@@ -1734,17 +1734,24 @@ def test_modules_item_relative_prefix_matches_workspace_stems(tmp_path) -> None:
     )
     source = "modules:\n  - .func\n"
     source_path = tmp_path / "interview.yml"
-    labels = {item.label for item in get_completions(source, 1, 6, uri_or_path=str(source_path), workspace_index=wi)}
+    items = list(get_completions(source, 1, 6, uri_or_path=str(source_path), workspace_index=wi))
+    labels = {item.label for item in items}
     assert ".functions" in labels
     assert ".dw_objects" not in labels  # filtered by .func prefix
     assert ".entities" not in labels
     # Vendored modules should NOT appear for relative-prefixed entries
     assert "docassemble.base.util" not in labels
     assert "docassemble.base.functions" not in labels
+    # Check text_edit_range and insert_text on workspace module items
+    func_item = next(item for item in items if item.label == ".functions")
+    assert func_item.insert_text == ".functions"
+    assert func_item.text_edit_range == (4, 6)  # from col 4 (after "- ") to cursor at col 6
 
 
 def test_modules_item_relative_prefix_excludes_vendored_modules(tmp_path) -> None:
-    """When the user types a dot prefix, vendored modules are excluded."""
+    """When the user types a dot prefix, vendored modules are excluded.
+    Workspace modules get text_edit_range so VS Code replaces the exact value
+    range regardless of word-boundary heuristics."""
     import dataclasses
     from docassemble_lsp.core.workspace import WorkspaceIndex
 
@@ -1755,15 +1762,20 @@ def test_modules_item_relative_prefix_excludes_vendored_modules(tmp_path) -> Non
     source = "modules:\n  - .\n"
     source_path = tmp_path / "interview.yml"
     # character=5 so line_prefix = "  - ." → partial = "." → is_relative = True
-    labels = {item.label for item in get_completions(source, 1, 5, uri_or_path=str(source_path), workspace_index=wi)}
+    items = list(get_completions(source, 1, 5, uri_or_path=str(source_path), workspace_index=wi))
+    labels = {item.label for item in items}
     assert ".utils" in labels
     assert "docassemble.base.util" not in labels
     assert "docassemble.base.functions" not in labels
+    # text_edit_range replaces the dot with the full dotted name
+    utils_item = next(item for item in items if item.label == ".utils")
+    assert utils_item.insert_text == ".utils"
+    assert utils_item.text_edit_range == (4, 5)
 
 
-def test_modules_item_non_relative_prefix_shows_vendored_and_workspace(tmp_path) -> None:
-    """Without a dot prefix, workspace modules get the dot added and
-    vendored modules still appear without it."""
+def test_modules_item_non_relative_prefix_shows_workspace_modules(tmp_path) -> None:
+    """Without a dot prefix, workspace modules get text_edit_range.
+    Vendored modules never appear in modules: blocks."""
     import dataclasses
     from docassemble_lsp.core.workspace import WorkspaceIndex
 
@@ -1773,10 +1785,15 @@ def test_modules_item_non_relative_prefix_shows_vendored_and_workspace(tmp_path)
     )
     source = "modules:\n  - util\n"
     source_path = tmp_path / "interview.yml"
-    labels = {item.label for item in get_completions(source, 1, 6, uri_or_path=str(source_path), workspace_index=wi)}
+    items = list(get_completions(source, 1, 6, uri_or_path=str(source_path), workspace_index=wi))
+    labels = {item.label for item in items}
     assert ".utils" in labels
     assert "utils" not in labels
-    assert "docassemble.base.util" in labels
+    assert "docassemble.base.util" not in labels
+    # Workspace module gets text_edit_range and dotted insert_text
+    ws_item = next(item for item in items if item.label == ".utils")
+    assert ws_item.insert_text == ".utils"
+    assert ws_item.text_edit_range == (4, 6)  # cursor at col 6 replaces from value start
 
 
 def test_modules_item_relative_prefix_snippets_without_workspace(tmp_path) -> None:
