@@ -6,6 +6,9 @@ mod vscode
 default:
     @just --list
 
+check:
+    prek run -a
+
 # Run all unit tests (LSP + VS Code mock-server)
 test: lsp::test-versions vscode::test
 

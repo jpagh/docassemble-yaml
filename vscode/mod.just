@@ -1,8 +1,8 @@
-compile:
-    npm run compile
-
 build:
     npm run build
+
+compile:
+    npm run compile
 
 publish:
     npm run build

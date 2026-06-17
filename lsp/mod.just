@@ -1,3 +1,9 @@
+format:
+    uv run ruff format
+
+lint:
+    uv run ruff check --fix
+
 test:
     uv run pytest -q -n auto
 
@@ -11,12 +17,3 @@ test-versions:
 
 type:
     uv run mypy .
-
-lint:
-    uv run ruff check --fix
-
-format:
-    uv run ruff format
-
-check:
-    cd "$(justfile_directory())" && prek run -a
