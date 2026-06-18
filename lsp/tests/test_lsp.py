@@ -260,6 +260,68 @@ def test_run_server_debug_log_level_emits_log_message(monkeypatch, caplog) -> No
     assert "Log level set to DEBUG" in caplog.text
 
 
+def test_run_server_reads_runtime_options_from_pyproject_when_not_provided(
+    monkeypatch,
+    tmp_path,
+) -> None:
+    reset_logging()
+
+    pyproject = tmp_path / "pyproject.toml"
+    pyproject.write_text(
+        '[tool.docassemble-lsp]\nconventions = ["C102"]\nignore-codes = ["E301"]\n',
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path)
+
+    captured: dict[str, object] = {}
+
+    class _DummyServer:
+        def start_io(self) -> None:
+            return None
+
+    def _capture_create_server(*, runtime_options=None, formatter_config=None):
+        captured["runtime_options"] = runtime_options
+        captured["formatter_config"] = formatter_config
+        return _DummyServer()
+
+    monkeypatch.setattr(lsp_server, "create_server", _capture_create_server)
+
+    exit_code = lsp_server.run_server(log_level="INFO")
+
+    assert exit_code == 0
+    runtime_options = captured.get("runtime_options")
+    assert isinstance(runtime_options, RuntimeOptions)
+    assert runtime_options.enabled_conventions == frozenset({"C102"})
+    assert runtime_options.ignore_codes == frozenset({"E301"})
+
+
+def test_run_server_uses_default_runtime_options_when_no_pyproject(
+    monkeypatch,
+    tmp_path,
+) -> None:
+    reset_logging()
+
+    monkeypatch.chdir(tmp_path)
+
+    captured: dict[str, object] = {}
+
+    class _DummyServer:
+        def start_io(self) -> None:
+            return None
+
+    def _capture_create_server(*, runtime_options=None, formatter_config=None):
+        captured["runtime_options"] = runtime_options
+        captured["formatter_config"] = formatter_config
+        return _DummyServer()
+
+    monkeypatch.setattr(lsp_server, "create_server", _capture_create_server)
+
+    exit_code = lsp_server.run_server(log_level="INFO")
+
+    assert exit_code == 0
+    assert captured.get("runtime_options") is None
+
+
 def test_completion_list_covers_example_corpora_top_level_keys() -> None:
     completions = build_completion_list("", 0, 0)
 

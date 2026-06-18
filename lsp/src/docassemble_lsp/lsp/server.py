@@ -26,6 +26,7 @@ from lsprotocol.types import (
     WORKSPACE_SYMBOL,
     CodeAction,
     CodeActionKind,
+    CodeActionOptions,
     CodeActionParams,
     Command,
     CompletionItem,
@@ -748,6 +749,8 @@ def build_code_actions(
     diagnostics: list[LspDiagnostic],
     *,
     only_kinds: list[str] | None = None,
+    runtime_options: RuntimeOptions | None = None,
+    workspace_index: WorkspaceIndex | None = None,
 ) -> list[CodeAction]:
     requested_kinds = set(only_kinds or [])
     wants_quick_fix = not requested_kinds or CodeActionKind.QuickFix in requested_kinds
@@ -772,7 +775,10 @@ def build_code_actions(
             )
 
     if wants_fix_all:
-        fix_all_fixes = resolve_fix_all_fixes(source, core_diagnostics)
+        all_core_diagnostics = analyze_text(
+            source, path=uri, runtime_options=runtime_options, workspace_index=workspace_index
+        )
+        fix_all_fixes = resolve_fix_all_fixes(source, all_core_diagnostics)
         if fix_all_fixes:
             actions.append(
                 CodeAction(
@@ -1063,10 +1069,9 @@ def create_server(
 
     @server.feature(TEXT_DOCUMENT_DID_OPEN)
     def did_open(
-        ls: LanguageServer,
+        _ls: LanguageServer,
         params: DidOpenTextDocumentParams,
     ) -> None:
-        del ls
         workspace_indexes.update_source(params.text_document.uri, params.text_document.text)
         publish(params.text_document.uri)
 
@@ -1075,15 +1080,13 @@ def create_server(
         ls: LanguageServer,
         params: DidChangeTextDocumentParams,
     ) -> None:
-        del ls
-        document = server.workspace.get_text_document(params.text_document.uri)
+        document = ls.workspace.get_text_document(params.text_document.uri)
         workspace_indexes.update_source(params.text_document.uri, document.source)
         publish(params.text_document.uri)
 
     @server.feature(TEXT_DOCUMENT_DID_SAVE)
     def did_save(ls: LanguageServer, params: DidSaveTextDocumentParams) -> None:
-        del ls
-        document = server.workspace.get_text_document(params.text_document.uri)
+        document = ls.workspace.get_text_document(params.text_document.uri)
         workspace_indexes.update_source(params.text_document.uri, document.source)
         # When saving a .py file only the saved module's AST is stale —
         # YAML saves never modify Python files, so the workspace index stays valid.
@@ -1096,23 +1099,21 @@ def create_server(
             publish(params.text_document.uri)
             return
         workspace_indexes.clear()
-        workspace_indexes.for_workspace(server.workspace.root_path)
+        workspace_indexes.for_workspace(ls.workspace.root_path)
         publish(params.text_document.uri)
 
     @server.feature(TEXT_DOCUMENT_DID_CLOSE)
     def did_close(
-        ls: LanguageServer,
+        _ls: LanguageServer,
         params: DidCloseTextDocumentParams,
     ) -> None:
-        del ls
         workspace_indexes.remove_source(params.text_document.uri)
 
     @server.feature(INITIALIZED)
     def initialized(
         ls: LanguageServer,
-        params: InitializedParams,
+        _params: InitializedParams,
     ) -> None:
-        del params
         if ls.protocol.trace not in (None, TraceValue.Off):
             ls.window_log_message(
                 LogMessageParams(message=f"Workspace root: {ls.workspace.root_path}", type=MessageType.Log)
@@ -1124,14 +1125,13 @@ def create_server(
         ls: LanguageServer,
         params: DidChangeWatchedFilesParams,
     ) -> None:
-        del ls
         relevant = any(change.uri.endswith((".py", ".yml", ".yaml")) for change in params.changes)
         if relevant:
             workspace_indexes.clear()
             changed_paths = [p for change in params.changes if (p := path_from_uri_or_path(change.uri)) is not None]
             if changed_paths:
                 clear_detect_package_cache(changed_paths)
-            workspace_indexes.for_workspace(server.workspace.root_path)
+            workspace_indexes.for_workspace(ls.workspace.root_path)
 
     @server.feature(
         TEXT_DOCUMENT_COMPLETION,
@@ -1210,16 +1210,30 @@ def create_server(
             ),
         )
 
-    @server.feature(TEXT_DOCUMENT_CODE_ACTION)
+    @server.feature(
+        TEXT_DOCUMENT_CODE_ACTION,
+        CodeActionOptions(
+            code_action_kinds=[
+                CodeActionKind.QuickFix,
+                CodeActionKind.SourceFixAll,
+                _DOCASSEMBLE_FIX_ALL_KIND,
+            ]
+        ),
+    )
     def code_action(ls: LanguageServer, params: CodeActionParams) -> list[CodeAction]:
-        del ls
-        document = server.workspace.get_text_document(params.text_document.uri)
+        document = ls.workspace.get_text_document(params.text_document.uri)
         return build_code_actions(
             params.text_document.uri,
             document.source,
             params.range.start.line,
             list(params.context.diagnostics),
             only_kinds=list(params.context.only) if params.context.only is not None else None,
+            runtime_options=runtime_options,
+            workspace_index=workspace_indexes.for_document(
+                ls.workspace.root_path,
+                params.text_document.uri,
+                document.source,
+            ),
         )
 
     @server.feature(TEXT_DOCUMENT_DOCUMENT_SYMBOL)
@@ -1305,6 +1319,28 @@ def run_server(
 ) -> int:
     configure_logging(level=log_level)
     _configure_pygls_logging()
+
+    if runtime_options is None:
+        from docassemble_lsp.core.files import (
+            collect_dayaml_conventions,
+            collect_dayaml_ignore_codes,
+        )
+
+        conventions = collect_dayaml_conventions([Path.cwd()])
+        ignore_codes = collect_dayaml_ignore_codes([Path.cwd()])
+        if conventions or ignore_codes:
+            logger.info(
+                "Auto-detected docassemble-lsp config: conventions=%s ignore_codes=%s",
+                sorted(conventions),
+                sorted(ignore_codes),
+            )
+            runtime_options = RuntimeOptions(
+                enabled_conventions=conventions,
+                ignore_codes=ignore_codes,
+            )
+        else:
+            logger.debug("No docassemble-lsp config found in %s", Path.cwd())
+
     for module_name in ("docassemble.base.util", "docassemble.base.functions"):
         resolution = resolve_python_module_source(module_name, workspace_index=WorkspaceIndex.empty())
         path_text = str(resolution.path) if resolution.path is not None else "<unresolved>"
