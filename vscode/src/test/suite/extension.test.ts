@@ -712,6 +712,75 @@ export async function runTests(): Promise<void> {
       },
     },
     {
+      name: "provides fix-all code action for C102 conventions via bundled server",
+      run: async () => {
+        if (process.env.DOCASSEMBLE_LSP_ENABLE_REAL_TEST !== "1" || !python3Available()) {
+          throw new SkipTest();
+        }
+
+        const workspaceDir = process.env.DOCASSEMBLE_TEST_WORKSPACE;
+        if (!workspaceDir) {
+          throw new Error("DOCASSEMBLE_TEST_WORKSPACE not set");
+        }
+
+        // Write pyproject.toml enabling C102 conventions
+        await fs.promises.writeFile(
+          path.join(workspaceDir, "pyproject.toml"),
+          '[tool.docassemble-lsp]\nconventions = ["C102"]\n',
+          "utf-8",
+        );
+
+        // Write test YAML with C102 shorthand patterns
+        const yamlUri = await writeTestFile(
+          workspaceDir,
+          "fix_all_shorthand.yml",
+          "question: Hi\nfields:\n  - Name: user.name\n  - Age: user.age\n",
+        );
+
+        await resetConfiguration();
+        await updateConfiguration("docassemble-lsp.enabled", true);
+        await updateConfiguration("docassemble-lsp.importStrategy", "useBundled");
+        await updateConfiguration("docassemble-lsp.interpreter", []);
+
+        const api = await getApi();
+        await api.restart();
+        await waitForState(api, "running");
+
+        const document = await vscode.workspace.openTextDocument(yamlUri);
+        await vscode.window.showTextDocument(document);
+
+        // Wait for C102 diagnostics
+        await waitFor(() =>
+          vscode.languages.getDiagnostics(document.uri).some((d) => String(d.code) === "C102"),
+        );
+
+        const codeActions = await vscode.commands.executeCommand<vscode.CodeAction[]>(
+          "vscode.executeCodeActionProvider",
+          document.uri,
+          new vscode.Range(0, 0, 4, 0),
+        );
+
+        const fixAll = codeActions?.find((a) => a.kind?.value === "source.fixAll.docassemble-lsp");
+        assert.ok(fixAll, "Expected fix-all code action");
+        assert.equal(fixAll.title, "Fix all auto-fixable docassemble-lsp issues");
+
+        // Apply the fix-all edit and verify the document content
+        assert.ok(fixAll.edit, "Expected fix-all edit");
+        const applied = await vscode.workspace.applyEdit(fixAll.edit);
+        assert.ok(applied, "Expected edit to apply successfully");
+
+        const text = document.getText();
+        assert.ok(
+          text.includes("label: Name\n    field: user.name"),
+          "Expected Name shorthand expanded to explicit keys",
+        );
+        assert.ok(
+          text.includes("label: Age\n    field: user.age"),
+          "Expected Age shorthand expanded to explicit keys",
+        );
+      },
+    },
+    {
       name: "starts with Python extension integration",
       run: async () => {
         if (!pythonExtensionAvailable()) {

@@ -28,6 +28,12 @@
         "test:real-lsp-extension": "npm run bundle-server && npm run compile && DOCASSEMBLE_LSP_ENABLE_REAL_TEST=1 node ./dist/test/runTest.js"
     },
     "contributes": {
+        "codeActions": [
+            {
+                "kind": "source.fixAll.docassemble-lsp",
+                "description": "Fix all auto-fixable docassemble-lsp issues"
+            }
+        ],
         "commands": [
             {
                 "command": "docassemble-lsp.restart",
