@@ -78,6 +78,20 @@ FIELDS_ITEM_FILE_BOOLEAN_KEYS = ("persistent", "private")
 # Datatypes that accept file-like upload fields
 FILE_LIKE_DATATYPES = frozenset({"file", "files", "camera", "user", "environment", "camcorder", "microphone"})
 
+# Datatype values that are really input-type concerns (remapped by the parser at parse time)
+INPUT_TYPE_DATATYPES = frozenset(
+    {
+        "area",
+        "hidden",
+        "ajax",
+        "radio",
+        "dropdown",
+        "pulldown",
+        "combobox",
+        "datalist",
+    }
+)
+
 # Datatypes that shadow choices/code with a built-in boolean widget
 # (choices/code are silently ignored at runtime by docassemble.base.parse)
 BOOLEAN_DATATYPES = frozenset(
@@ -223,6 +237,7 @@ __all__ = [
     "FIELDS_ITEM_SPECIAL_PYTHON_EXPR_KEYS",
     "FIELDS_ITEM_SPECIAL_STRING_KEYS",
     "FILE_LIKE_DATATYPES",
+    "INPUT_TYPE_DATATYPES",
     "BOOLEAN_DATATYPES",
     "MULTIPLE_CHOICE_DATATYPES",
     "MULTIPLE_CHOICE_INPUT_TYPES",

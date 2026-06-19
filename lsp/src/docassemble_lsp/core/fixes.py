@@ -9,14 +9,17 @@ from typing import Callable
 from docassemble_lsp.core.completion_registry import format_property_insert_text
 from docassemble_lsp.core.completion_rules import get_property_rule
 from docassemble_lsp.core.diagnostics import Diagnostic, analyze_text
+from docassemble_lsp.core.field_keys import INPUT_TYPE_DATATYPES
 from docassemble_lsp.core.schema import load_schema
 from docassemble_lsp.core.validation_config import RuntimeOptions
 from docassemble_lsp.core.yaml_shared import _BLOCK_SCALAR_MARKERS
 
 _YAML_KEY_RE = re.compile(r"^(\s*)(?:-\s*)?([^:#][^:]*?)\s*:")
 _FIELD_LABEL_SHORTHAND_RE = re.compile(r"^(\s*)-\s*([^:]+?)\s*:\s*(.*?)\s*(#.*)?$")
-_RADIO_DATATYPE_RE = re.compile(r"^(\s*)datatype(\s*:\s*)radio(\s*(?:#.*)?)$", re.IGNORECASE)
-_AREA_DATATYPE_RE = re.compile(r"^(\s*)datatype(\s*:\s*)area(\s*(?:#.*)?)$", re.IGNORECASE)
+_INPUT_TYPE_DATATYPE_RE = re.compile(
+    r"^(\s*)datatype(\s*:\s*)(" + "|".join(sorted(INPUT_TYPE_DATATYPES)) + r")(\s*(?:#.*)?)$",
+    re.IGNORECASE,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -138,9 +141,7 @@ def _unknown_key_fixes(source: str, diagnostic: Diagnostic, preferred_line: int 
     ]
 
 
-def _radio_datatype_with_choices_fixes(
-    source: str, diagnostic: Diagnostic, preferred_line: int | None
-) -> list[ResolvedFix]:
+def _input_type_datatype_fixes(source: str, diagnostic: Diagnostic, preferred_line: int | None) -> list[ResolvedFix]:
     del preferred_line
     if diagnostic.code != "C103":
         return []
@@ -148,47 +149,16 @@ def _radio_datatype_with_choices_fixes(
     lines = _document_lines(source)
     line_index = min(max(diagnostic.line - 1, 0), len(lines) - 1)
     text = lines[line_index]
-    match = _RADIO_DATATYPE_RE.match(text)
+    match = _INPUT_TYPE_DATATYPE_RE.match(text)
     if match is None:
         return []
 
-    indent, separator, suffix = match.groups()
-    replacement = f"{indent}input type{separator}radio{suffix or ''}"
+    indent, separator, value, suffix = match.groups()
+    replacement = f"{indent}input type{separator}{value}{suffix or ''}"
     return [
         ResolvedFix(
             code="C103",
-            title="Use input type: radio",
-            edit=SourceEdit(
-                start_line=line_index,
-                start_character=0,
-                end_line=line_index,
-                end_character=len(text),
-                new_text=replacement,
-            ),
-            supports_fix_all=True,
-            supports_cli_fix=True,
-        )
-    ]
-
-
-def _area_datatype_fixes(source: str, diagnostic: Diagnostic, preferred_line: int | None) -> list[ResolvedFix]:
-    del preferred_line
-    if diagnostic.code != "C105":
-        return []
-
-    lines = _document_lines(source)
-    line_index = min(max(diagnostic.line - 1, 0), len(lines) - 1)
-    text = lines[line_index]
-    match = _AREA_DATATYPE_RE.match(text)
-    if match is None:
-        return []
-
-    indent, separator, suffix = match.groups()
-    replacement = f"{indent}input type{separator}area{suffix or ''}"
-    return [
-        ResolvedFix(
-            code="C105",
-            title="Use input type: area",
+            title=f"Use input type: {value}",
             edit=SourceEdit(
                 start_line=line_index,
                 start_character=0,
@@ -574,8 +544,7 @@ def _cross_doc_missing_file_fixes(source: str, diagnostic: Diagnostic, preferred
 
 _FIX_PROVIDERS: dict[str, FixProvider] = {
     "C102": _field_label_shorthand_fixes,
-    "C103": _radio_datatype_with_choices_fixes,
-    "C105": _area_datatype_fixes,
+    "C103": _input_type_datatype_fixes,
     "E301": _unknown_key_fixes,
     "E414": _field_label_without_target_fixes,
     "E415": _field_target_without_label_fixes,

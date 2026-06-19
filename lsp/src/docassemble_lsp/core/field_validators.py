@@ -19,6 +19,7 @@ from docassemble_lsp.core.field_keys import (
     BOOLEAN_DATATYPES,
     DISABLE_OTHERS_BLOCKED_DTYPES,
     FILE_LIKE_DATATYPES,
+    INPUT_TYPE_DATATYPES,
     MULTIPLE_CHOICE_DATATYPES,
     MULTIPLE_CHOICE_INPUT_TYPES,
     UNCHECK_CHECK_COMPATIBLE_DTYPES,
@@ -122,17 +123,6 @@ class FieldDatatypeValidator:
                 )
             )
 
-        if (
-            datatype_normalized == "radio"
-            and input_type_normalized != "radio"
-            and ("choices" in field_item or "code" in field_item)
-        ):
-            self.errors.append(
-                _validator_error(
-                    MessageCode.RADIO_DATATYPE_WITH_CHOICES_PREFER_INPUT_TYPE, _lc_key_line(field_item, "datatype")
-                )
-            )
-
         if datatype_normalized == "range" and not ("min" in field_item and "max" in field_item):
             self.errors.append(
                 _validator_error(MessageCode.RANGE_MISSING_MIN_MAX, _lc_key_line(field_item, "datatype"))
@@ -161,11 +151,12 @@ class FieldDatatypeValidator:
                         )
                     )
 
-        if datatype_normalized == "area" and input_type_normalized != "area":
+        if datatype_normalized in INPUT_TYPE_DATATYPES and input_type_normalized != datatype_normalized:
             self.errors.append(
                 _validator_error(
-                    MessageCode.DATATYPE_AREA_PREFER_INPUT_TYPE,
+                    MessageCode.DATATYPE_PREFER_INPUT_TYPE,
                     _lc_key_line(field_item, "datatype"),
+                    datatype=datatype_normalized,
                 )
             )
 

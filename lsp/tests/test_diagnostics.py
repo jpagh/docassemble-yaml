@@ -350,18 +350,6 @@ def test_yesnomaybe_code_errors_that_boolean_overrides_code() -> None:
     assert e534.severity == "error"
 
 
-def test_radio_datatype_with_choices_prefers_input_type_convention() -> None:
-    diagnostics = analyze_text(
-        'question: Hi\nfields:\n  - label: May we text you?\n    field: texting_allowed\n    datatype: radio\n    choices:\n      - "A"\n      - "B"\n    required: False\n',
-        path="sample.yml",
-        runtime_options=RuntimeOptions(enabled_conventions=frozenset({"C103"})),
-    )
-
-    c103 = next(diagnostic for diagnostic in diagnostics if diagnostic.code == "C103")
-    assert c103.line == 5
-    assert c103.severity == "convention"
-
-
 def test_analyze_text_can_ignore_specific_codes() -> None:
     diagnostics = analyze_text(
         "---\nfoo: bar\n",
@@ -1665,26 +1653,60 @@ def test_rows_with_area_datatype_is_valid() -> None:
     assert "E512" not in codes
 
 
-def test_area_datatype_reports_convention() -> None:
+def test_input_type_datatype_area_reports_convention() -> None:
     diagnostics = analyze_text(
         "question: Essay\nfields:\n  - label: Bio\n    field: user_bio\n    datatype: area\n    rows: 10\n",
         path="sample.yml",
-        runtime_options=RuntimeOptions(enabled_conventions=frozenset({"C105"})),
+        runtime_options=RuntimeOptions(enabled_conventions=frozenset({"C103"})),
     )
 
-    c105 = next(diagnostic for diagnostic in diagnostics if diagnostic.code == "C105")
-    assert c105.line == 5
-    assert c105.severity == "convention"
+    c103 = next(diagnostic for diagnostic in diagnostics if diagnostic.code == "C103")
+    assert c103.line == 5
+    assert c103.severity == "convention"
 
 
 def test_area_datatype_convention_suppressed_with_input_type_area() -> None:
     diagnostics = analyze_text(
         "question: Essay\nfields:\n  - label: Bio\n    field: user_bio\n    datatype: area\n    input type: area\n    rows: 10\n",
         path="sample.yml",
-        runtime_options=RuntimeOptions(enabled_conventions=frozenset({"C105"})),
+        runtime_options=RuntimeOptions(enabled_conventions=frozenset({"C103"})),
     )
     codes = {d.code for d in diagnostics}
-    assert "C105" not in codes
+    assert "C103" not in codes
+
+
+def test_input_type_datatype_hidden_reports_convention() -> None:
+    diagnostics = analyze_text(
+        "question: Hi\nfields:\n  - label: Ex\n    field: x\n    datatype: hidden\n",
+        path="sample.yml",
+        runtime_options=RuntimeOptions(enabled_conventions=frozenset({"C103"})),
+    )
+
+    c103 = next(d for d in diagnostics if d.code == "C103")
+    assert c103.line == 5
+    assert c103.severity == "convention"
+
+
+def test_input_type_datatype_radio_with_choices_reports_convention() -> None:
+    diagnostics = analyze_text(
+        'question: Hi\nfields:\n  - label: May we text you?\n    field: texting_allowed\n    datatype: radio\n    choices:\n      - "A"\n      - "B"\n',
+        path="sample.yml",
+        runtime_options=RuntimeOptions(enabled_conventions=frozenset({"C103"})),
+    )
+
+    c103 = next(d for d in diagnostics if d.code == "C103")
+    assert c103.line == 5
+    assert c103.severity == "convention"
+
+
+def test_input_type_datatype_hidden_suppressed_with_input_type_hidden() -> None:
+    diagnostics = analyze_text(
+        "question: Hi\nfields:\n  - label: Ex\n    field: x\n    datatype: hidden\n    input type: hidden\n",
+        path="sample.yml",
+        runtime_options=RuntimeOptions(enabled_conventions=frozenset({"C103"})),
+    )
+    codes = {d.code for d in diagnostics}
+    assert "C103" not in codes
 
 
 # -----------------------------------------------------------------------

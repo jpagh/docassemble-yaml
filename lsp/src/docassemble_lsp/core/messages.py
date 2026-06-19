@@ -219,9 +219,9 @@ class MessageCode(str, Enum):
 
     VALIDATION_CODE_MISSING_VALIDATION_ERROR = "C101"
     FIELDS_LABEL_SHORTHAND_DISALLOWED = "C102"
-    RADIO_DATATYPE_WITH_CHOICES_PREFER_INPUT_TYPE = "C103"
+    DATATYPE_PREFER_INPUT_TYPE = "C103"
     FIELD_TARGET_UNDERSCORE = "C104"
-    DATATYPE_AREA_PREFER_INPUT_TYPE = "C105"
+    # C105 — available for future conventions
     RESERVED_DA_NAME = "E931"
     DEF_MAKO_REQUIRED = "E934"
 
@@ -462,11 +462,6 @@ MESSAGE_DEFINITIONS: dict[str, MessageDefinition] = {
         code=MessageCode.FIELDS_LABEL_SHORTHAND_DISALLOWED,
         summary="fields label shorthand disallowed",
         template="Use explicit 'label' and 'field' keys in 'fields' instead of '{label_key}: {field_name}'.",
-    ),
-    MessageCode.RADIO_DATATYPE_WITH_CHOICES_PREFER_INPUT_TYPE: MessageDefinition(
-        code=MessageCode.RADIO_DATATYPE_WITH_CHOICES_PREFER_INPUT_TYPE,
-        summary="prefer input type radio over datatype radio with choices",
-        template="Use 'input type: radio' instead of 'datatype: radio' when choices or code provide radio options.",
     ),
     MessageCode.FIELD_EXCLUDE_INVALID_FORMAT: MessageDefinition(
         code=MessageCode.FIELD_EXCLUDE_INVALID_FORMAT,
@@ -949,11 +944,12 @@ MESSAGE_DEFINITIONS: dict[str, MessageDefinition] = {
         summary="Prefer validation_error() over raise/assert in validation code",
         template="Prefer validation_error() over raise/assert in validation code",
     ),
-    MessageCode.DATATYPE_AREA_PREFER_INPUT_TYPE: MessageDefinition(
-        code=MessageCode.DATATYPE_AREA_PREFER_INPUT_TYPE,
-        summary="prefer input type area over datatype area",
-        template="Use 'input type: area' instead of 'datatype: area'. 'datatype: area' is deprecated.",
+    MessageCode.DATATYPE_PREFER_INPUT_TYPE: MessageDefinition(
+        code=MessageCode.DATATYPE_PREFER_INPUT_TYPE,
+        summary="prefer input type over datatype for input-type concerns",
+        template="Use 'input type: {datatype}' instead of 'datatype: {datatype}'. 'datatype: {datatype}' is deprecated for input-type concerns.",
     ),
+    # C105 — reserved/available
     MessageCode.FIELD_TARGET_UNDERSCORE: MessageDefinition(
         code=MessageCode.FIELD_TARGET_UNDERSCORE,
         summary="Field target starts with underscore",
