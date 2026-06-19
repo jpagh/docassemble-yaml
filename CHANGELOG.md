@@ -6,11 +6,18 @@
 
 - [LSP] Module completions in `modules:` blocks now emit a `TextEdit` with exact replacement range, bypassing VS Code's word-boundary heuristics for dotted names. Workspace modules always receive a dotted prefix (`.mymodule`) and explicit `textEdit` range. Vendored docassemble modules (`docassemble.base.*`) are excluded from `modules:` completions.
 - [VSCODE] Integration tests for module completions, include completions, and on-type formatting, gated behind `DOCASSEMBLE_LSP_ENABLE_REAL_TEST=1`.
+- [LSP] **C103** generalized convention: `datatype: area`, `datatype: hidden`, `datatype: radio`, `datatype: dropdown`, `datatype: pulldown`, `datatype: combobox`, `datatype: datalist`, and `datatype: ajax` now all suggest using `input type: <value>` instead (these are input-type concerns that the parser remaps at parse time). Previously only `area` was covered (C105).
 
 ### Changed
 
 - [VSCODE] Output channel changed from `OutputChannel` to `LogOutputChannel` for structured logging.
 - [VSCODE] `vscode-languageclient` upgraded from `^9.0.1` to `^10.0.0`.
+- **C103** now covers all input-type-as-datatype values; **C105** is reserved/available for future use. Users with `C105` in their config should migrate to `C103`.
+
+### Fixed
+
+- [LSP] Fix All code action now works correctly (was broken in certain client states).
+- [VSCODE] Fix All code action now appears in VSCode.
 
 ## [26.6.2] - 2026-06-16
 

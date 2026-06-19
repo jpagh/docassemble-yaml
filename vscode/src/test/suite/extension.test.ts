@@ -781,6 +781,71 @@ export async function runTests(): Promise<void> {
       },
     },
     {
+      name: "provides fix-all code action for C103 input-type datatype convention via bundled server",
+      run: async () => {
+        if (process.env.DOCASSEMBLE_LSP_ENABLE_REAL_TEST !== "1" || !python3Available()) {
+          throw new SkipTest();
+        }
+
+        const workspaceDir = process.env.DOCASSEMBLE_TEST_WORKSPACE;
+        if (!workspaceDir) {
+          throw new Error("DOCASSEMBLE_TEST_WORKSPACE not set");
+        }
+
+        // Write pyproject.toml enabling C103 conventions
+        await fs.promises.writeFile(
+          path.join(workspaceDir, "pyproject.toml"),
+          '[tool.docassemble-lsp]\nconventions = ["C103"]\n',
+          "utf-8",
+        );
+
+        // Write test YAML with datatype: hidden (should suggest input type: hidden)
+        const yamlUri = await writeTestFile(
+          workspaceDir,
+          "fix_all_input_type_datatype.yml",
+          "question: Hi\nfields:\n  - label: Ex\n    field: x\n    datatype: hidden\n",
+        );
+
+        await resetConfiguration();
+        await updateConfiguration("docassemble-lsp.enabled", true);
+        await updateConfiguration("docassemble-lsp.importStrategy", "useBundled");
+        await updateConfiguration("docassemble-lsp.interpreter", []);
+
+        const api = await getApi();
+        await api.restart();
+        await waitForState(api, "running");
+
+        const document = await vscode.workspace.openTextDocument(yamlUri);
+        await vscode.window.showTextDocument(document);
+
+        // Wait for C103 diagnostics
+        await waitFor(() =>
+          vscode.languages.getDiagnostics(document.uri).some((d) => String(d.code) === "C103"),
+        );
+
+        const codeActions = await vscode.commands.executeCommand<vscode.CodeAction[]>(
+          "vscode.executeCodeActionProvider",
+          document.uri,
+          new vscode.Range(0, 0, 4, 0),
+        );
+
+        const fixAll = codeActions?.find((a) => a.kind?.value === "source.fixAll.docassemble-lsp");
+        assert.ok(fixAll, "Expected fix-all code action");
+        assert.equal(fixAll.title, "Fix all auto-fixable docassemble-lsp issues");
+
+        // Apply the fix-all edit and verify the document content
+        assert.ok(fixAll.edit, "Expected fix-all edit");
+        const applied = await vscode.workspace.applyEdit(fixAll.edit);
+        assert.ok(applied, "Expected edit to apply successfully");
+
+        const text = document.getText();
+        assert.ok(
+          text.includes("input type: hidden"),
+          "Expected datatype: hidden replaced with input type: hidden",
+        );
+      },
+    },
+    {
       name: "starts with Python extension integration",
       run: async () => {
         if (!pythonExtensionAvailable()) {
