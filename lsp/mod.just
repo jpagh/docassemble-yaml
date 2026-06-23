@@ -7,13 +7,13 @@ lint:
 test:
     uv run pytest -q -n auto
 
-test-versions:
-    rm -rf .venv; uv run --python 3.10 --only-group test pytest -n auto
-    rm -rf .venv; uv run --python 3.11 --only-group test pytest -n auto
-    rm -rf .venv; uv run --python 3.12 --only-group test pytest -n auto
-    rm -rf .venv; uv run --python 3.13 --only-group test pytest -n auto
-    rm -rf .venv; uv run --python 3.14 --only-group test pytest -n auto
-    rm -rf .venv; uv sync
+test-all-pythons:
+    #!/usr/bin/env bash
+    for version in 3.10 3.11 3.12 3.13 3.14; do
+        echo "=== Python $version ==="
+        uv run --python $version --only-group test pytest -n auto || exit 1
+    done
+    uv sync
 
 type:
     uv run mypy .

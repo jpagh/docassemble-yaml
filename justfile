@@ -10,10 +10,10 @@ check:
     prek run -a
 
 # Run all unit tests (LSP + VS Code mock-server)
-test: lsp::test-versions vscode::test
+test: lsp::test-all-pythons vscode::test
 
 # Full pre-release gate (lint + type + LSP tests + extension integration)
-gate: lsp::lint lsp::type lsp::test-versions test-real-smoke test-real-ext
+gate: lsp::lint lsp::type lsp::test-all-pythons test-real-smoke test-real-ext
 
 # Bump unified version (default: patch). Pass 'minor' or 'major' for larger bumps.
 bump *part="patch":
