@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [26.6.3] - 2026-06-23
+
 ### Added
 
 - [VSCODE] Docassemble YAML files now default `editor.suggest.matchOnWordStartOnly` to `false`, enabling VS Code's substring matching for completion filtering. This makes partial-word searches like `phone` find `microphone`.
