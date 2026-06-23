@@ -435,18 +435,6 @@ def test_enum_property_completion_triggers_suggest_after_insert() -> None:
     assert question.command is None
 
 
-def test_completion_list_adds_filter_text_for_compound_property_names() -> None:
-    completions = build_completion_list("question: Hi\nfields:\n  - \n", 2, 4)
-
-    datatype = next(item for item in completions.items if item.label == "datatype")
-    input_type = next(item for item in completions.items if item.label == "input type")
-
-    assert datatype.filter_text is not None
-    assert "type" in datatype.filter_text.split()
-    assert input_type.filter_text is not None
-    assert "inputtype" in input_type.filter_text.split()
-
-
 def test_completion_list_matches_type_prefix_to_datatype_and_input_type() -> None:
     completions = build_completion_list("question: Hi\nfields:\n  - type", 2, len("  - type"))
 

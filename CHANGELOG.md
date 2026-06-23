@@ -15,6 +15,7 @@
 - [VSCODE] Output channel changed from `OutputChannel` to `LogOutputChannel` for structured logging.
 - [VSCODE] `vscode-languageclient` upgraded from `^9.0.1` to `^10.0.0`.
 - **C103** now covers all input-type-as-datatype values; **C105** is reserved/available for future use. Users with `C105` in their config should migrate to `C103`.
+- [LSP] Removed `filterText` from completion items. With `editor.suggest.matchOnWordStartOnly` now `false`, VS Code's fuzzy matching on the `label` alone suffices for compound property names and module completions.
 
 ### Fixed
 

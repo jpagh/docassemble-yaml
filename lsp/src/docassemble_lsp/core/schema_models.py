@@ -11,7 +11,6 @@ class CompletionCandidate:
     # documentation/hover header instead.
     detail: str | None = None
     documentation: str | None = None
-    filter_text: str | None = None
     is_value: bool = False
     is_snippet: bool = False
     uses_snippet_text: bool = False

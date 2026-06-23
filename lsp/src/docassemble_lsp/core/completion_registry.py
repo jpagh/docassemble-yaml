@@ -134,28 +134,6 @@ def format_property_insert_text(prop_name: str, rule: PropertyRule, *, indent: s
     return "\n".join(f"{indent}{line}" for line in text.split("\n"))
 
 
-def property_filter_text(prop_name: str) -> str | None:
-    parts = prop_name.split()
-    variants = [prop_name]
-
-    if len(parts) > 1:
-        variants.append("".join(parts))
-        variants.append(parts[-1])
-    elif prop_name.endswith("type") and prop_name != "type":
-        variants.append("type")
-
-    seen: set[str] = set()
-    ordered: list[str] = []
-    for variant in variants:
-        if variant in seen:
-            continue
-        seen.add(variant)
-        ordered.append(variant)
-    if len(ordered) <= 1:
-        return None
-    return " ".join(ordered)
-
-
 def block_scalar_variant_candidate(prop_name: str, rule: PropertyRule) -> CompletionCandidate | None:
     if prop_name not in _BLOCK_SCALAR_FRIENDLY_KEYS:
         return None
@@ -372,7 +350,6 @@ def property_completion_provider(context: CompletionContext) -> list[CompletionC
             label=name,
             insert_text=property_insert_text(name, prop),
             documentation=property_documentation(name, prop),
-            filter_text=property_filter_text(name),
             uses_snippet_text=True,
             trigger_suggest=bool(prop.enum_values),
         )
@@ -532,7 +509,6 @@ def _complete_module_names(context: CompletionContext) -> list[CompletionCandida
                 CompletionCandidate(
                     label=dotted,
                     insert_text=dotted,
-                    filter_text=name,
                     is_value=True,
                     text_edit_range=text_edit_range,
                 )

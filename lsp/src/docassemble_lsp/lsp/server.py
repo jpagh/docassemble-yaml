@@ -246,7 +246,6 @@ def build_completion_list(
                 label=candidate.label,
                 kind=kind,
                 detail=candidate.detail,
-                filter_text=candidate.filter_text,
                 documentation=(
                     MarkupContent(kind=MarkupKind.Markdown, value=candidate.documentation)
                     if candidate.documentation
