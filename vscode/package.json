@@ -114,7 +114,8 @@
                 "editor.defaultFormatter": "jackadamson.vscode-docassemble",
                 "editor.formatOnType": true,
                 "editor.insertSpaces": true,
-                "editor.tabSize": 2
+                "editor.tabSize": 2,
+                "editor.suggest.matchOnWordStartOnly": false
             }
         },
         "languages": [

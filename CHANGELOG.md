@@ -4,6 +4,7 @@
 
 ### Added
 
+- [VSCODE] Docassemble YAML files now default `editor.suggest.matchOnWordStartOnly` to `false`, enabling VS Code's substring matching for completion filtering. This makes partial-word searches like `phone` find `microphone`.
 - [LSP] Module completions in `modules:` blocks now emit a `TextEdit` with exact replacement range, bypassing VS Code's word-boundary heuristics for dotted names. Workspace modules always receive a dotted prefix (`.mymodule`) and explicit `textEdit` range. Vendored docassemble modules (`docassemble.base.*`) are excluded from `modules:` completions.
 - [VSCODE] Integration tests for module completions, include completions, and on-type formatting, gated behind `DOCASSEMBLE_LSP_ENABLE_REAL_TEST=1`.
 - [LSP] **C103** generalized convention: `datatype: area`, `datatype: hidden`, `datatype: radio`, `datatype: dropdown`, `datatype: pulldown`, `datatype: combobox`, `datatype: datalist`, and `datatype: ajax` now all suggest using `input type: <value>` instead (these are input-type concerns that the parser remaps at parse time). Previously only `area` was covered (C105).
