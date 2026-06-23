@@ -20,6 +20,8 @@ bump *part="patch":
     bump-my-version bump {{part}}
     git push --atomic origin HEAD --tags
 
+publish: bump vscode::publish
+
 # Run real-LSP CLI+LSP smoke test (no VS Code needed)
 test-real-smoke:
     cd lsp && uv run node ../vscode/scripts/real-lsp-smoke.mjs
