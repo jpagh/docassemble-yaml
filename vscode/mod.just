@@ -4,10 +4,14 @@ build:
 compile:
     npm run compile
 
+package:
+    npm run build
+    npx @vscode/vsce package
+
 publish:
     npm run build
-    vsce package
-    vsce publish
+    npx @vscode/vsce package
+    npx @vscode/vsce publish
 
 test: build
     npm test
