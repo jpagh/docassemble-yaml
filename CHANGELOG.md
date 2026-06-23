@@ -6,18 +6,18 @@
 
 ### Added
 
-- [VSCODE] Docassemble YAML files now default `editor.suggest.matchOnWordStartOnly` to `false`, enabling VS Code's substring matching for completion filtering. This makes partial-word searches like `phone` find `microphone`.
 - [LSP] Module completions in `modules:` blocks now emit a `TextEdit` with exact replacement range, bypassing VS Code's word-boundary heuristics for dotted names. Workspace modules always receive a dotted prefix (`.mymodule`) and explicit `textEdit` range. Vendored docassemble modules (`docassemble.base.*`) are excluded from `modules:` completions.
-- [VSCODE] Integration tests for module completions, include completions, and on-type formatting, gated behind `DOCASSEMBLE_LSP_ENABLE_REAL_TEST=1`.
 - [LSP] **C103** generalized convention: `datatype: area`, `datatype: hidden`, `datatype: radio`, `datatype: dropdown`, `datatype: pulldown`, `datatype: combobox`, `datatype: datalist`, and `datatype: ajax` now all suggest using `input type: <value>` instead (these are input-type concerns that the parser remaps at parse time). Previously only `area` was covered (C105).
 - [LSP] Completions for `.using()` keyword arguments in `objects:` block values: `auto_gather=`, `there_are_any=`, `there_is_another=`, `complete_attribute=`, `object_type=`, and others now offered when typing inside a `.using()` call. When `object_type=` is detected, DAObject subclass names are suggested as values. Typing a class name followed by `.` suggests `.using(`.
+- [VSCODE] Docassemble YAML files now default `editor.suggest.matchOnWordStartOnly` to `false`, enabling VS Code's substring matching for completion filtering. This makes partial-word searches like `phone` find `microphone`.
+- [VSCODE] Integration tests for module completions, include completions, and on-type formatting, gated behind `DOCASSEMBLE_LSP_ENABLE_REAL_TEST=1`.
 
 ### Changed
 
-- [VSCODE] Output channel changed from `OutputChannel` to `LogOutputChannel` for structured logging.
-- [VSCODE] `vscode-languageclient` upgraded from `^9.0.1` to `^10.0.0`.
 - **C103** now covers all input-type-as-datatype values; **C105** is reserved/available for future use. Users with `C105` in their config should migrate to `C103`.
 - [LSP] Removed `filterText` from completion items. With `editor.suggest.matchOnWordStartOnly` now `false`, VS Code's fuzzy matching on the `label` alone suffices for compound property names and module completions.
+- [VSCODE] Output channel changed from `OutputChannel` to `LogOutputChannel` for structured logging.
+- [VSCODE] `vscode-languageclient` upgraded from `^9.0.1` to `^10.0.0`.
 
 ### Fixed
 
