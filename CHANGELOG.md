@@ -7,6 +7,7 @@
 - [LSP] Module completions in `modules:` blocks now emit a `TextEdit` with exact replacement range, bypassing VS Code's word-boundary heuristics for dotted names. Workspace modules always receive a dotted prefix (`.mymodule`) and explicit `textEdit` range. Vendored docassemble modules (`docassemble.base.*`) are excluded from `modules:` completions.
 - [VSCODE] Integration tests for module completions, include completions, and on-type formatting, gated behind `DOCASSEMBLE_LSP_ENABLE_REAL_TEST=1`.
 - [LSP] **C103** generalized convention: `datatype: area`, `datatype: hidden`, `datatype: radio`, `datatype: dropdown`, `datatype: pulldown`, `datatype: combobox`, `datatype: datalist`, and `datatype: ajax` now all suggest using `input type: <value>` instead (these are input-type concerns that the parser remaps at parse time). Previously only `area` was covered (C105).
+- [LSP] Completions for `.using()` keyword arguments in `objects:` block values: `auto_gather=`, `there_are_any=`, `there_is_another=`, `complete_attribute=`, `object_type=`, and others now offered when typing inside a `.using()` call. When `object_type=` is detected, DAObject subclass names are suggested as values. Typing a class name followed by `.` suggests `.using(`.
 
 ### Changed
 

@@ -255,6 +255,8 @@ def python_completion_provider(context: CompletionContext) -> list[CompletionCan
                 target.label,
             ),
             display_kind="keyword" if target.detail == "keyword" else "class" if target.detail == "exception" else None,
+            documentation=target.documentation,
+            text_edit_range=target.text_edit_range,
         )
         for target in python_targets
     ]

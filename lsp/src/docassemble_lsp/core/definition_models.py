@@ -35,6 +35,8 @@ class DocumentLinkTarget:
 class PythonCompletionTarget:
     label: str
     detail: str
+    documentation: str | None = None
+    text_edit_range: tuple[int, int] | None = None
 
 
 @dataclass(frozen=True, slots=True)

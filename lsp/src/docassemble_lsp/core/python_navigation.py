@@ -110,6 +110,17 @@ _PYTHON_CHILD_VALUE_PARENTS = {
 }
 _PYTHON_COMPLETION_PREFIX_RE = re.compile(r"([A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*\.?)$")
 
+_USING_KWARGS: dict[str, str] = {
+    "object_type": "DAObject subclass for new items",
+    "auto_gather": "Whether to gather items automatically (bool)",
+    "complete_attribute": "Required attribute name for item completion (str)",
+    "there_are_any": "Whether any items exist (bool)",
+    "there_is_another": "Whether there is another item (bool)",
+    "gathered": "Whether all items have been gathered (bool)",
+    "ask_number": "Whether to ask for number of items (bool)",
+    "minimum_number": "Minimum number of items (int)",
+}
+
 _PYTHON_KEYWORDS = frozenset(
     {
         "False",
@@ -507,7 +518,10 @@ def _list_item_python_completion_prefix_at_position(
 
 def _python_completion_prefix_at_position(source: str, line: int, character: int) -> tuple[tuple[str, ...], str] | None:
     region = enclosing_block_scalar_region(source, line)
-    if region is not None and region.key_name in _PYTHON_BLOCK_KEYS:
+    if region is not None and (
+        region.key_name in _PYTHON_BLOCK_KEYS
+        or _is_objects_value_path(_key_path(source, region.key_line, region.key_name))
+    ):
         local_line = line - region.content_start_line + 1
         local_character = max(character - region.content_indent, 0)
         prefix = _python_completion_prefix_in_text(region.text, local_line, local_character)
@@ -593,7 +607,10 @@ def _keywords_for_context(source: str, line: int, character: int) -> frozenset |
         return _MAKO_LINE_KEYWORDS
 
     region = enclosing_block_scalar_region(source, line)
-    if region is not None and region.key_name in _PYTHON_BLOCK_KEYS:
+    if region is not None and (
+        region.key_name in _PYTHON_BLOCK_KEYS
+        or _is_objects_value_path(_key_path(source, region.key_line, region.key_name))
+    ):
         return _PYTHON_KEYWORDS
 
     scalar_prefix = _scalar_python_completion_prefix_at_position(source, line, character)
@@ -617,16 +634,166 @@ def _is_objects_value_completion_position(source: str, line: int, character: int
     lines = _document_lines(source)
     text = lines[min(max(line, 0), len(lines) - 1)]
     match = _KEY_VALUE_RE.match(text)
-    if match is None:
+    if match is not None:
+        raw_value = match.group(3)
+        start_character, _end_character = _value_range(raw_value, match.start(3), match.end(3))
+        if character >= start_character:
+            key_name = match.group(2).strip()
+            return _is_objects_value_path(_key_path(source, line, key_name))
+    region = enclosing_block_scalar_region(source, line)
+    if region is not None and _is_objects_value_path(_key_path(source, region.key_line, region.key_name)):
+        local_line = line - region.content_start_line + 1
+        if local_line == 1:
+            if ".using(" in region.text.splitlines()[0]:
+                return False
+            return True
+        local_lines = region.text.splitlines()
+        if local_line <= len(local_lines):
+            local_text = local_lines[local_line - 1]
+            local_char = max(character - region.content_indent, 0)
+            obj_type_idx = local_text.find("object_type")
+            if obj_type_idx != -1:
+                eq_idx = local_text.find("=", obj_type_idx)
+                if eq_idx != -1 and local_char > eq_idx:
+                    return True
         return False
+    return False
 
-    raw_value = match.group(3)
-    start_character, _end_character = _value_range(raw_value, match.start(3), match.end(3))
-    if character < start_character:
-        return False
 
-    key_name = match.group(2).strip()
-    return _is_objects_value_path(_key_path(source, line, key_name))
+def _using_kwarg_completions(partial: str) -> list[PythonCompletionTarget]:
+    matched = [
+        PythonCompletionTarget(label=f"{name}=", detail="kwarg", documentation=_USING_KWARGS[name])
+        for name in _USING_KWARGS
+        if not partial or partial.lower() in name.lower()
+    ]
+    matched.sort(
+        key=lambda c: (
+            0 if partial and c.label.lower().startswith(partial.lower()) else 1,
+            c.label,
+        )
+    )
+    return matched
+
+
+def _da_object_subclass_completions(
+    workspace_index: WorkspaceIndex,
+    source: str,
+    current_path: Path | None,
+    partial: str,
+) -> list[PythonCompletionTarget] | None:
+    class_names: set[str] = set(workspace_index.all_da_object_subclass_names)
+    if workspace_index.package_root is None:
+        vendored_paths: list[Path] = []
+        for module_name in VENDORED_MODULE_NAMES:
+            mod_path = resolve_python_module_path(module_name, current_path, workspace_index)
+            if mod_path is not None:
+                vendored_paths.append(mod_path)
+        if vendored_paths:
+            class_names = set(compute_da_object_subclasses(vendored_paths))
+    for _line, entry in _iter_top_level_list_items(source, "imports"):
+        for binding in _parse_import_binding(entry, current_path, workspace_index):
+            if binding.alias is not None:
+                class_names.add(binding.alias)
+    if class_names:
+        matched = [
+            PythonCompletionTarget(label=name, detail="class")
+            for name in class_names
+            if not partial or partial.lower() in name.lower()
+        ]
+        matched.sort(
+            key=lambda c: (
+                0 if partial and c.label.lower().startswith(partial.lower()) else 1,
+                c.label,
+            )
+        )
+        return matched
+    return None
+
+
+def _suggest_using_completions(
+    source: str,
+    line: int,
+    character: int,
+    workspace_index: WorkspaceIndex,
+    current_path: Path | None,
+) -> list[PythonCompletionTarget] | None:
+    region = enclosing_block_scalar_region(source, line)
+    if region is not None:
+        if not _is_objects_value_path(_key_path(source, region.key_line, region.key_name)):
+            return None
+        local_line = line - region.content_start_line + 1
+        local_char = max(character - region.content_indent, 0)
+        text = region.text
+        lines_list = text.splitlines()
+        if local_line > len(lines_list):
+            return None
+        local_text = lines_list[local_line - 1]
+        cursor_text = "\n".join(lines_list[: local_line - 1])
+        if cursor_text:
+            cursor_text += "\n"
+        cursor_text += local_text[:local_char]
+    else:
+        lines = _document_lines(source)
+        text = lines[min(max(line, 0), len(lines) - 1)]
+        match = _KEY_VALUE_RE.match(text)
+        if match is None:
+            return None
+        key_name = match.group(2).strip()
+        if not _is_objects_value_path(_key_path(source, line, key_name)):
+            return None
+        raw_value = match.group(3)
+        start_character, _end_character = _value_range(raw_value, match.start(3), match.end(3))
+        if character < start_character:
+            return None
+        cursor_text = text[match.start(3) : character]
+
+    using_idx = cursor_text.rfind(".using(")
+    if using_idx == -1:
+        return None
+
+    after_using = cursor_text[using_idx + len(".using(") :]
+
+    depth = 1
+    for ch in after_using:
+        if ch == "(":
+            depth += 1
+        elif ch == ")":
+            depth -= 1
+            if depth <= 0:
+                return None
+
+    after_stripped = after_using.rstrip()
+    if not after_stripped or after_stripped[-1] in (",", "("):
+        return _using_kwarg_completions("") or None
+
+    last_sep = max(after_stripped.rfind(","), after_stripped.rfind("("))
+    if last_sep >= 0:
+        partial_kwarg = after_stripped[last_sep + 1 :].strip()
+        if "=" not in partial_kwarg:
+            return _using_kwarg_completions(partial_kwarg) or None
+    elif "=" not in after_stripped:
+        return _using_kwarg_completions(after_stripped.strip()) or None
+
+    nested = 0
+    last_eq = -1
+    for i, ch in enumerate(after_using):
+        if ch == "(":
+            nested += 1
+        elif ch == ")":
+            nested -= 1
+        elif ch == "=" and nested == 0:
+            last_eq = i
+
+    if last_eq >= 0:
+        kwarg_text = after_using[:last_eq].rstrip()
+        kwarg_name = kwarg_text.replace(",", " ").split()[-1] if kwarg_text else ""
+        if kwarg_name == "object_type":
+            partial_value = after_using[last_eq + 1 :].strip()
+            candidates = _da_object_subclass_completions(workspace_index, source, current_path, partial_value)
+            if candidates is not None:
+                return candidates
+
+    return None
 
 
 def _python_completion_candidates_from_bindings(
@@ -699,40 +866,41 @@ class PythonNavigationService:
 
         current_path = path_from_uri_or_path(uri_or_path)
 
+        using_candidates = _suggest_using_completions(source, line, character, self.workspace_index, current_path)
+        if using_candidates is not None:
+            return using_candidates
+
+        # DAObject subclass + dot → offer .using(
+        # Check both precomputed subclass names and import aliases from the current file.
+        if _is_objects_value_completion_position(source, line, character):
+            base_chain, partial = prefix
+            if len(base_chain) == 1:
+                known_name = base_chain[0] in self.workspace_index.all_da_object_subclass_names
+                if not known_name:
+                    for _line, entry in _iter_top_level_list_items(source, "imports"):
+                        for binding in _parse_import_binding(entry, current_path, self.workspace_index):
+                            if binding.alias == base_chain[0]:
+                                known_name = True
+                                break
+                        if known_name:
+                            break
+                if known_name and (not partial or partial.lower() in ".using("):
+                    start = character - 1 - len(partial)
+                    return [
+                        PythonCompletionTarget(
+                            label=".using(",
+                            detail="method",
+                            text_edit_range=(start, character),
+                        )
+                    ]
+
         # Short-circuit objects: value completions: use precomputed DAObject
         # subclass names plus any import aliases from the current file's ``imports:``.
         if _is_objects_value_completion_position(source, line, character):
             _, partial = prefix
-            class_names = set(self.workspace_index.all_da_object_subclass_names)
-            # In base mode (no package detected), include vendored DAObject subclasses.
-            if self.workspace_index.package_root is None:
-                vendored_paths: list[Path] = []
-                for module_name in VENDORED_MODULE_NAMES:
-                    mod_path = resolve_python_module_path(module_name, current_path, self.workspace_index)
-                    if mod_path is not None:
-                        vendored_paths.append(mod_path)
-                if vendored_paths:
-                    class_names = set(compute_da_object_subclasses(vendored_paths))
-            # Also include aliases from the current file's ``imports:``.
-            for _line, entry in _iter_top_level_list_items(source, "imports"):
-                for binding in _parse_import_binding(entry, current_path, self.workspace_index):
-                    if binding.alias is not None:
-                        class_names.add(binding.alias)
-            # Fall back to bindings when no flat classes are available (base mode
-            # or out-of-package imports).
-            if class_names:
-                matched = [
-                    PythonCompletionTarget(label=name, detail="class")
-                    for name in class_names
-                    if not partial or partial.lower() in name.lower()
-                ]
-                matched.sort(
-                    key=lambda c: (
-                        0 if partial and c.label.lower().startswith(partial.lower()) else 1,
-                        c.label,
-                    )
-                )
-                return matched
+            candidates = _da_object_subclass_completions(self.workspace_index, source, current_path, partial)
+            if candidates is not None:
+                return candidates
 
         bindings = _python_namespace_bindings(
             source,

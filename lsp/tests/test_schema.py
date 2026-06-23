@@ -1824,6 +1824,247 @@ def test_objects_item_completes_da_object_subclass_names(tmp_path) -> None:
     assert "Individual" in labels or "DAObject" in labels
 
 
+def test_using_kwarg_completions_inline(tmp_path) -> None:
+    """Inline ``key: DAList.using(there_`` suggests ``there_are_any=``."""
+    source = "objects:\n  - user: DAList.using(there_\n"
+    labels = {
+        item.label
+        for item in get_completions(
+            source,
+            1,
+            len("  - user: DAList.using(there_"),
+            uri_or_path=str(tmp_path / "main.yml"),
+            workspace_paths=[str(tmp_path)],
+        )
+    }
+    assert "there_are_any=" in labels
+
+
+def test_using_kwarg_completions_block_scalar_line1_auto_gather(tmp_path) -> None:
+    """Block scalar L1: ``|`` and ``.using(au`` suggests ``auto_gather=``."""
+    source = "objects:\n  user: |\n    DAList.using(au\n"
+    labels = {
+        item.label
+        for item in get_completions(
+            source,
+            2,
+            len("    DAList.using(au"),
+            uri_or_path=str(tmp_path / "main.yml"),
+            workspace_paths=[str(tmp_path)],
+        )
+    }
+    assert "auto_gather=" in labels
+
+
+def test_using_kwarg_completions_block_scalar_line1_there_are_any(tmp_path) -> None:
+    """Block scalar L1: ``|`` and ``.using(there_`` suggests ``there_are_any=``."""
+    source = "objects:\n  user: |\n    DAList.using(there_\n"
+    labels = {
+        item.label
+        for item in get_completions(
+            source,
+            2,
+            len("    DAList.using(there_"),
+            uri_or_path=str(tmp_path / "main.yml"),
+            workspace_paths=[str(tmp_path)],
+        )
+    }
+    assert "there_are_any=" in labels
+
+
+def test_block_scalar_marker_no_completions(tmp_path) -> None:
+    """Cursor on ``|`` in objects values produces no Python completions."""
+    source = "objects:\n  user: |\n    DAList.using(au\n"
+    items = get_completions(
+        source,
+        1,
+        len("  user: |"),
+        uri_or_path=str(tmp_path / "main.yml"),
+        workspace_paths=[str(tmp_path)],
+    )
+    assert len(items) == 0
+
+
+def test_using_kwarg_completions_block_scalar_line2_partial(tmp_path) -> None:
+    """Block scalar L2+: ``.using(`` then newline and ``there_`` suggests ``there_are_any=``."""
+    source = "objects:\n  user: |\n    DAList.using(\n      there_\n"
+    labels = {
+        item.label
+        for item in get_completions(
+            source,
+            3,
+            len("      there_"),
+            uri_or_path=str(tmp_path / "main.yml"),
+            workspace_paths=[str(tmp_path)],
+        )
+    }
+    assert "there_are_any=" in labels
+
+
+def test_using_kwarg_object_type_value_block_scalar(tmp_path) -> None:
+    """Block scalar L2+ with ``object_type=Cus`` suggests DAObject subclass names."""
+    pkg_dir = tmp_path / "docassemble" / "demo"
+    questions_dir = pkg_dir / "data" / "questions"
+    questions_dir.mkdir(parents=True)
+    (pkg_dir / "__init__.py").write_text("", encoding="utf-8")
+    (tmp_path / "pyproject.toml").write_text("[project]\nname = 'demo'\n", encoding="utf-8")
+    (pkg_dir / "objects.py").write_text(
+        "from docassemble.base.util import DAObject\nclass CustomObj(DAObject):\n    pass\n",
+        encoding="utf-8",
+    )
+    source_path = questions_dir / "main.yml"
+    source = "objects:\n  user: |\n    DAList.using(\n      object_type=Cus\n"
+    labels = {
+        item.label
+        for item in get_completions(
+            source,
+            3,
+            len("      object_type=Cus"),
+            uri_or_path=str(source_path),
+            workspace_paths=[str(tmp_path)],
+        )
+    }
+    assert "CustomObj" in labels
+
+
+def test_using_kwarg_completions_inline_still_shows_class_names(tmp_path) -> None:
+    """Inline ``objects:`` value without ``.using()`` still suggests class names."""
+    source = "objects:\n  - user: Ind\n"
+    labels = {
+        item.label
+        for item in get_completions(
+            source,
+            1,
+            len("  - user: Ind"),
+            uri_or_path=str(tmp_path / "main.yml"),
+            workspace_paths=[str(tmp_path)],
+        )
+    }
+    assert "Individual" in labels
+
+
+def test_using_dot_suggested_after_class_name_inline(tmp_path) -> None:
+    """``DAList.`` in inline ``objects:`` value suggests ``.using(``."""
+    source = "objects:\n  - user: DAList.\n"
+    labels = {
+        item.label
+        for item in get_completions(
+            source,
+            1,
+            len("  - user: DAList."),
+            uri_or_path=str(tmp_path / "main.yml"),
+            workspace_paths=[str(tmp_path)],
+        )
+    }
+    assert ".using(" in labels
+
+
+def test_using_dot_suggested_after_class_name_block_scalar(tmp_path) -> None:
+    """``DAList.`` on block scalar L1 suggests ``.using(``."""
+    source = "objects:\n  user: |\n    DAList.\n"
+    labels = {
+        item.label
+        for item in get_completions(
+            source,
+            2,
+            len("    DAList."),
+            uri_or_path=str(tmp_path / "main.yml"),
+            workspace_paths=[str(tmp_path)],
+        )
+    }
+    assert ".using(" in labels
+
+
+def test_using_dot_suggested_with_partial_match(tmp_path) -> None:
+    """``DAList.u`` filters to ``.using(``."""
+    source = "objects:\n  - user: DAList.u\n"
+    labels = {
+        item.label
+        for item in get_completions(
+            source,
+            1,
+            len("  - user: DAList.u"),
+            uri_or_path=str(tmp_path / "main.yml"),
+            workspace_paths=[str(tmp_path)],
+        )
+    }
+    assert ".using(" in labels
+
+
+def test_using_kwarg_completions_shows_documentation(tmp_path) -> None:
+    """Kwarg completions include description in the documentation field."""
+    source = "objects:\n  - user: DAList.using(auto_\n"
+    items = get_completions(
+        source,
+        1,
+        len("  - user: DAList.using(auto_"),
+        uri_or_path=str(tmp_path / "main.yml"),
+        workspace_paths=[str(tmp_path)],
+    )
+    auto_gather = next((i for i in items if i.label == "auto_gather="), None)
+    assert auto_gather is not None, "Expected auto_gather= in completions"
+    assert auto_gather.documentation == "Whether to gather items automatically (bool)"
+
+
+def test_using_dot_suggested_for_import_alias(tmp_path) -> None:
+    """Import alias in ``imports:`` followed by dot suggests ``.using(``."""
+    source = "imports:\n  - from docassemble.base.util import DAObject as CustomBase\nobjects:\n  - user: CustomBase.\n"
+    labels = {
+        item.label
+        for item in get_completions(
+            source,
+            3,
+            len("  - user: CustomBase."),
+            uri_or_path=str(tmp_path / "main.yml"),
+            workspace_paths=[str(tmp_path)],
+        )
+    }
+    assert ".using(" in labels
+
+
+def test_object_type_block_scalar_line1(tmp_path) -> None:
+    """Block scalar L1 with ``DAList.using(object_type=Cus`` suggests ``CustomObj``."""
+    pkg_dir = tmp_path / "docassemble" / "demo"
+    questions_dir = pkg_dir / "data" / "questions"
+    questions_dir.mkdir(parents=True)
+    (pkg_dir / "__init__.py").write_text("", encoding="utf-8")
+    (tmp_path / "pyproject.toml").write_text("[project]\nname = 'demo'\n", encoding="utf-8")
+    (pkg_dir / "objects.py").write_text(
+        "from docassemble.base.util import DAObject\nclass CustomObj(DAObject):\n    pass\n",
+        encoding="utf-8",
+    )
+    source_path = questions_dir / "main.yml"
+    source = "objects:\n  user: |\n    DAList.using(object_type=Cus\n"
+    labels = {
+        item.label
+        for item in get_completions(
+            source,
+            2,
+            len("    DAList.using(object_type=Cus"),
+            uri_or_path=str(source_path),
+            workspace_paths=[str(tmp_path)],
+        )
+    }
+    assert "CustomObj" in labels
+
+
+def test_using_dot_not_suggested_without_dot(tmp_path) -> None:
+    """``DAList`` (no dot) does NOT suggest ``.using(`` — class names still work."""
+    source = "objects:\n  - user: DAList\n"
+    labels = {
+        item.label
+        for item in get_completions(
+            source,
+            1,
+            len("  - user: DAList"),
+            uri_or_path=str(tmp_path / "main.yml"),
+            workspace_paths=[str(tmp_path)],
+        )
+    }
+    assert ".using(" not in labels
+    assert "DAList" in labels
+
+
 def test_reset_item_completes_known_variable_names(tmp_path) -> None:
     """reset: list items suggest field variable names from the workspace."""
     src_a = tmp_path / "a.yml"
