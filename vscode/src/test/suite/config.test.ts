@@ -2,15 +2,7 @@ import * as assert from "node:assert/strict";
 
 import * as vscode from "vscode";
 
-import {
-  getApi,
-  updateConfiguration,
-  resetConfiguration,
-  waitForState,
-  DocassembleExtensionApi,
-  ServerState,
-  ServerStateSnapshot,
-} from "./test-utils";
+import { getApi, updateConfiguration, resetConfiguration, waitForState } from "./test-utils";
 
 const CONFIG_SECTION = "docassemble-lsp";
 
@@ -20,7 +12,6 @@ export async function runTests(): Promise<void> {
       name: "changing enabled to false triggers server stop",
       run: async () => {
         await resetConfiguration();
-        await updateConfiguration("docassemble-lsp.enabled", false);
 
         const api = await getApi();
         const state = await waitForState(api, "disabled");
@@ -31,7 +22,6 @@ export async function runTests(): Promise<void> {
       name: "toggling enabled back to true triggers server restart",
       run: async () => {
         await resetConfiguration();
-        await updateConfiguration("docassemble-lsp.enabled", false);
 
         const api = await getApi();
         let state = await waitForState(api, "disabled");

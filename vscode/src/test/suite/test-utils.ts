@@ -43,6 +43,7 @@ export async function resetConfiguration(): Promise<void> {
   await updateConfiguration("editor.formatOnType", undefined);
   await updateConfiguration("editor.insertSpaces", undefined);
   await updateConfiguration("editor.tabSize", undefined);
+  await updateConfiguration("[docassemble]", undefined);
 }
 
 export async function waitForState(

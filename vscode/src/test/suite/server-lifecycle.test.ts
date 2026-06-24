@@ -9,9 +9,6 @@ import {
   waitForState,
   quoteForShell,
   mockServerPath,
-  DocassembleExtensionApi,
-  ServerState,
-  ServerStateSnapshot,
 } from "./test-utils";
 
 export async function runTests(): Promise<void> {
@@ -92,7 +89,7 @@ export async function runTests(): Promise<void> {
       },
     },
     {
-      name: "server transitions through states correctly",
+      name: "server starts and reaches running state",
       run: async () => {
         await resetConfiguration();
         await updateConfiguration("docassemble-lsp.enabled", true);

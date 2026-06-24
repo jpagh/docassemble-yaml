@@ -13,9 +13,6 @@ import {
   quoteForShell,
   python3Available,
   SkipTest,
-  DocassembleExtensionApi,
-  ServerState,
-  ServerStateSnapshot,
 } from "./test-utils";
 
 export async function runTests(): Promise<void> {

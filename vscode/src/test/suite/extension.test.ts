@@ -16,9 +16,6 @@ import {
   python3Available,
   quoteForShell,
   mockServerPath,
-  DocassembleExtensionApi,
-  ServerState,
-  ServerStateSnapshot,
 } from "./test-utils";
 
 type TestCase = {
@@ -937,13 +934,4 @@ function readLog(logPath: string): string {
   } catch {
     return "";
   }
-}
-
-async function updateLanguageConfiguration(
-  languageId: string,
-  value: Record<string, unknown> | undefined,
-): Promise<void> {
-  await vscode.workspace
-    .getConfiguration()
-    .update(`[${languageId}]`, value, vscode.ConfigurationTarget.Global);
 }
