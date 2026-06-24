@@ -1,3 +1,6 @@
+coverage:
+    uv run pytest --cov --cov-report=term-missing --cov-report=html
+
 format:
     uv run ruff format
 
@@ -17,3 +20,7 @@ test-all-pythons:
 
 type:
     uv run mypy .
+
+# Regenerate vendored docassemble stubs from installed package
+update-vendor-stubs:
+    uv run python scripts/update_vendored_docassemble_base_util.py

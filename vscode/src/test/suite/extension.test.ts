@@ -5,27 +5,26 @@ import * as path from "node:path";
 
 import * as vscode from "vscode";
 
-type ServerState = "idle" | "disabled" | "missing" | "running" | "error" | "stopped";
-
-type ServerStateSnapshot = {
-  state: ServerState;
-  resolvedCommand?: string;
-  lastError?: string;
-};
-
-type DocassembleExtensionApi = {
-  restart(): Promise<void>;
-  showOutput(): void;
-  showSetupHelp(): Promise<void>;
-  getServerState(): ServerStateSnapshot;
-};
+import {
+  EXTENSION_ID,
+  getApi,
+  updateConfiguration,
+  resetConfiguration,
+  waitFor,
+  waitForState,
+  SkipTest,
+  python3Available,
+  quoteForShell,
+  mockServerPath,
+  DocassembleExtensionApi,
+  ServerState,
+  ServerStateSnapshot,
+} from "./test-utils";
 
 type TestCase = {
   name: string;
   run: () => Promise<void>;
 };
-
-const EXTENSION_ID = "jackadamson.vscode-docassemble";
 
 // ---- Helper: write a YAML file into the test workspace and return its URI ----
 async function writeTestFile(
@@ -908,49 +907,15 @@ export async function runTests(): Promise<void> {
     for (const [index, failure] of failures.entries()) {
       console.error(`  ${index + 1}) Docassemble extension`);
       console.error(`       ${failure.name}:`);
-      console.error(formatError(failure.error));
+      console.error(
+        failure.error instanceof Error
+          ? (failure.error.stack ?? failure.error.message)
+          : String(failure.error),
+      );
     }
 
     throw new Error(`${failures.length} test(s) failed.`);
   }
-}
-
-class SkipTest extends Error {}
-
-async function getApi(): Promise<DocassembleExtensionApi> {
-  const extension = vscode.extensions.getExtension<DocassembleExtensionApi>(EXTENSION_ID);
-  assert.ok(extension, `Expected extension ${EXTENSION_ID} to be available.`);
-  const api = await extension.activate();
-  assert.ok(api, `${EXTENSION_ID}.activate() returned undefined`);
-  return api;
-}
-
-async function updateConfiguration<T>(section: string, value: T): Promise<void> {
-  await vscode.workspace
-    .getConfiguration()
-    .update(section, value, vscode.ConfigurationTarget.Global);
-}
-
-async function resetConfiguration(): Promise<void> {
-  // Disable the server so a between-test restart doesn't pollute the
-  // extension host state. Tests that need a server explicitly re-enable.
-  await updateConfiguration("docassemble-lsp.enabled", false);
-  await updateConfiguration("docassemble-lsp.importStrategy", undefined);
-  await updateConfiguration("docassemble-lsp.command", undefined);
-  await updateConfiguration("docassemble-lsp.interpreter", undefined);
-  await updateConfiguration("docassemble-lsp.env", undefined);
-  await updateConfiguration("docassemble-lsp.trace.server", undefined);
-  await updateConfiguration("docassemble-lsp.showNotifications", undefined);
-  await updateConfiguration("editor.formatOnType", undefined);
-  await updateConfiguration("editor.insertSpaces", undefined);
-  await updateConfiguration("editor.tabSize", undefined);
-  await updateLanguageConfiguration("docassemble", undefined);
-}
-
-function mockServerPath(): string {
-  const extension = vscode.extensions.getExtension(EXTENSION_ID);
-  assert.ok(extension, `Expected extension ${EXTENSION_ID} to be available.`);
-  return path.join(extension.extensionPath, "dist", "test", "fixtures", "mock-lsp-server.js");
 }
 
 function bundledServerPath(): string {
@@ -959,60 +924,11 @@ function bundledServerPath(): string {
   return path.join(extension.extensionPath, "bundled", "run_server.py");
 }
 
-function python3Available(): boolean {
-  return commandExists("python3");
-}
-
 function pythonExtensionAvailable(): boolean {
   return (
     process.env.DOCASSEMBLE_LSP_ENABLE_REAL_TEST === "1" &&
     !!vscode.extensions.getExtension("ms-python.python")
   );
-}
-
-function commandExists(command: string): boolean {
-  if (path.isAbsolute(command) || command.includes(path.sep)) {
-    return isExecutable(command);
-  }
-
-  const pathValue = process.env.PATH;
-  if (!pathValue) {
-    return false;
-  }
-
-  for (const directory of pathValue.split(path.delimiter).filter(Boolean)) {
-    const candidate = path.join(directory, command);
-    if (isExecutable(candidate)) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
-function isExecutable(candidatePath: string): boolean {
-  try {
-    fs.accessSync(candidatePath, fs.constants.X_OK);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-function formatError(error: unknown): string {
-  if (error instanceof Error) {
-    return error.stack ?? error.message;
-  }
-
-  return String(error);
-}
-
-function quoteForShell(value: string): string {
-  if (process.platform === "win32") {
-    return `"${value.replaceAll('"', '\\"')}"`;
-  }
-
-  return `'${value.replaceAll("'", "'\\''")}'`;
 }
 
 function readLog(logPath: string): string {
@@ -1030,34 +946,4 @@ async function updateLanguageConfiguration(
   await vscode.workspace
     .getConfiguration()
     .update(`[${languageId}]`, value, vscode.ConfigurationTarget.Global);
-}
-
-async function waitFor(predicate: () => boolean, timeoutMs = 5000): Promise<void> {
-  for (let attempt = 0; attempt < timeoutMs / 50; attempt += 1) {
-    if (predicate()) {
-      return;
-    }
-
-    await new Promise((resolve) => setTimeout(resolve, 50));
-  }
-
-  throw new Error("Timed out waiting for condition.");
-}
-
-async function waitForState(
-  api: DocassembleExtensionApi,
-  expectedState: ServerState,
-): Promise<ServerStateSnapshot> {
-  for (let attempt = 0; attempt < 40; attempt += 1) {
-    const snapshot = api.getServerState();
-    if (snapshot.state === expectedState) {
-      return snapshot;
-    }
-
-    await new Promise((resolve) => setTimeout(resolve, 100));
-  }
-
-  throw new Error(
-    `Timed out waiting for state ${expectedState}; last state was ${api.getServerState().state}.`,
-  );
 }

@@ -1304,6 +1304,7 @@ def create_server(
         ),
     )
     def semantic_tokens_full(ls: LanguageServer, params: SemanticTokensParams) -> SemanticTokens:
+        logger.debug("Semantic tokens: disabled — TextMate grammar provides fine-grained highlighting")
         document = ls.workspace.get_text_document(params.text_document.uri)
         return build_semantic_tokens(document.source)
 

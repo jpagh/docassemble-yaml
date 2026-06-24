@@ -91,7 +91,7 @@ for (const entry of readdirSync(libsDir)) {
   if (entry === "ruamel_yaml_clib" || entry === "ruamel.yaml.clib") {
     rmSync(full, { recursive: true });
     console.log(`  removed ${entry}`);
-  } else if (/ruamel[_\-]yaml[_\-]clib/.test(entry) && /\.(so|dylib|pyd)$/.test(entry)) {
+  } else if (/ruamel[_-]yaml[_-]clib/.test(entry) && /\.(so|dylib|pyd)$/.test(entry)) {
     rmSync(full);
     console.log(`  removed ${entry}`);
   }
