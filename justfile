@@ -7,7 +7,13 @@ default:
     @just --list
 
 check:
-    prek run -a
+    @taplo format
+    @ruff check --fix lsp
+    @ruff format lsp
+    @cd lsp && uv run mypy src/
+    @cd lsp && uv run pytest tests -n auto -p no:terminal
+    @cd vscode && npm run lint
+    @cd vscode && npm run format
 
 # Run all unit tests (LSP + VS Code mock-server)
 test: lsp::test-all-pythons vscode::test
