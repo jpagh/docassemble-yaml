@@ -7,13 +7,20 @@ default:
     @just --list
 
 check:
-    @taplo format
-    @ruff check --fix lsp
-    @ruff format lsp
-    @cd lsp && uv run mypy src/
-    @cd lsp && uv run pytest tests -n auto -p no:terminal
-    @cd vscode && npm run lint
-    @cd vscode && npm run format
+    #!/usr/bin/env bash
+    run() {
+      if ! output=$("$@" 2>&1); then
+        echo "$output" >&2
+        exit 1
+      fi
+    }
+    run taplo format
+    run ruff check --fix lsp
+    run ruff format lsp
+    (cd lsp && run uv run mypy src/)
+    (cd lsp && run uv run pytest tests -n auto -p no:terminal)
+    (cd vscode && run npm run lint)
+    (cd vscode && run npm run format)
 
 # Run all unit tests (LSP + VS Code mock-server)
 test: lsp::test-all-pythons vscode::test
