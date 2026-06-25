@@ -6,7 +6,6 @@ import * as path from "node:path";
 import * as vscode from "vscode";
 
 import {
-  EXTENSION_ID,
   getApi,
   updateConfiguration,
   resetConfiguration,
@@ -597,7 +596,7 @@ export async function runTests(): Promise<void> {
           language: "docassemble",
           content: "question:\n  ",
         });
-        const editor = await vscode.window.showTextDocument(document);
+        await vscode.window.showTextDocument(document);
         const pos = new vscode.Position(1, 2);
 
         const items = await vscode.commands.executeCommand<vscode.CompletionList>(
@@ -913,12 +912,6 @@ export async function runTests(): Promise<void> {
 
     throw new Error(`${failures.length} test(s) failed.`);
   }
-}
-
-function bundledServerPath(): string {
-  const extension = vscode.extensions.getExtension(EXTENSION_ID);
-  assert.ok(extension, `Expected extension ${EXTENSION_ID} to be available.`);
-  return path.join(extension.extensionPath, "bundled", "run_server.py");
 }
 
 function pythonExtensionAvailable(): boolean {
