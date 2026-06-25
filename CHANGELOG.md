@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- [LSP] Completion label for `.using()` now includes the closing parenthesis (was `.using(`).
+- [CLI] `--conventions` and `--ignore-codes` config args are no longer passed to the `format` command, which does not accept them.
+
 ## [26.6.3] - 2026-06-23
 
 ### Added

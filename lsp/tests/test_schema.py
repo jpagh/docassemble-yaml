@@ -1944,7 +1944,7 @@ def test_using_kwarg_completions_inline_still_shows_class_names(tmp_path) -> Non
 
 
 def test_using_dot_suggested_after_class_name_inline(tmp_path) -> None:
-    """``DAList.`` in inline ``objects:`` value suggests ``.using(``."""
+    """``DAList.`` in inline ``objects:`` value suggests ``.using()``."""
     source = "objects:\n  - user: DAList.\n"
     labels = {
         item.label
@@ -1956,11 +1956,11 @@ def test_using_dot_suggested_after_class_name_inline(tmp_path) -> None:
             workspace_paths=[str(tmp_path)],
         )
     }
-    assert ".using(" in labels
+    assert ".using()" in labels
 
 
 def test_using_dot_suggested_after_class_name_block_scalar(tmp_path) -> None:
-    """``DAList.`` on block scalar L1 suggests ``.using(``."""
+    """``DAList.`` on block scalar L1 suggests ``.using()``."""
     source = "objects:\n  user: |\n    DAList.\n"
     labels = {
         item.label
@@ -1972,11 +1972,11 @@ def test_using_dot_suggested_after_class_name_block_scalar(tmp_path) -> None:
             workspace_paths=[str(tmp_path)],
         )
     }
-    assert ".using(" in labels
+    assert ".using()" in labels
 
 
 def test_using_dot_suggested_with_partial_match(tmp_path) -> None:
-    """``DAList.u`` filters to ``.using(``."""
+    """``DAList.u`` filters to ``.using()``."""
     source = "objects:\n  - user: DAList.u\n"
     labels = {
         item.label
@@ -1988,7 +1988,7 @@ def test_using_dot_suggested_with_partial_match(tmp_path) -> None:
             workspace_paths=[str(tmp_path)],
         )
     }
-    assert ".using(" in labels
+    assert ".using()" in labels
 
 
 def test_using_kwarg_completions_shows_documentation(tmp_path) -> None:
@@ -2007,7 +2007,7 @@ def test_using_kwarg_completions_shows_documentation(tmp_path) -> None:
 
 
 def test_using_dot_suggested_for_import_alias(tmp_path) -> None:
-    """Import alias in ``imports:`` followed by dot suggests ``.using(``."""
+    """Import alias in ``imports:`` followed by dot suggests ``.using()``."""
     source = "imports:\n  - from docassemble.base.util import DAObject as CustomBase\nobjects:\n  - user: CustomBase.\n"
     labels = {
         item.label
@@ -2019,7 +2019,7 @@ def test_using_dot_suggested_for_import_alias(tmp_path) -> None:
             workspace_paths=[str(tmp_path)],
         )
     }
-    assert ".using(" in labels
+    assert ".using()" in labels
 
 
 def test_object_type_block_scalar_line1(tmp_path) -> None:
@@ -2049,7 +2049,7 @@ def test_object_type_block_scalar_line1(tmp_path) -> None:
 
 
 def test_using_dot_not_suggested_without_dot(tmp_path) -> None:
-    """``DAList`` (no dot) does NOT suggest ``.using(`` — class names still work."""
+    """``DAList`` (no dot) does NOT suggest ``.using()`` — class names still work."""
     source = "objects:\n  - user: DAList\n"
     labels = {
         item.label
@@ -2061,7 +2061,7 @@ def test_using_dot_not_suggested_without_dot(tmp_path) -> None:
             workspace_paths=[str(tmp_path)],
         )
     }
-    assert ".using(" not in labels
+    assert ".using()" not in labels
     assert "DAList" in labels
 
 

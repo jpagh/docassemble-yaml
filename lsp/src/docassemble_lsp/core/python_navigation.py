@@ -888,7 +888,7 @@ class PythonNavigationService:
                     start = character - 1 - len(partial)
                     return [
                         PythonCompletionTarget(
-                            label=".using(",
+                            label=".using()",
                             detail="method",
                             text_edit_range=(start, character),
                         )
