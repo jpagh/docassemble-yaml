@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Removed
+
+- [CLI] The legacy `docassemble_lsp.core.validation:main()` entry point and its `process_file` helper have been removed. Use `docassemble-lsp` (the new `cli.py`) instead.
+
 ### Fixed
 
 - [LSP] Completion label for `.using()` now includes the closing parenthesis (was `.using(`).

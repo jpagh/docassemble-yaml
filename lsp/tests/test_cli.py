@@ -659,3 +659,114 @@ def test_format_check_command_reader_error_returns_one(tmp_path: Path) -> None:
     exit_code = main(["format", "--check", "--quiet", str(source)])
 
     assert exit_code == 1
+
+
+def test_cli_does_not_expose_legacy_process_file() -> None:
+    assert not hasattr(cli, "process_file")
+    with pytest.raises(SystemExit):
+        main(["process-file", str(FIXTURES_DIR / "large_valid_interview.yml")])
+
+
+def test_check_command_short_quiet_flag_accepted(tmp_path: Path) -> None:
+    source = tmp_path / "broken.yml"
+    source.write_text("---\nfoo: bar\n", encoding="utf-8")
+
+    exit_code = main(["check", "-q", str(source)])
+
+    assert exit_code == 1
+
+
+def test_check_command_accessibility_error_on_widget_propagates() -> None:
+    parser = build_parser()
+    parsed = parser.parse_args(
+        ["check", "--accessibility-error-on-widget", "foo", "--accessibility-error-on-widget", "bar", "dummy.yml"]
+    )
+    opts = cli._runtime_options_from_args(parsed)
+    assert opts.accessibility_error_on_widgets == frozenset({"foo", "bar"})
+
+
+def test_check_command_format_on_success_rewrites_clean_file(tmp_path: Path) -> None:
+    source = tmp_path / "format_me.yml"
+    source.write_text("---\ncode: |\n  x={'a':1}\n", encoding="utf-8")
+
+    exit_code = main(["check", "--quiet", "--format-on-success", str(source)])
+
+    assert exit_code == 0
+    content = source.read_text(encoding="utf-8")
+    assert "x = " in content or "x={" not in content
+
+
+def test_check_command_format_on_success_skips_files_with_errors(tmp_path: Path) -> None:
+    source = tmp_path / "error_file.yml"
+    source.write_text("foo: bar\ncode: |\n  x={'a':1}\n", encoding="utf-8")
+
+    original = source.read_text(encoding="utf-8")
+    exit_code = main(["check", "--quiet", "--format-on-success", str(source)])
+
+    assert exit_code == 1
+    assert source.read_text(encoding="utf-8") == original
+
+
+def test_check_command_fix_and_format_on_success_run_both_passes(tmp_path: Path) -> None:
+    source = tmp_path / "both.yml"
+    source.write_text(
+        "question: Hi\nfields:\n  - Name: user.name\n---\ncode: |\n  x={'a':1}\n",
+        encoding="utf-8",
+    )
+
+    exit_code = main(
+        [
+            "check",
+            "--quiet",
+            "--fix",
+            "--format-on-success",
+            "--conventions",
+            "C102",
+            str(source),
+        ]
+    )
+
+    assert exit_code == 0
+    content = source.read_text(encoding="utf-8")
+    assert "label: Name" in content
+    assert "x = " in content or "x={" not in content
+
+
+def test_check_command_check_dry_run_does_not_write(tmp_path: Path) -> None:
+    source = tmp_path / "dry_run.yml"
+    source.write_text("---\ncode: |\n  x={'a':1}\n", encoding="utf-8")
+
+    original = source.read_text(encoding="utf-8")
+    exit_code = main(["check", "--quiet", "--check", str(source)])
+
+    assert exit_code == 1
+    assert source.read_text(encoding="utf-8") == original
+
+
+def test_check_command_check_dry_run_clean_file_is_zero(tmp_path: Path) -> None:
+    source = tmp_path / "clean.yml"
+    source.write_text('---\ncode: |\n  x = {"a": 1}\n', encoding="utf-8")
+
+    exit_code = main(["check", "--quiet", "--check", str(source)])
+
+    assert exit_code == 0
+
+
+def test_check_command_fix_and_format_on_success_reads_file_once(tmp_path: Path, monkeypatch) -> None:
+    source = tmp_path / "read_count.yml"
+    source.write_text("---\ncode: |\n  x={'a':1}\n", encoding="utf-8")
+
+    original_read_text = Path.read_text
+    call_count = 0
+
+    def counting_read_text(self, *args: object, **kwargs: object) -> str:
+        nonlocal call_count
+        call_count += 1
+        return original_read_text(self, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "read_text", counting_read_text)
+
+    exit_code = main(["check", "--quiet", "--fix", "--format-on-success", str(source)])
+
+    assert exit_code == 0
+    assert call_count == 1

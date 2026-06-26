@@ -11,11 +11,12 @@ from typing import Iterable, Sequence, TypeVar, overload
 from docassemble_lsp.core import (
     Diagnostic,
     FormatterConfig,
-    analyze_path,
+    analyze_text,
     collect_yaml_files,
     configure_logging,
-    fix_path,
+    fix_text,
     format_path,
+    format_text,
 )
 from docassemble_lsp.core.diagnostics import diagnostic_to_dict
 from docassemble_lsp.core.files import collect_dayaml_cli_args, collect_dayaml_conventions, collect_dayaml_ignore_codes
@@ -177,7 +178,11 @@ def _parsed_code_args(values: Sequence[str] | None) -> frozenset[str]:
 
 
 def _runtime_options_from_args(args: argparse.Namespace) -> RuntimeOptions:
+    accessibility_widgets = frozenset(
+        widget.strip().lower() for widget in getattr(args, "accessibility_error_on_widgets", []) if widget.strip()
+    )
     return RuntimeOptions(
+        accessibility_error_on_widgets=accessibility_widgets,
         enabled_conventions=_parsed_code_args(getattr(args, "conventions", None)),
         ignore_codes=_parsed_code_args(getattr(args, "ignore_codes", None)),
         show_warnings=not getattr(args, "no_warnings", False),
@@ -216,14 +221,11 @@ def _check_command(args: argparse.Namespace) -> int:
     results: list[dict[str, object]] = []
     has_failure = False
     runtime_options = _runtime_options_from_args(args)
+    formatter_config = _formatter_config_from_args(args)
 
     for path in paths:
         try:
-            if args.fix:
-                fix_result = fix_path(path, runtime_options=runtime_options)
-                if fix_result.changed and not args.quiet and not args.json:
-                    print(f"fixed: {path}", file=sys.stdout)
-            diagnostics = analyze_path(path, runtime_options=runtime_options)
+            original = path.read_text(encoding="utf-8")
         except OSError as exc:
             has_failure = True
             if args.json:
@@ -231,6 +233,31 @@ def _check_command(args: argparse.Namespace) -> int:
             if not args.quiet and not args.json:
                 print(f"{path}: error - {exc}", file=sys.stderr)
             continue
+
+        working = original
+        if args.fix:
+            fix_result = fix_text(working, path=str(path), runtime_options=runtime_options)
+            working = fix_result.text
+
+        diagnostics = analyze_text(working, path=str(path), runtime_options=runtime_options)
+        error_findings = [d for d in diagnostics if d.severity == "error"]
+
+        should_format = (args.format_on_success and not error_findings) or args.check
+        if should_format:
+            format_result = format_text(working, config=formatter_config)
+            working = format_result.text
+
+        changed = working != original
+        if changed:
+            if args.check:
+                has_failure = True
+                if not args.quiet and not args.json:
+                    print(f"would reformat: {path}", file=sys.stdout)
+            else:
+                path.write_text(working, encoding="utf-8")
+                if not args.quiet and not args.json:
+                    print(f"reformatted: {path}", file=sys.stdout)
+
         for diagnostic in diagnostics:
             entry = diagnostic_to_dict(diagnostic)
             entry["path"] = str(path)
@@ -291,7 +318,7 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Suppress warning diagnostics; only show errors",
     )
-    check_parser.add_argument("--quiet", action="store_true", help="Suppress text output")
+    check_parser.add_argument("-q", "--quiet", action="store_true", help="Suppress text output")
     check_parser.add_argument(
         "--strict",
         action="store_true",
@@ -326,6 +353,24 @@ def build_parser() -> argparse.ArgumentParser:
         type=int,
         default=2,
         help=argparse.SUPPRESS,
+    )
+    check_parser.add_argument(
+        "--accessibility-error-on-widget",
+        action="append",
+        default=[],
+        dest="accessibility_error_on_widgets",
+        metavar="WIDGET",
+        help="Treat a specific accessibility-sensitive widget as an error. Repeat to enable multiple widgets.",
+    )
+    check_parser.add_argument(
+        "--format-on-success",
+        action="store_true",
+        help="Format files that pass YAML validation (no errors)",
+    )
+    check_parser.add_argument(
+        "--check",
+        action="store_true",
+        help="Dry-run: check what would be reformatted without writing, exit 1 if any file would change",
     )
     check_parser.add_argument(
         "--log-level",

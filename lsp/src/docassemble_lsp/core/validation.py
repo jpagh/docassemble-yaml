@@ -1,14 +1,12 @@
 # Each doc, apply this to each block
-import argparse
 import ast
 import dataclasses
 import logging
 import re
-import sys
 from collections.abc import Mapping
 from difflib import SequenceMatcher
 from pathlib import Path
-from typing import Any, Callable, Literal, Optional, cast
+from typing import Any, Optional
 
 import esprima  # type: ignore[import-untyped]
 from mako.exceptions import (  # type: ignore[import-untyped]
@@ -40,12 +38,9 @@ from docassemble_lsp.core.field_validators import (
     FieldDatatypeValidator,
 )
 from docassemble_lsp.core.files import (
-    collect_dayaml_cli_args,
-    collect_dayaml_ignore_codes,
-    collect_yaml_files,
     templates_dir_for_path,
 )
-from docassemble_lsp.core.formatting import FormatterConfig, format_yaml_string
+
 from docassemble_lsp.core.jinja import (
     contains_jinja_syntax,
     has_jinja_header,
@@ -63,7 +58,6 @@ from docassemble_lsp.core.python_paths import path_from_uri_or_path
 from docassemble_lsp.core.validation_config import (
     RuntimeOptions,
     YAMLError,
-    parse_ignore_codes,
 )
 from docassemble_lsp.core.workspace import WorkspaceIndex
 from docassemble_lsp.core.yaml_parsing import (
@@ -105,26 +99,6 @@ __all__ = [
     "find_errors_from_string",
     "find_errors",
 ]
-
-
-class _ProgressOutput:
-    def __init__(self) -> None:
-        self._line_active = False
-
-    def dot(self) -> None:
-        print(".", end="", flush=True)
-        self._line_active = True
-
-    def line(self, message: str) -> None:
-        if self._line_active:
-            print()
-            self._line_active = False
-        print(message)
-
-    def finish(self) -> None:
-        if self._line_active:
-            print()
-            self._line_active = False
 
 
 # Global identifiers for _extract_conditional_fields_from_doc below. Should cover all show/hide style modifiers
@@ -3689,279 +3663,3 @@ def find_errors(
         input_file=input_file,
         runtime_options=runtime_options,
     )
-
-
-def process_file(
-    input_file,
-    quiet: bool = False,
-    display_path: str | None = None,
-    show_experimental: bool = False,
-    runtime_options: Optional[RuntimeOptions] = None,
-    ignore_codes: frozenset[str] = frozenset(),
-    format_on_success: bool = False,
-    formatter_config: FormatterConfig | None = None,
-    ok_reporter: Callable[[], None] | None = None,
-    line_reporter: Callable[[str], None] | None = None,
-) -> Literal["ok", "warning", "error", "skipped"]:
-    """Process a single file and report its validation status.
-
-    Args:
-        input_file: Path to the YAML file to check.
-        quiet: If True, suppress output for successful and skipped files.
-            Errors are still printed.
-        display_path: Optional path string to use in output instead of the
-            full ``input_file`` path (e.g. a relative path).
-        show_experimental: If True, prefix non-experimental errors with
-            ``REAL ERROR:``. The default is False.
-    Returns:
-        A string indicating the result of processing:
-        - "ok": The file was checked and no errors were found.
-                - "warning": The file was checked and only warnings/conventions were found.
-                - "error": The file was checked and one or more errors were found.
-        - "skipped": The file was not checked because it matches a known
-          pattern of files to ignore.
-    """
-    for dumb_da_file in [
-        "pgcodecache.yml",
-        "title_documentation.yml",
-        "documentation.yml",
-        "docstring.yml",
-        "example-list.yml",
-        "examples.yml",
-    ]:
-        if input_file.endswith(dumb_da_file):
-            if not quiet:
-                message = f"skipped: {display_path or input_file}"
-                if line_reporter is not None:
-                    line_reporter(message)
-                else:
-                    print(message)
-            return "skipped"
-
-    with open(input_file, "r", encoding="utf-8") as f:
-        full_content = f.read()
-
-    is_jinja = has_jinja_header(full_content)
-
-    all_errors = find_errors_from_string(
-        full_content,
-        input_file=display_path or input_file,
-        runtime_options=runtime_options,
-    )
-    all_errors = [err for err in all_errors if err.code is None or err.code.upper() not in ignore_codes]
-
-    error_findings = [err for err in all_errors if err.severity == "error"]
-    warning_findings = [err for err in all_errors if err.severity == "warning"]
-    convention_findings = [err for err in all_errors if err.severity == "convention"]
-
-    reformatted = False
-    if format_on_success and not error_findings:
-        formatted, changed, _ = format_yaml_string(
-            full_content,
-            config=formatter_config,
-        )
-        if changed:
-            with open(input_file, "w", encoding="utf-8") as f:
-                f.write(formatted)
-            reformatted = True
-
-    if len(all_errors) == 0:
-        if not quiet:
-            if reformatted:
-                message = f"reformatted: {display_path or input_file}"
-                if line_reporter is not None:
-                    line_reporter(message)
-                else:
-                    print(message)
-            elif ok_reporter is not None:
-                ok_reporter()
-            else:
-                label = "ok (jinja)" if is_jinja else "ok"
-                print(f"{label}: {display_path or input_file}")
-        return "ok"
-
-    jinja_note = " (jinja)" if is_jinja else ""
-
-    if error_findings:
-        header = f"errors ({len(error_findings)}){jinja_note}: {display_path or input_file}"
-        if line_reporter is not None:
-            line_reporter(header)
-        else:
-            print(header)
-        for err in error_findings:
-            print(f"  {err.format(show_experimental=show_experimental)}")
-
-    if not quiet and warning_findings:
-        header = f"warnings ({len(warning_findings)}){jinja_note}: {display_path or input_file}"
-        if line_reporter is not None:
-            line_reporter(header)
-        else:
-            print(header)
-        for err in warning_findings:
-            print(f"  {err.format(show_experimental=show_experimental)}")
-
-    if not quiet and convention_findings:
-        header = f"conventions ({len(convention_findings)}){jinja_note}: {display_path or input_file}"
-        if line_reporter is not None:
-            line_reporter(header)
-        else:
-            print(header)
-        for err in convention_findings:
-            print(f"  {err.format(show_experimental=show_experimental)}")
-
-    if reformatted and not quiet:
-        message = f"reformatted: {display_path or input_file}"
-        if line_reporter is not None:
-            line_reporter(message)
-        else:
-            print(message)
-
-    if error_findings:
-        return "error"
-    return "warning"
-
-
-def _build_arg_parser(*, require_files: bool = True) -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(
-        description="Validate Docassemble YAML files",
-    )
-    parser.add_argument(
-        "files",
-        nargs="+" if require_files else "*",
-        type=Path,
-        help="YAML files or directories to validate (directories are searched recursively)",
-    )
-    parser.add_argument(
-        "--check-all",
-        action="store_true",
-        help=(
-            "Do not ignore default directories during recursive search "
-            "(.git*, .github*, build, dist, node_modules, sources)"
-        ),
-    )
-    parser.add_argument(
-        "-q",
-        "--quiet",
-        action="store_true",
-        help="Suppress all output except errors",
-    )
-    parser.add_argument(
-        "--no-summary",
-        action="store_true",
-        help="Do not print the summary line after processing",
-    )
-    parser.add_argument(
-        "--format-on-success",
-        action="store_true",
-        help="Format files that pass YAML validation",
-    )
-    parser.add_argument(
-        "--convert-tabs-to-spaces",
-        action=argparse.BooleanOptionalAction,
-        default=False,
-        help=("When formatting, replace literal tab characters in YAML files with two spaces"),
-    )
-    parser.add_argument(
-        "--ignore-codes",
-        default="",
-        help=('Comma-separated diagnostic codes to suppress, for example: "E410,E301"'),
-    )
-    parser.add_argument(
-        "--show-experimental",
-        action=argparse.BooleanOptionalAction,
-        default=False,
-        help='Prefix non-experimental errors with "REAL ERROR:" (default: off)',
-    )
-    parser.add_argument(
-        "--accessibility-error-on-widget",
-        dest="accessibility_error_on_widgets",
-        action="append",
-        default=[],
-        metavar="WIDGET",
-        help=(
-            "Treat a specific accessibility-sensitive widget as an error. "
-            "Repeat to enable multiple widgets. Default: none"
-        ),
-    )
-    return parser
-
-
-def main(argv: list[str] | None = None) -> int:
-    raw_argv = sys.argv[1:] if argv is None else argv
-    bootstrap_parser = _build_arg_parser(require_files=False)
-    bootstrap_args, _ = bootstrap_parser.parse_known_args(raw_argv)
-    bootstrap_files = bootstrap_args.files or [Path.cwd()]
-    config_cli_args = collect_dayaml_cli_args(bootstrap_files)
-
-    parser = _build_arg_parser(require_files=False)
-    args = parser.parse_args([*config_cli_args, *raw_argv])
-    if not args.files:
-        args.files = [Path.cwd()]
-
-    ignore_codes = collect_dayaml_ignore_codes(args.files) | parse_ignore_codes(args.ignore_codes)
-    runtime_options = RuntimeOptions(
-        accessibility_error_on_widgets=frozenset(
-            widget.strip().lower() for widget in args.accessibility_error_on_widgets if widget.strip()
-        )
-    )
-    formatter_config = (
-        FormatterConfig(convert_tabs_to_spaces=args.convert_tabs_to_spaces) if args.format_on_success else None
-    )
-
-    cwd = Path.cwd().resolve()
-
-    def _display(file_path: Path) -> Path:
-        resolved = file_path.resolve()
-        try:
-            return resolved.relative_to(cwd)
-        except ValueError:
-            pass
-        return resolved
-
-    yaml_files = collect_yaml_files(args.files, include_default_ignores=not args.check_all)
-    if not yaml_files:
-        print("No YAML files found.", file=sys.stderr)
-        return 1
-
-    files_ok = 0
-    files_warning = 0
-    files_error = 0
-    files_skipped = 0
-    progress = _ProgressOutput() if not args.quiet else None
-
-    for input_file in yaml_files:
-        status = process_file(
-            str(input_file),
-            quiet=args.quiet,
-            display_path=str(_display(input_file)),
-            show_experimental=args.show_experimental,
-            runtime_options=runtime_options,
-            ignore_codes=ignore_codes,
-            format_on_success=args.format_on_success,
-            formatter_config=formatter_config,
-            ok_reporter=progress.dot if progress is not None else None,
-            line_reporter=progress.line if progress is not None else None,
-        )
-        if status == "ok":
-            files_ok += 1
-        elif status == "warning":
-            files_warning += 1
-        elif status == "error":
-            files_error += 1
-        else:
-            files_skipped += 1
-
-    if not args.quiet and not args.no_summary:
-        cast(_ProgressOutput, progress).finish()
-        total = files_ok + files_warning + files_error + files_skipped
-        print(
-            f"Summary: {files_ok} ok, {files_warning} warnings, {files_error} errors, {files_skipped} skipped ({total} total)"
-        )
-    elif progress is not None:
-        progress.finish()
-
-    return 1 if files_error > 0 else 0
-
-
-if __name__ == "__main__":  # pragma: no cover
-    sys.exit(main())
