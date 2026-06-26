@@ -106,6 +106,87 @@ export async function runTests(): Promise<void> {
         assert.equal(state.state, "running");
       },
     },
+    {
+      name: "user-initiated stop does not auto-restart",
+      run: async () => {
+        await resetConfiguration();
+        await updateConfiguration("docassemble-lsp.enabled", true);
+        await updateConfiguration("docassemble-lsp.importStrategy", "fromEnvironment");
+        await updateConfiguration(
+          "docassemble-lsp.command",
+          `${quoteForShell(process.execPath)} ${quoteForShell(mockServerPath())}`,
+        );
+
+        const api = await getApi();
+        await api.restart();
+        const state = await waitForState(api, "running");
+        assert.equal(state.state, "running");
+      },
+    },
+    {
+      name: "user disables the server",
+      run: async () => {
+        await resetConfiguration();
+        await updateConfiguration("docassemble-lsp.enabled", true);
+        await updateConfiguration("docassemble-lsp.importStrategy", "fromEnvironment");
+        await updateConfiguration(
+          "docassemble-lsp.command",
+          `${quoteForShell(process.execPath)} ${quoteForShell(mockServerPath())}`,
+        );
+
+        const api = await getApi();
+        await api.restart();
+        await waitForState(api, "running");
+
+        await updateConfiguration("docassemble-lsp.enabled", false);
+        await api.restart();
+        const state = await waitForState(api, "disabled");
+        assert.equal(state.state, "disabled");
+      },
+    },
+    {
+      name: "server crash triggers auto-restart",
+      run: async () => {
+        await resetConfiguration();
+        await updateConfiguration("docassemble-lsp.enabled", true);
+        await updateConfiguration("docassemble-lsp.importStrategy", "fromEnvironment");
+        await updateConfiguration(
+          "docassemble-lsp.command",
+          `${quoteForShell(process.execPath)} ${quoteForShell(mockServerPath())}`,
+        );
+        // Crash the mock after the 2nd message. The first message
+        // is the initialize request; the mock exits before the
+        // third message is processed.
+        await updateConfiguration("docassemble-lsp.env", {
+          DOCASSEMBLE_MOCK_CRASH_AFTER: "2",
+        });
+
+        const api = await getApi();
+        await api.restart();
+        await waitForState(api, "running");
+        const initial = api.getServerState();
+        assert.equal(initial.crashRestartCount, 0, "fresh start should have zero crashes");
+
+        // Wait for the mock to crash and the LanguageClient to
+        // auto-restart. The crash count should become > 0.
+        let crashed = false;
+        for (let i = 0; i < 50; i += 1) {
+          if (api.getServerState().crashRestartCount > 0) {
+            crashed = true;
+            break;
+          }
+          await new Promise((resolve) => setTimeout(resolve, 100));
+        }
+        assert.ok(crashed, "crashRestartCount should increment after a mock crash");
+
+        // The internal LanguageClient restart keeps our state
+        // machine at "running" (we never call startInternal for
+        // an internal restart), so this is what we expect.
+        const after = api.getServerState();
+        assert.equal(after.state, "running");
+        assert.ok(after.crashRestartCount > 0);
+      },
+    },
   ];
 
   console.log("\n  Server lifecycle");

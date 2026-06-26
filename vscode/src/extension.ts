@@ -23,6 +23,7 @@ export type ServerStateSnapshot = {
   state: ServerState;
   resolvedCommand?: string;
   lastError?: string;
+  crashRestartCount: number;
 };
 
 export type DocassembleExtensionApi = {
@@ -50,6 +51,8 @@ class DocassembleLspController {
   private fileWatchers: vscode.Disposable[] = [];
   private linkRegistration: vscode.Disposable | undefined;
   private readonly bundledLspVersion: string | undefined;
+  private userInitiatedShutdown = false;
+  private crashRestartCount = 0;
 
   public constructor(
     private readonly context: vscode.ExtensionContext,
@@ -69,6 +72,7 @@ class DocassembleLspController {
 
   public async restart(): Promise<void> {
     this.cancelScheduledRestart();
+    this.userInitiatedShutdown = false;
     await this.enqueue(async () => {
       try {
         await this.stopInternal();
@@ -96,6 +100,7 @@ class DocassembleLspController {
       return;
     }
 
+    this.userInitiatedShutdown = false;
     this.setServerState("idle");
 
     const config = vscode.workspace.getConfiguration(CONFIG_SECTION);
@@ -153,8 +158,31 @@ class DocassembleLspController {
       serverOptions,
       {
         errorHandler: {
-          error: () => ({ action: ErrorAction.Shutdown }),
-          closed: () => ({ action: CloseAction.DoNotRestart }),
+          error: (error, _message, count) => {
+            const attempt = count ?? 1;
+            if (attempt <= 3) {
+              this.log(
+                `Language server error (attempt ${attempt}); continuing. ${error?.message ?? ""}`,
+              );
+              return { action: ErrorAction.Continue, message: "Recovering from transient error" };
+            }
+            this.log(`Language server failed ${attempt} times; giving up. ${error?.message ?? ""}`);
+            return { action: ErrorAction.Shutdown };
+          },
+          closed: () => {
+            if (this.userInitiatedShutdown) {
+              this.log("Language server closed by user; not restarting.");
+              return { action: CloseAction.DoNotRestart };
+            }
+            this.crashRestartCount += 1;
+            if (this.crashRestartCount > 3) {
+              this.log(`Language server crashed ${this.crashRestartCount} times; giving up.`);
+              this.crashRestartCount = 0;
+              return { action: CloseAction.DoNotRestart };
+            }
+            this.log(`Language server crashed (attempt ${this.crashRestartCount}); restarting.`);
+            return { action: CloseAction.Restart, message: "Recovering from server crash" };
+          },
         },
         documentSelector: [
           { language: "docassemble", scheme: "file" },
@@ -176,14 +204,14 @@ class DocassembleLspController {
       },
     );
 
-    this.client = client;
-
     const traceSetting = config.get<string>("trace.server", "off");
+    this.client = client;
     client.setTrace(this.toTrace(traceSetting));
 
     try {
       await client.start();
       this.setServerState("running");
+      this.crashRestartCount = 0;
       this.log(`Language server started with command: ${resolvedCommand.command}`);
 
       // Register a local DocumentLinkProvider so VS Code draws persistent
@@ -251,9 +279,11 @@ class DocassembleLspController {
       this.lastError = message;
       this.setServerState("error");
       this.log(`Language server failed to start: ${message}`);
-      void vscode.window.showWarningMessage(
-        "Docassemble language server could not be started. See the Docassemble Language Server output for details.",
-      );
+      if (this.shouldShowNotification("error")) {
+        void vscode.window.showWarningMessage(
+          "Docassemble language server could not be started. See the Docassemble Language Server output for details.",
+        );
+      }
     }
   }
 
@@ -262,6 +292,7 @@ class DocassembleLspController {
       return;
     }
 
+    this.userInitiatedShutdown = true;
     this.disposeFileWatchers();
 
     if (this.linkRegistration) {
@@ -346,6 +377,7 @@ class DocassembleLspController {
       state: this.serverState,
       resolvedCommand: this.lastResolvedCommand,
       lastError: this.lastError,
+      crashRestartCount: this.crashRestartCount,
     };
   }
 
@@ -427,6 +459,11 @@ class DocassembleLspController {
           `Python interpreter "${interpreter}" not found on PATH. ` +
             "Install Python or add it to your PATH, or install the ms-python.python extension.",
         );
+        if (this.shouldShowNotification("warning")) {
+          void vscode.window.showWarningMessage(
+            "Python interpreter not found. See the Docassemble Language Server output for setup help.",
+          );
+        }
         return undefined;
       }
     } else {
@@ -604,6 +641,21 @@ class DocassembleLspController {
 
   private getTraceSetting(): string {
     return vscode.workspace.getConfiguration(CONFIG_SECTION).get<string>("trace.server", "off");
+  }
+
+  private getNotificationLevel(): "off" | "onError" | "onWarning" | "always" {
+    return vscode.workspace
+      .getConfiguration(CONFIG_SECTION)
+      .get<"off" | "onError" | "onWarning" | "always">("showNotifications", "off");
+  }
+
+  private shouldShowNotification(level: "error" | "warning"): boolean {
+    const setting = this.getNotificationLevel();
+    if (setting === "always") return true;
+    if (setting === "off") return false;
+    if (setting === "onError") return level === "error";
+    if (setting === "onWarning") return level === "warning" || level === "error";
+    return false;
   }
 
   private async enqueue(operation: () => Promise<void>): Promise<void> {

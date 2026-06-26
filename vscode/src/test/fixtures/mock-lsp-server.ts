@@ -33,6 +33,14 @@ type Diagnostic = {
 let buffer = Buffer.alloc(0);
 const logPath = process.env.DOCASSEMBLE_MOCK_LOG?.trim();
 
+let messagesReceived = 0;
+const crashAfter = (() => {
+  const raw = process.env.DOCASSEMBLE_MOCK_CRASH_AFTER?.trim();
+  if (!raw) return 0;
+  const n = Number.parseInt(raw, 10);
+  return Number.isFinite(n) && n > 0 ? n : 0;
+})();
+
 process.stdin.on("data", (chunk: Buffer) => {
   buffer = Buffer.concat([buffer, chunk]);
 
@@ -67,6 +75,11 @@ process.stdin.on("data", (chunk: Buffer) => {
 process.stdin.resume();
 
 function handleMessage(message: JsonRpcMessage): void {
+  messagesReceived += 1;
+  if (crashAfter > 0 && messagesReceived > crashAfter) {
+    process.stderr.write(`mock-lsp-server: crashing after ${crashAfter} messages\n`);
+    process.exit(1);
+  }
   logMessage(message.method);
 
   if (message.method === "initialize") {

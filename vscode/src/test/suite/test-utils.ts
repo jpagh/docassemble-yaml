@@ -7,6 +7,7 @@ export type ServerStateSnapshot = {
   state: ServerState;
   resolvedCommand?: string;
   lastError?: string;
+  crashRestartCount: number;
 };
 
 export type DocassembleExtensionApi = {
