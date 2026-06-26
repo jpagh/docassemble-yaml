@@ -13,11 +13,13 @@ publish:
     npx @vscode/vsce package
     npx @vscode/vsce publish
 
+# Run VS Code extension tests against real docassemble-lsp
 test: build
-    npm test
+    DOCASSEMBLE_LSP_ENABLE_REAL_TEST=1 node ./dist/test/runTest.js
 
-test-real: build
-    DOCASSEMBLE_LSP_ENABLE_REAL_TEST=1 npm test
+# Run VS Code extension tests against mock lsp
+test-mock: build
+    node ./dist/test/runTest.js
 
 watch:
     npm run watch

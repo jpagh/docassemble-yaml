@@ -23,9 +23,8 @@
     "compile": "tsc -p ./",
     "build": "npm run bundle-server && tsc -p ./ && esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --platform=node --target=node18 --format=cjs --sourcemap=external --minify",
     "watch": "tsc -w -p ./",
-    "test": "npm run bundle-server && npm run compile && node ./dist/test/runTest.js",
-    "test:real-lsp": "node ./scripts/real-lsp-smoke.mjs",
-    "test:real-lsp-extension": "npm run bundle-server && npm run compile && DOCASSEMBLE_LSP_ENABLE_REAL_TEST=1 node ./dist/test/runTest.js",
+    "test": "node ./dist/test/runTest.js",
+    "test:real-lsp-extension": "DOCASSEMBLE_LSP_ENABLE_REAL_TEST=1 node ./dist/test/runTest.js",
     "lint": "oxlint",
     "format": "oxfmt --write",
     "format:check": "oxfmt --check"

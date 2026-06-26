@@ -7,7 +7,6 @@ Internal-facing — for longer docs see `lsp/docs/`.
 
 ```bash
 just bump              # default: patch (YY.MM.patch). Use `just bump minor` for month bump
-just test-real-smoke   # CLI + LSP handshake smoke test
 just vscode test       # extension tests (mock server)
 DOCASSEMBLE_LSP_ENABLE_REAL_TEST=1 just vscode test  # full real-server extension tests
 ```
@@ -68,7 +67,6 @@ Run before each release. Current gate:
 
 - `just vscode test` — runs all 13 tests against mock server
 - `DOCASSEMBLE_LSP_ENABLE_REAL_TEST=1 just vscode test` — runs real-server tests
-- `just test-real-smoke` — CLI + LSP stdio handshake
 
 A full extension gate (matching the aspirational assertion list in the
 v0 RELEASE_GATE) remains future work. See the gaps above.
