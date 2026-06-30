@@ -4,7 +4,13 @@ import os
 import time
 from pathlib import Path
 
-from docassemble_lsp.core.python_modules import clear_module_index_cache, load_python_module_index
+from docassemble_lsp.core.python_modules import (
+    clear_module_index_cache,
+    compute_da_object_subclasses,
+    load_python_module_index,
+    resolve_python_symbol_chain,
+)
+from docassemble_lsp.core.workspace import WorkspaceIndex
 
 
 def _write_py_file(path: Path, content: str) -> None:
@@ -69,3 +75,43 @@ def test_module_index_clear_single_path(tmp_path: Path) -> None:
     # module_b should still be cached.
     index_b_again = load_python_module_index(mod_b)
     assert index_b_again is index_b
+
+
+def test_imported_module_uses_workspace_index(tmp_path: Path) -> None:
+    pkg = tmp_path / "docassemble" / "demo"
+    pkg.mkdir(parents=True)
+    (pkg / "__init__.py").write_text("")
+    (pkg / "utils.py").write_text("FOO = 1\n")
+    (pkg / "helpers.py").write_text("from . import utils\n")
+    idx = WorkspaceIndex.empty_for_roots((tmp_path.resolve(),))
+    helpers_index = load_python_module_index(pkg / "helpers.py", workspace_index=idx)
+    assert "utils" in helpers_index.symbols
+    sym = helpers_index.symbols["utils"]
+    assert sym.imported_name == "utils"
+    assert sym.imported_module_path is not None
+    assert sym.imported_module_path.resolve() == (pkg / "__init__.py").resolve()
+
+
+def test_resolve_python_symbol_chain_cross_module(tmp_path: Path) -> None:
+    pkg = tmp_path / "docassemble" / "demo"
+    pkg.mkdir(parents=True)
+    (pkg / "__init__.py").write_text("")
+    (pkg / "utils.py").write_text("FOO = 1\n")
+    (pkg / "helpers.py").write_text("from .utils import FOO\n")
+    idx = WorkspaceIndex.empty_for_roots((tmp_path.resolve(),))
+    result = resolve_python_symbol_chain(pkg / "helpers.py", ("FOO",), workspace_index=idx)
+    assert len(result) == 1
+    assert result[0].path == (pkg / "utils.py").resolve()
+
+
+def test_compute_da_object_subclasses_with_workspace(tmp_path: Path) -> None:
+    pkg = tmp_path / "docassemble" / "demo"
+    pkg.mkdir(parents=True)
+    (pkg / "__init__.py").write_text("")
+    (pkg / "mymodel.py").write_text("class MyThing(DAObject):\n    pass\n")
+    idx = WorkspaceIndex.empty_for_roots((tmp_path.resolve(),))
+    result = compute_da_object_subclasses(
+        [pkg / "mymodel.py"],
+        workspace_index=idx,
+    )
+    assert "MyThing" in result

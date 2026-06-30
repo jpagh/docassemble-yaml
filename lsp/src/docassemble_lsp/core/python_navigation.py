@@ -689,7 +689,7 @@ def _da_object_subclass_completions(
             if mod_path is not None:
                 vendored_paths.append(mod_path)
         if vendored_paths:
-            class_names = set(compute_da_object_subclasses(vendored_paths))
+            class_names = set(compute_da_object_subclasses(vendored_paths, workspace_index=workspace_index))
     for _line, entry in _iter_top_level_list_items(source, "imports"):
         for binding in _parse_import_binding(entry, current_path, workspace_index):
             if binding.alias is not None:

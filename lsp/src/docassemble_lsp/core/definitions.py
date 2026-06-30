@@ -505,7 +505,10 @@ def build_workspace_index(
     final_docstrings.update(vendored.docstring_registry)
     final_docstrings.update(workspace_docstrings)
 
-    da_object_subclass_names = compute_da_object_subclasses(list(workspace_module_paths) + vendored.vendored_paths)
+    da_object_subclass_names = compute_da_object_subclasses(
+        list(workspace_module_paths) + vendored.vendored_paths,
+        workspace_index=index,
+    )
 
     return replace(
         index,
@@ -990,7 +993,7 @@ def resolve_python_hover(
 
     # Determine the symbol kind from the module index (still cached).
     kind_str: str = "symbol"
-    module_index = load_python_module_index(first_target.path)
+    module_index = load_python_module_index(first_target.path, workspace_index=workspace_index)
     sym = module_index.symbols.get(symbol_name)
     if sym is not None:
         kind_str = sym.kind

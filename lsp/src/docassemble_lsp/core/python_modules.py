@@ -288,12 +288,14 @@ def _python_imported_module_symbol(
     *,
     imported_name: str | None,
     current_path: Path,
+    workspace_index: WorkspaceIndex | None = None,
 ) -> PythonModuleSymbol:
+    wi = workspace_index if workspace_index is not None else WorkspaceIndex.empty()
     return PythonModuleSymbol(
         kind="module" if imported_name is None else "symbol",
         target=None,
         methods={},
-        imported_module_path=resolve_python_module_path(module_name, current_path, WorkspaceIndex.empty()),
+        imported_module_path=resolve_python_module_path(module_name, current_path, wi),
         imported_name=imported_name,
     )
 
@@ -331,6 +333,8 @@ def python_module_symbol_detail(
 
 def load_python_module_index(
     module_path: Path,
+    *,
+    workspace_index: WorkspaceIndex | None = None,
 ) -> PythonModuleIndex:
     cached = _python_module_index_cache.get(module_path)
     if cached is not None:
@@ -415,6 +419,7 @@ def load_python_module_index(
                     module_name,
                     imported_name=None,
                     current_path=module_path,
+                    workspace_index=workspace_index,
                 )
             continue
 
@@ -432,6 +437,7 @@ def load_python_module_index(
                 module_name,
                 imported_name=alias.name,
                 current_path=module_path,
+                workspace_index=workspace_index,
             )
 
     # Second pass: detect exception classes by checking inheritance chains.
@@ -498,11 +504,13 @@ def collect_non_exception_class_names(index: PythonModuleIndex) -> frozenset[str
     return frozenset(name for name, symbol in index.symbols.items() if symbol.kind == "class")
 
 
-def compute_da_object_subclasses(module_paths: list[Path]) -> frozenset[str]:
+def compute_da_object_subclasses(
+    module_paths: list[Path], *, workspace_index: WorkspaceIndex | None = None
+) -> frozenset[str]:
     """Compute transitively all class names that inherit from DAObject."""
     base_to_subclasses: dict[str, set[str]] = {}
     for mod_path in module_paths:
-        index = load_python_module_index(mod_path)
+        index = load_python_module_index(mod_path, workspace_index=workspace_index)
         for name, sym in index.symbols.items():
             if sym.bases:
                 for base in sym.bases:
@@ -566,20 +574,27 @@ def clear_module_index_cache(paths: Iterable[Path] | None = None) -> None:
             _python_module_index_cache.pop(path, None)
 
 
-def resolve_python_symbol_chain(module_path: Path | None, chain: tuple[str, ...]) -> list[DefinitionTarget]:
+def resolve_python_symbol_chain(
+    module_path: Path | None,
+    chain: tuple[str, ...],
+    *,
+    workspace_index: WorkspaceIndex | None = None,
+) -> list[DefinitionTarget]:
     if module_path is None:
         return []
     if not chain:
         return [DefinitionTarget(path=module_path, line=0, start_character=0, end_character=0)]
 
-    index = load_python_module_index(module_path)
+    index = load_python_module_index(module_path, workspace_index=workspace_index)
     symbol = index.symbols.get(chain[0])
     if symbol is None:
         return []
 
     if symbol.imported_module_path is not None:
         delegated_chain = ((symbol.imported_name,) if symbol.imported_name is not None else ()) + chain[1:]
-        return resolve_python_symbol_chain(symbol.imported_module_path, delegated_chain)
+        return resolve_python_symbol_chain(
+            symbol.imported_module_path, delegated_chain, workspace_index=workspace_index
+        )
 
     if len(chain) == 1:
         return [symbol.target] if symbol.target is not None else []
