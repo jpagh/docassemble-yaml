@@ -35,7 +35,7 @@ Controlled by `docassemble-lsp.importStrategy`:
 - **`docassemble-lsp.interpreter`** — Python interpreter override for `"useBundled"` or `"fromEnvironment"` (when no `command` is set). Defaults to the Python extension's active environment.
 - **`docassemble-lsp.env`** — extra environment variables merged into the server process.
 - **`docassemble-lsp.trace.server`** — protocol trace level for debugging.
-- **`docassemble-lsp.showNotifications`** — when to show server notifications.
+- **`docassemble-lsp.showNotifications`** — controls when VS Code notifications are shown for language server errors and warnings. Values: `"off"` (default, no notifications), `"onError"` (notify on server start failures only), `"onWarning"` (notify on both start failures and missing Python), `"always"` (notify on all conditions).
 
 ## Log Level
 

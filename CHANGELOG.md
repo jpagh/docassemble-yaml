@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Added
+
+- [VSCODE] `docassemble-lsp.showNotifications` setting now has integration tests that verify warnings are shown or suppressed per the configured level (`off`/`onError`/`onWarning`/`always`). The setting documentation in `vscode/README.md` has been expanded to describe each value.
+
 ### Removed
 
 - [CLI] The legacy `docassemble_lsp.core.validation:main()` entry point and its `process_file` helper have been removed. Use `docassemble-lsp` (the new `cli.py`) instead.

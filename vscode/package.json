@@ -102,7 +102,7 @@
             "onWarning",
             "always"
           ],
-          "markdownDescription": "Controls when notifications are shown for server errors and warnings."
+          "markdownDescription": "Controls when VS Code notifications are shown for language server errors and warnings. `\"off\"` (default) shows none; `\"onError\"` shows start-failure notifications; `\"onWarning\"` shows start-failure and missing-Python notifications; `\"always\"` shows all."
         },
         "docassemble-lsp.trace.server": {
           "type": "string",
