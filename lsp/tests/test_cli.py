@@ -759,10 +759,14 @@ def test_check_command_fix_and_format_on_success_reads_file_once(tmp_path: Path,
     original_read_text = Path.read_text
     call_count = 0
 
-    def counting_read_text(self, *args: object, **kwargs: object) -> str:
+    def counting_read_text(
+        self,
+        encoding: str | None = None,
+        errors: str | None = "strict",
+    ) -> str:
         nonlocal call_count
         call_count += 1
-        return original_read_text(self, *args, **kwargs)
+        return original_read_text(self, encoding=encoding, errors=errors)
 
     monkeypatch.setattr(Path, "read_text", counting_read_text)
 
