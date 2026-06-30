@@ -14,14 +14,13 @@ from docassemble_lsp.core.jinja import contains_jinja_syntax, has_jinja_header
 from docassemble_lsp.core.yaml_parsing import normalize_yaml_for_parser
 
 
+# Black's target_versions follow the installed black version (see pyproject.toml dependencies).
 @dataclass
 class FormatterConfig:
     python_keys: set[str] = field(default_factory=lambda: {"code", "validation code"})
     black_line_length: int = 88
-    black_target_versions: set[black.TargetVersion] = field(default_factory=set)
     indent: int = 2
     convert_tabs_to_spaces: bool = False
-    prefer_literal_blocks: bool = True
     strip_trailing_whitespace: bool = True
 
 
@@ -106,7 +105,6 @@ def format_python_code(
 
     mode = black.Mode(
         line_length=config.black_line_length,
-        target_versions=config.black_target_versions,
     )
     try:
         formatted = black.format_file_contents(dedented_text, fast=False, mode=mode)

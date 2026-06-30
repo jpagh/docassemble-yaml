@@ -191,6 +191,7 @@ def _runtime_options_from_args(args: argparse.Namespace) -> RuntimeOptions:
 
 
 def _formatter_config_from_args(args: argparse.Namespace) -> FormatterConfig:
+    # black target_versions follow the installed black; see FormatterConfig.
     return FormatterConfig(
         convert_tabs_to_spaces=bool(getattr(args, "convert_tabs_to_spaces", False)),
         indent=int(getattr(args, "indent", 2)),

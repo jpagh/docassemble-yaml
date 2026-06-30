@@ -57,3 +57,13 @@ def test_format_reader_error_returns_unchanged() -> None:
     assert result.changed is False
     assert result.text == malformed
     assert result.error is not None
+
+
+def test_formatter_config_has_no_legacy_fields() -> None:
+    assert set(FormatterConfig.__dataclass_fields__) == {
+        "python_keys",
+        "black_line_length",
+        "indent",
+        "convert_tabs_to_spaces",
+        "strip_trailing_whitespace",
+    }
