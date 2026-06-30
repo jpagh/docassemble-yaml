@@ -21,3 +21,49 @@ def test_build_document_facts_uses_question_text_when_no_id_exists() -> None:
     assert len(facts) == 1
     assert facts[0].name == "Hello there"
     assert facts[0].selection_line == 0
+
+
+def test_build_document_facts_multiple_yaml_documents() -> None:
+    source = "---\nid: first\nkey: val\n---\nid: second\nfoo: bar\n"
+    facts = build_document_facts(source)
+    assert len(facts) == 2
+    assert facts[0].name == "first"
+    assert facts[0].start_line == 1
+    assert facts[0].end_line == 2
+    assert facts[0].selection_line == 1
+    assert facts[1].name == "second"
+    assert facts[1].start_line == 4
+    assert facts[1].end_line == 5
+    assert facts[1].selection_line == 4
+
+
+def test_build_document_facts_comment_only_dropped() -> None:
+    facts = build_document_facts("# hello\n")
+    assert len(facts) == 0
+
+
+def test_build_document_facts_id_only() -> None:
+    facts = build_document_facts("id: \n")
+    assert len(facts) == 1
+    assert facts[0].name == "id"
+
+
+def test_build_document_facts_non_preferred_keys() -> None:
+    facts = build_document_facts("foo: bar\n")
+    assert len(facts) == 1
+    assert facts[0].name == "foo"
+    assert facts[0].selection_line == 0
+
+
+def test_build_document_facts_block_scalar_name_key() -> None:
+    facts = build_document_facts("id: |\n  hello\n")
+    assert len(facts) == 1
+    assert facts[0].name == "id"
+
+
+def test_build_document_facts_nested_keys_at_top_level_only() -> None:
+    facts = build_document_facts("outer:\n  inner: x\nother: y\n")
+    assert len(facts) == 1
+    assert len(facts[0].keys) == 2
+    key_names = [k.name for k in facts[0].keys]
+    assert "inner" not in key_names
