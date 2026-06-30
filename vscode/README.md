@@ -65,7 +65,14 @@ vsce package           # packages the VSIX
 ```
 
 The `bundled/` directory is git-ignored and regenerated on every
-build.
+build. The build is platform-specific — it embeds a specific
+CPython version, OS, and architecture, so contributors on a
+different platform must rebuild before running the real-LSP tests.
+The `just` recipes handle this: `just vscode::test` and
+`just vscode::test-mock` both depend on `vscode::build` and rebuild
+the bundle as a side effect. The default `npm test` (mock server)
+does not need the bundle — only `npm run test:real-lsp-extension`
+and the real-LSP path in `just vscode::test` do.
 
 ## Commands
 
