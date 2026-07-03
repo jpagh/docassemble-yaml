@@ -14,6 +14,7 @@
 
 - [LSP] Completion label for `.using()` now includes the closing parenthesis (was `.using(`).
 - [CLI] `--conventions` and `--ignore-codes` config args are no longer passed to the `format` command, which does not accept them.
+- [LSP] Works with docassemble 1.10.x on systems that lack native libraries like `libcairo`. The language server no longer crashes when the installed docassemble version imports optional system-dependent packages (e.g. `cairosvg`) during module resolution.
 
 ## [26.6.3] - 2026-06-23
 

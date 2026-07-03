@@ -177,7 +177,7 @@ def resolve_python_module_source(
 
     try:
         spec = importlib.util.find_spec(normalized)
-    except ImportError:
+    except Exception:
         spec = None
     if spec is None or spec.origin in {None, "built-in", "frozen"}:
         if vendored_path is not None and vendored_path.is_file():
