@@ -126,6 +126,9 @@ def _precompute_parent_keys(source: str) -> list[str | None]:
         if match is not None:
             indent = len(match.group(1))
             key = match.group(2).strip()
+            prefix = text[match.end(1) : match.start(2)]
+            if prefix:
+                indent += len(prefix)
             while stack and stack[-1][0] >= indent:
                 stack.pop()
             stack.append((indent, key))

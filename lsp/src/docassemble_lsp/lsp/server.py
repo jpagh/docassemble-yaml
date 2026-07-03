@@ -1087,12 +1087,12 @@ def create_server(
     def did_save(ls: LanguageServer, params: DidSaveTextDocumentParams) -> None:
         document = ls.workspace.get_text_document(params.text_document.uri)
         workspace_indexes.update_source(params.text_document.uri, document.source)
-        # When saving a .py file only the saved module's AST is stale —
+        # When saving a .py file the saved module and its siblings need eviction —
         # YAML saves never modify Python files, so the workspace index stays valid.
         if params.text_document.uri.endswith(".py"):
             py_path = path_from_uri_or_path(params.text_document.uri)
             if py_path is not None:
-                clear_module_index_cache([py_path])
+                clear_module_index_cache([py_path, py_path.parent])
                 clear_detect_package_cache([py_path])
             # No workspace index rebuild needed — overlays handle it.
             publish(params.text_document.uri)

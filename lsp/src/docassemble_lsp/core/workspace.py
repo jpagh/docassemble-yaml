@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 from docassemble_lsp.core.definition_models import DefinitionTarget
 from docassemble_lsp.core.document_facts import DocumentFact, build_document_facts
 from docassemble_lsp.core.field_keys import FIELD_ITEM_KNOWN_KEYS as _FIELD_ITEM_KNOWN_KEYS
-from docassemble_lsp.core.files import collect_yaml_files
+from docassemble_lsp.core.files import collect_yaml_files, detect_docassemble_package
 from docassemble_lsp.core.yaml_shared import (
     _KEY_VALUE_RE,
     _clean_value,
@@ -142,10 +142,12 @@ class WorkspaceIndex:
             current_source=current_source,
             overlays=overlays,
         )
+        package_root = detect_docassemble_package(resolved_search_roots[0]) if resolved_search_roots else None
         return cls(
             yaml_sources=yaml_sources,
             facts_by_path={source.path: tuple(build_document_facts(source.text)) for source in yaml_sources.sources},
             search_roots=resolved_search_roots,
+            package_root=package_root,
         )
 
     @classmethod
@@ -157,12 +159,17 @@ class WorkspaceIndex:
         search_roots: list[Path] | None = None,
         overlays: Mapping[Path, str] | None = None,
     ) -> WorkspaceIndex:
-        return cls.from_yaml_roots(
+        result = cls.from_yaml_roots(
             search_roots or [],
             current_path=current_path,
             current_source=current_source,
             overlays=overlays,
         )
+        if result.package_root is None:
+            pr = detect_docassemble_package(current_path)
+            if pr is not None:
+                result = replace(result, package_root=pr)
+        return result
 
     def as_source_dict(self) -> dict[Path, str]:
         return self.yaml_sources.as_source_dict()

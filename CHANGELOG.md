@@ -12,6 +12,9 @@
 
 ### Fixed
 
+- [LSP] Completion parent-key resolution on multi-line list items and list-item mapping siblings now resolves correctly (e.g., `c: 2` inside `- b: 1` no longer inherits `b` as its parent). Fixes completions inside list-item mappings.
+- [LSP] Package root detection now works from all `WorkspaceIndex` constructors, not only `build_workspace_index`. Module resolution is now correct when the workspace is built via `from_yaml_roots` or `from_current_document`.
+- [LSP] Module index cache is now invalidated for sibling modules when a `.py` file is saved (previously only the saved file was evicted). Saving a package's `__init__.py` correctly evicts cached modules in that directory.
 - [LSP] Completion label for `.using()` now includes the closing parenthesis (was `.using(`).
 - [CLI] `--conventions` and `--ignore-codes` config args are no longer passed to the `format` command, which does not accept them.
 - [LSP] Works with docassemble 1.10.x on systems that lack native libraries like `libcairo`. The language server no longer crashes when the installed docassemble version imports optional system-dependent packages (e.g. `cairosvg`) during module resolution.

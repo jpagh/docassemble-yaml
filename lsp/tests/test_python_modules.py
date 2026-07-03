@@ -279,3 +279,15 @@ def test_module_completion_members_class_methods(tmp_path: Path) -> None:
     _write_py_file(mod_path, "class MyClass:\n    def pub(self): pass\n    def _priv(self): pass\n")
     result = module_completion_members(mod_path, ("MyClass",))
     assert result == {"pub": "method", "_priv": "method"}
+
+
+def test_clear_module_index_cache_directory_evicts_children(tmp_path: Path) -> None:
+    a = tmp_path / "a.py"
+    a.write_text("X=1\n")
+    b = tmp_path / "b.py"
+    b.write_text("Y=1\n")
+    index_a = load_python_module_index(a)
+    index_b = load_python_module_index(b)
+    clear_module_index_cache([tmp_path])
+    assert load_python_module_index(a) is not index_a
+    assert load_python_module_index(b) is not index_b

@@ -1,4 +1,7 @@
 import * as assert from "node:assert/strict";
+import * as fs from "node:fs";
+import * as os from "node:os";
+import * as path from "node:path";
 
 import * as vscode from "vscode";
 
@@ -185,6 +188,50 @@ export async function runTests(): Promise<void> {
         const after = api.getServerState();
         assert.equal(after.state, "running");
         assert.ok(after.crashRestartCount > 0);
+      },
+    },
+    {
+      name: "trace.server setting reaches the mock server",
+      run: async () => {
+        const logFile = path.join(os.tmpdir(), `mock-trace-log-${Date.now()}.txt`);
+
+        await resetConfiguration();
+        await updateConfiguration("docassemble-lsp.enabled", true);
+        await updateConfiguration("docassemble-lsp.importStrategy", "fromEnvironment");
+        await updateConfiguration(
+          "docassemble-lsp.command",
+          `${quoteForShell(process.execPath)} ${quoteForShell(mockServerPath())}`,
+        );
+        await updateConfiguration("docassemble-lsp.env", {
+          DOCASSEMBLE_MOCK_LOG: logFile,
+        });
+        await updateConfiguration("docassemble-lsp.trace.server", "verbose");
+
+        const api = await getApi();
+        await api.restart();
+        await waitForState(api, "running");
+
+        // Wait for the mock to log the `$/setTrace` notification.
+        let found = false;
+        for (let i = 0; i < 50; i += 1) {
+          if (fs.existsSync(logFile)) {
+            const content = fs.readFileSync(logFile, "utf8");
+            if (content.includes("$/setTrace")) {
+              found = true;
+              break;
+            }
+          }
+          await new Promise((resolve) => setTimeout(resolve, 100));
+        }
+
+        // Clean up the log file regardless.
+        try {
+          fs.unlinkSync(logFile);
+        } catch {
+          /* ignore */
+        }
+
+        assert.ok(found, "Expected $/setTrace in mock server log");
       },
     },
   ];

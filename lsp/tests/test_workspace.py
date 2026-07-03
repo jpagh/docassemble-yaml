@@ -462,3 +462,30 @@ def test_workspace_index_templates_multi_package(tmp_path) -> None:
 
     # Aggregated template names include files from both packages.
     assert index.template_file_names == frozenset({"alpha_form.docx", "beta_form.docx", "shared.docx"})
+
+
+def test_workspace_index_from_yaml_roots_sets_package_root(tmp_path) -> None:
+    pkg_dir = tmp_path / "docassemble" / "demo"
+    pkg_dir.mkdir(parents=True)
+    (pkg_dir / "__init__.py").write_text("")
+    (pkg_dir / "data").mkdir()
+    (tmp_path / "pyproject.toml").write_text("[project]\nname='demo'\n")
+    idx = WorkspaceIndex.from_yaml_roots([tmp_path])
+    assert idx.package_root == tmp_path
+
+
+def test_workspace_index_from_yaml_roots_empty_roots_package_root_is_none(tmp_path) -> None:
+    idx = WorkspaceIndex.from_yaml_roots([])
+    assert idx.package_root is None
+
+
+def test_workspace_index_from_current_document_sets_package_root(tmp_path) -> None:
+    pkg_dir = tmp_path / "docassemble" / "demo"
+    pkg_dir.mkdir(parents=True)
+    (pkg_dir / "__init__.py").write_text("")
+    (pkg_dir / "data").mkdir()
+    (tmp_path / "pyproject.toml").write_text("[project]\nname='demo'\n")
+    yaml_file = pkg_dir / "data" / "test.yml"
+    yaml_file.write_text("question: Hi\n", encoding="utf-8")
+    idx = WorkspaceIndex.from_current_document(yaml_file, "question: Hi\n")
+    assert idx.package_root == tmp_path

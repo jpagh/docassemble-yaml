@@ -565,13 +565,19 @@ def clear_module_index_cache(paths: Iterable[Path] | None = None) -> None:
 
     When *paths* is ``None`` (default), the entire cache is cleared.
     When *paths* is provided, only the specified module paths are
-    evicted — other cached modules are preserved.
+    evicted — other cached modules are preserved.  Directory paths
+    evict every cached module whose path is under that directory.
     """
     if paths is None:
         _python_module_index_cache.clear()
     else:
         for path in paths:
-            _python_module_index_cache.pop(path, None)
+            if path.is_dir():
+                for cached in list(_python_module_index_cache):
+                    if cached.is_relative_to(path):
+                        _python_module_index_cache.pop(cached, None)
+            else:
+                _python_module_index_cache.pop(path, None)
 
 
 def resolve_python_symbol_chain(
