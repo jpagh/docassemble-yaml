@@ -67,3 +67,10 @@ def test_formatter_config_has_no_legacy_fields() -> None:
         "convert_tabs_to_spaces",
         "strip_trailing_whitespace",
     }
+
+
+def test_format_text_converts_tabs_to_spaces() -> None:
+    config = FormatterConfig(convert_tabs_to_spaces=True)
+    result = format_text("key:\tvalue\n", config=config)
+    assert "\t" not in result.text
+    assert result.text == "key:  value\n"
