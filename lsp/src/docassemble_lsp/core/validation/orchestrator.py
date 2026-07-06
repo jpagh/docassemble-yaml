@@ -75,8 +75,6 @@ from docassemble_lsp.core.yaml_shared import (
 )
 
 logger = logging.getLogger(__name__)
-_RuamelDuplicateKeyError = DuplicateKeyError
-_RuamelMarkedYAMLError = MarkedYAMLError
 
 
 def _validate_cross_document(

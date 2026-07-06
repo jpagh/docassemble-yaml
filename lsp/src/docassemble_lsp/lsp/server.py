@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 import re
-from dataclasses import dataclass
 from difflib import get_close_matches
 from pathlib import Path
 
@@ -134,11 +133,6 @@ def _configure_pygls_logging() -> None:
     if any(isinstance(existing_filter, _IgnoreUnknownCancelFilter) for existing_filter in pygls_logger.filters):
         return
     pygls_logger.addFilter(_IgnoreUnknownCancelFilter())
-
-
-@dataclass(frozen=True, slots=True)
-class ServerFeatures:
-    diagnostics_source: str = "docassemble-lsp"
 
 
 _YAML_KEY_RE = re.compile(r"^(\s*)(?:-\s*)?([^:#][^:]*?)\s*:")
@@ -694,14 +688,6 @@ def _line_key_range(source: str, line: int) -> tuple[str, int, int] | None:
     if match is None:
         return None
     return (match.group(2).strip(), match.start(2), match.end(2))
-
-
-def _has_unknown_keys_diagnostic(diagnostics: list[LspDiagnostic]) -> bool:
-    for diagnostic in diagnostics:
-        if diagnostic.code != "E301":
-            continue
-        return True
-    return False
 
 
 def _suggest_known_key_replacement(key_name: str) -> str | None:

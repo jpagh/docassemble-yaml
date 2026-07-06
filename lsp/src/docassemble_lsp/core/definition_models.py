@@ -88,12 +88,6 @@ class PythonSymbolQuery:
 
 
 @dataclass(frozen=True, slots=True)
-class PythonChainOccurrence:
-    parts: tuple[str, ...]
-    ranges: tuple[tuple[int, int, int], ...]
-
-
-@dataclass(frozen=True, slots=True)
 class BlockScalarRegion:
     key_name: str
     key_line: int
@@ -101,12 +95,6 @@ class BlockScalarRegion:
     end_line: int
     content_indent: int
     text: str
-
-
-@dataclass(frozen=True, slots=True)
-class PythonDeclarationQuery:
-    query: PythonSymbolQuery
-    target: DefinitionTarget
 
 
 @dataclass(frozen=True, slots=True)

@@ -169,25 +169,6 @@ _MARKDOWN_STRING_DISPLAY_TYPES = ("string", "mako", "markdown")
 _PYTHON_EXPR_DISPLAY_TYPES = ("python",)
 
 
-def _bool_expr_rule(
-    name: str,
-    *,
-    enum_values: tuple[str, ...] = (),
-    description: str | None = None,
-    comment: str | None = None,
-    insert_kind: InsertKind = "scalar",
-) -> PropertyRule:
-    return _rule(
-        name,
-        value_types=("boolean", "string"),
-        enum_values=enum_values,
-        display_value_types=_BOOLEAN_PY_EXPR_DISPLAY_TYPES,
-        description=description,
-        comment=comment,
-        insert_kind=insert_kind,
-    )
-
-
 def _bool_expr_rules(
     names: tuple[str, ...],
     *,

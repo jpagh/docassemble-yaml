@@ -800,61 +800,6 @@ def _resolve_local_file_reference(
     return []
 
 
-def _resolve_def_reference(source: str, symbol_name: str, current_path: Path | None) -> list[DefinitionTarget]:
-    if not symbol_name:
-        return []
-
-    target_path = current_path or Path(".")
-    targets: list[DefinitionTarget] = []
-    for fact in build_document_facts(source):
-        for key_fact in fact.keys:
-            if key_fact.name != "def":
-                continue
-            value = _clean_value(key_fact.value)
-            if value != symbol_name:
-                continue
-            targets.append(
-                DefinitionTarget(
-                    path=target_path,
-                    line=key_fact.line,
-                    start_character=0,
-                    end_character=len(_document_lines(source)[key_fact.line]),
-                )
-            )
-    return targets
-
-
-def _resolve_top_level_key_reference(
-    source: str,
-    *,
-    key_name: str,
-    symbol_name: str,
-    current_path: Path | None,
-) -> list[DefinitionTarget]:
-    if not symbol_name:
-        return []
-
-    target_path = current_path or Path(".")
-    lines = _document_lines(source)
-    targets: list[DefinitionTarget] = []
-    for fact in build_document_facts(source):
-        for key_fact in fact.keys:
-            if key_fact.name != key_name:
-                continue
-            value = _clean_value(key_fact.value)
-            if value != symbol_name:
-                continue
-            targets.append(
-                DefinitionTarget(
-                    path=target_path,
-                    line=key_fact.line,
-                    start_character=0,
-                    end_character=len(lines[key_fact.line]),
-                )
-            )
-    return targets
-
-
 def _symbol_request(source: str, line: int, character: int, current_path: Path | None) -> ReferenceRequest | None:
     key_or_parent, value = _match_value_context(source, line, character)
     if key_or_parent is not None and value is not None:

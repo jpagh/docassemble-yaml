@@ -179,20 +179,6 @@ _EXPRESSION_KEYWORDS = frozenset(
     }
 )
 
-_STATEMENT_KEYWORDS = _EXPRESSION_KEYWORDS | frozenset(
-    {
-        "elif",
-        "for",
-        "while",
-        "try",
-        "except",
-        "finally",
-        "with",
-        "async",
-        "await",
-    }
-)
-
 _MAKO_LINE_KEYWORDS = _EXPRESSION_KEYWORDS | frozenset(
     {
         "elif",
@@ -393,18 +379,6 @@ def _python_namespace_bindings(
         bindings.extend(_parse_import_binding(entry, current_path, workspace_index))
 
     return bindings
-
-
-def _python_name_range(node: ast.AST, source_lines: list[str], name: str) -> tuple[int, int, int] | None:
-    lineno = getattr(node, "lineno", None)
-    col_offset = getattr(node, "col_offset", None)
-    if lineno is None or col_offset is None:
-        return None
-    line_text = source_lines[lineno - 1]
-    start = line_text.find(name, col_offset)
-    if start == -1:
-        return None
-    return (lineno - 1, start, start + len(name))
 
 
 def enclosing_block_scalar_region(source: str, line: int) -> BlockScalarRegion | None:

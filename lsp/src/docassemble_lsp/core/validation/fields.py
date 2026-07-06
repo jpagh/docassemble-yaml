@@ -22,7 +22,6 @@ from mako.template import Template as MakoTemplate  # type: ignore[import-untype
 
 from docassemble_lsp.core.field_keys import (
     FIELD_ITEM_KNOWN_KEYS,
-    FIELD_ITEM_KNOWN_KEYS_LOWER,
     FIELD_JS_MODIFIER_KEYS,
     FIELD_MAKO_KEYS,
     FIELD_MODIFIER_KEYS,
@@ -595,7 +594,6 @@ class DAFields:
     mako_keys = frozenset(FIELD_MAKO_KEYS)
     js_modifier_keys = FIELD_JS_MODIFIER_KEYS
     py_modifier_keys = FIELD_PY_MODIFIER_KEYS
-    _reserved_field_keys_lower = FIELD_ITEM_KNOWN_KEYS_LOWER
     _reserved_field_keys = FIELD_ITEM_KNOWN_KEYS
 
     def __init__(self, x, runtime_options: RuntimeOptions | None = None):

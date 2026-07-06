@@ -223,10 +223,6 @@ def _discover_package_roots(search_roots: Iterable[Path]) -> list[Path]:
     return results
 
 
-def clear_package_roots_cache() -> None:
-    _discover_package_roots_cache.clear()
-
-
 def clear_detect_package_cache(paths: Iterable[Path] | None = None) -> None:
     """Clear the ``detect_docassemble_package``, ``templates_dir_for_path``,
     and template name caches.
