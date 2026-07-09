@@ -214,6 +214,10 @@ class DocassembleLspController {
       this.crashRestartCount = 0;
       this.log(`Language server started with command: ${resolvedCommand.command}`);
 
+      if (traceSetting !== "off") {
+        await client.sendNotification("$/setTrace", { value: traceSetting });
+      }
+
       // Register a local DocumentLinkProvider so VS Code draws persistent
       // underlines for module/include/static/template references. The LSP client
       // auto-registers a provider too, but VS Code only renders underlines from
