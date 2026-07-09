@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [26.7.0] - 2026-07-09
+
 ### Added
 
 - [VSCODE] `docassemble-lsp.showNotifications` setting now has integration tests that verify warnings are shown or suppressed per the configured level (`off`/`onError`/`onWarning`/`always`). The setting documentation in `vscode/README.md` has been expanded to describe each value.

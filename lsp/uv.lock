@@ -1450,7 +1450,7 @@ wheels = [
 
 [[package]]
 name = "docassemble-lsp"
-version = "26.6.3"
+version = "26.7.0"
 source = { editable = "." }
 dependencies = [
     { name = "black" },
