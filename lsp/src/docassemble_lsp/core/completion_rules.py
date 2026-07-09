@@ -1024,7 +1024,6 @@ def _build_registry() -> SchemaMetadata:
             "decoration",
             value_types=("string", "array", "object"),
             description="Image name or list of image names shown as decoration alongside the question.",
-            insert_kind="object",
         ),
         "css class": _rule(
             "css class",
