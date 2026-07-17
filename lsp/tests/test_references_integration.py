@@ -224,7 +224,10 @@ def test_definition_locations_demo_package_resolves_modules_symbol() -> None:
     )
 
     assert [
-        (Path(location.target_uri.removeprefix("file://")).name, location.target_range.start.line)
+        (
+            Path(location.target_uri.removeprefix("file://")).name,
+            location.target_range.start.line,
+        )
         for location in locations
     ] == [
         ("workflow.py", 0),
@@ -261,7 +264,10 @@ def test_definition_locations_demo_package_resolves_child_include_python_binding
     )
 
     assert [
-        (Path(location.target_uri.removeprefix("file://")).name, location.target_range.start.line)
+        (
+            Path(location.target_uri.removeprefix("file://")).name,
+            location.target_range.start.line,
+        )
         for location in locations
     ] == [
         ("workflow.py", 0),
@@ -285,7 +291,10 @@ def test_definition_locations_demo_package_resolves_url_action_event() -> None:
     )
 
     assert [
-        (Path(location.target_uri.removeprefix("file://")).name, location.target_range.start.line)
+        (
+            Path(location.target_uri.removeprefix("file://")).name,
+            location.target_range.start.line,
+        )
         for location in locations
     ] == [
         (
@@ -313,7 +322,10 @@ def test_definition_locations_demo_package_resolves_action_menu_item_event() -> 
     )
 
     assert [
-        (Path(location.target_uri.removeprefix("file://")).name, location.target_range.start.line)
+        (
+            Path(location.target_uri.removeprefix("file://")).name,
+            location.target_range.start.line,
+        )
         for location in locations
     ] == [
         ("x_events.yml", event_line),
@@ -342,6 +354,12 @@ def test_reference_locations_demo_package_include_url_action_event_references() 
     assert [(Path(location.uri.removeprefix("file://")).name, location.range.start.line) for location in locations] == [
         ("x_events.yml", helper_line),
         ("x_events.yml", event_line),
-        ("main.yml", next(index for index, line in enumerate(main_lines) if 'url_action("workflow_reset")' in line)),
-        ("main.yml", next(index for index, line in enumerate(main_lines) if "action: workflow_reset" in line)),
+        (
+            "main.yml",
+            next(index for index, line in enumerate(main_lines) if 'url_action("workflow_reset")' in line),
+        ),
+        (
+            "main.yml",
+            next(index for index, line in enumerate(main_lines) if "action: workflow_reset" in line),
+        ),
     ]

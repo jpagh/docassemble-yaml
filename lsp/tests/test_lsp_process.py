@@ -79,7 +79,11 @@ class _LspMessageReader(threading.Thread):
 
 class _LspSession:
     def __init__(
-        self, cli_args: list[str] | None = None, *, cwd: Path | None = None, extra_pythonpath: Path | None = None
+        self,
+        cli_args: list[str] | None = None,
+        *,
+        cwd: Path | None = None,
+        extra_pythonpath: Path | None = None,
     ) -> None:
         self._cli_args = cli_args or []
         self._cwd = cwd or REPO_ROOT
@@ -350,7 +354,9 @@ def test_lsp_process_debug_log_level_emits_log_message(tmp_path: Path) -> None:
     assert "Log level set to DEBUG" in stderr
 
 
-def test_lsp_process_publishes_field_shorthand_convention_when_enabled(tmp_path: Path) -> None:
+def test_lsp_process_publishes_field_shorthand_convention_when_enabled(
+    tmp_path: Path,
+) -> None:
     source_path = tmp_path / "shorthand.yml"
     source = "question: Hi\nfields:\n  - Name: user.name\n"
     source_path.write_text(source, encoding="utf-8")
@@ -368,7 +374,9 @@ def test_lsp_process_publishes_field_shorthand_convention_when_enabled(tmp_path:
     assert [diagnostic["code"] for diagnostic in diagnostics] == ["C102"]
 
 
-def test_lsp_process_offers_code_action_for_field_shorthand_convention(tmp_path: Path) -> None:
+def test_lsp_process_offers_code_action_for_field_shorthand_convention(
+    tmp_path: Path,
+) -> None:
     source_path = tmp_path / "shorthand.yml"
     source = "question: Hi\nfields:\n  - Name: user.name\n"
     source_path.write_text(source, encoding="utf-8")
@@ -402,7 +410,9 @@ def test_lsp_process_offers_code_action_for_field_shorthand_convention(tmp_path:
     assert [text_edit["newText"] for text_edit in text_edits] == ["  - label: Name\n    field: user.name"]
 
 
-def test_lsp_process_offers_source_fix_all_for_field_shorthand_conventions(tmp_path: Path) -> None:
+def test_lsp_process_offers_source_fix_all_for_field_shorthand_conventions(
+    tmp_path: Path,
+) -> None:
     source_path = tmp_path / "shorthand.yml"
     source = "question: Hi\nfields:\n  - Name: user.name\n  - Age: user.age\n"
     source_path.write_text(source, encoding="utf-8")
@@ -556,7 +566,10 @@ def test_lsp_process_returns_document_links_for_local_files(tmp_path: Path) -> N
     assert links == [
         {
             "range": {
-                "start": {"line": 1, "character": source.splitlines()[1].index("included.yml")},
+                "start": {
+                    "line": 1,
+                    "character": source.splitlines()[1].index("included.yml"),
+                },
                 "end": {
                     "line": 1,
                     "character": source.splitlines()[1].index("included.yml") + len("included.yml"),
@@ -568,7 +581,9 @@ def test_lsp_process_returns_document_links_for_local_files(tmp_path: Path) -> N
     ]
 
 
-def test_lsp_process_returns_document_links_for_modules_includes_and_static_files(tmp_path: Path) -> None:
+def test_lsp_process_returns_document_links_for_modules_includes_and_static_files(
+    tmp_path: Path,
+) -> None:
     package_dir = tmp_path / "docassemble" / "demo"
     questions = package_dir / "data" / "questions"
     static = package_dir / "data" / "static"
@@ -680,7 +695,9 @@ def test_lsp_process_indents_new_fields_line_on_type_formatting(tmp_path: Path) 
     ]
 
 
-def test_lsp_process_indents_fields_block_scalar_line_on_type_formatting(tmp_path: Path) -> None:
+def test_lsp_process_indents_fields_block_scalar_line_on_type_formatting(
+    tmp_path: Path,
+) -> None:
     source_path = tmp_path / "fields-block-scalar.yml"
     source = "fields:\n  - code: |\n\n"
     source_path.write_text(source, encoding="utf-8")
@@ -798,7 +815,9 @@ def test_lsp_process_python_watched_file_updates_completions(tmp_path: Path) -> 
         assert "Employee" in labels2
 
 
-def test_lsp_process_rebuilds_workspace_index_on_watched_file_change(tmp_path: Path) -> None:
+def test_lsp_process_rebuilds_workspace_index_on_watched_file_change(
+    tmp_path: Path,
+) -> None:
     source_path = tmp_path / "interview.yml"
     initial_content = "---\ndef: orig_var\n"
     updated_content = "---\ndef: new_var\n"
@@ -811,7 +830,10 @@ def test_lsp_process_rebuilds_workspace_index_on_watched_file_change(tmp_path: P
         session.wait_for_notification("textDocument/publishDiagnostics")
 
         # Close the document so the watched file change reads from disk
-        session.notify("textDocument/didClose", {"textDocument": {"uri": source_path.resolve().as_uri()}})
+        session.notify(
+            "textDocument/didClose",
+            {"textDocument": {"uri": source_path.resolve().as_uri()}},
+        )
 
         source_path.write_text(updated_content, encoding="utf-8")
 
@@ -858,7 +880,10 @@ def test_lsp_process_unsaved_symbol_disappears_on_close(tmp_path: Path) -> None:
         symbols_open = session.request("workspace/symbol", {"query": "temp_def"})
         assert any(symbol["name"] == "temp_def" for symbol in symbols_open)
 
-        session.notify("textDocument/didClose", {"textDocument": {"uri": source_path.resolve().as_uri()}})
+        session.notify(
+            "textDocument/didClose",
+            {"textDocument": {"uri": source_path.resolve().as_uri()}},
+        )
 
         symbols_closed = session.request("workspace/symbol", {"query": "temp_def"})
 

@@ -23,7 +23,9 @@ def validate_nesting_depth(
         _lc_line,
         _yaml_error,
     )
-    from docassemble_lsp.core.validation.blocks import _max_screen_visibility_nesting_depth as _max_nesting
+    from docassemble_lsp.core.validation.blocks import (
+        _max_screen_visibility_nesting_depth as _max_nesting,
+    )
 
     errors: list[YAMLError] = []
     nesting_depth, nesting_line = _max_nesting(doc)
@@ -43,6 +45,8 @@ def collect_conditional_fields(
     doc: dict[str, Any],
     line_number: int,
 ) -> list[dict[str, Any]]:
-    from docassemble_lsp.core.validation.blocks import _extract_conditional_fields_from_doc
+    from docassemble_lsp.core.validation.blocks import (
+        _extract_conditional_fields_from_doc,
+    )
 
     return _extract_conditional_fields_from_doc(doc, line_number)

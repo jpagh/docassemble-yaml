@@ -202,13 +202,25 @@ class WorkspaceNavigationService:
                             if ":" not in value:
                                 resolved = (path.parent / value).resolve()
                                 if resolved == request.target_path:
-                                    _append_reference_target(targets, path, line_index, start_character, end_character)
+                                    _append_reference_target(
+                                        targets,
+                                        path,
+                                        line_index,
+                                        start_character,
+                                        end_character,
+                                    )
                             else:
                                 pkg_resolved = resolve_package_qualified_path(
                                     value, list(self.workspace_index.search_roots)
                                 )
                                 if pkg_resolved is not None and pkg_resolved == request.target_path:
-                                    _append_reference_target(targets, path, line_index, start_character, end_character)
+                                    _append_reference_target(
+                                        targets,
+                                        path,
+                                        line_index,
+                                        start_character,
+                                        end_character,
+                                    )
                     elif (
                         parent in _FILE_REFERENCE_LIST_PARENTS
                         and _is_list_key_match(text, key_match)
@@ -223,7 +235,11 @@ class WorkspaceNavigationService:
                             )
                             if pkg_resolved is not None and pkg_resolved == request.target_path:
                                 _append_reference_target(
-                                    targets, path, line_index, key_match.start(2), key_match.end(3)
+                                    targets,
+                                    path,
+                                    line_index,
+                                    key_match.start(2),
+                                    key_match.end(3),
                                 )
                     continue
 
@@ -266,5 +282,11 @@ class WorkspaceNavigationService:
                     is_declaration=False,
                 )
 
-        targets.sort(key=lambda target: (target.line, target.start_character, target.end_character))
+        targets.sort(
+            key=lambda target: (
+                target.line,
+                target.start_character,
+                target.end_character,
+            )
+        )
         return targets

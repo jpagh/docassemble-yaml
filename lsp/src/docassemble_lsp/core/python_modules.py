@@ -12,7 +12,10 @@ from docassemble_lsp.core.definition_models import (
     PythonModuleResolution,
     PythonModuleSymbol,
 )
-from docassemble_lsp.core.files import _discover_package_roots, find_nearest_pyproject_dir
+from docassemble_lsp.core.files import (
+    _discover_package_roots,
+    find_nearest_pyproject_dir,
+)
 from docassemble_lsp.core.line_helpers import _safe_ast_parse
 from docassemble_lsp.core.python_paths import (
     docassemble_package_dir,
@@ -367,7 +370,10 @@ def load_python_module_index(
             target = _python_definition_target(module_path, lines, node)
             if target is not None:
                 symbols[node.name] = PythonModuleSymbol(
-                    kind="function", target=target, methods={}, docstring=ast.get_docstring(node)
+                    kind="function",
+                    target=target,
+                    methods={},
+                    docstring=ast.get_docstring(node),
                 )
             continue
 
@@ -599,7 +605,9 @@ def resolve_python_symbol_chain(
     if symbol.imported_module_path is not None:
         delegated_chain = ((symbol.imported_name,) if symbol.imported_name is not None else ()) + chain[1:]
         return resolve_python_symbol_chain(
-            symbol.imported_module_path, delegated_chain, workspace_index=workspace_index
+            symbol.imported_module_path,
+            delegated_chain,
+            workspace_index=workspace_index,
         )
 
     if len(chain) == 1:

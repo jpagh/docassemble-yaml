@@ -605,7 +605,10 @@ class DAFields:
             if content_keys == {"code"}:
                 if not isinstance(x.get("code"), str):
                     self.errors = [
-                        _validator_error(MessageCode.FIELDS_CODE_TYPE, value_type=type(x.get("code")).__name__)
+                        _validator_error(
+                            MessageCode.FIELDS_CODE_TYPE,
+                            value_type=type(x.get("code")).__name__,
+                        )
                     ]
                 return
             x = [x]
@@ -659,7 +662,10 @@ class DAFields:
         target_value = field_item.get(target_key)
         if not isinstance(target_value, str):
             self.errors.append(
-                _validator_error(MessageCode.FIELD_TARGET_NOT_PLAIN_TEXT, self._value_line_for(field_item, target_key))
+                _validator_error(
+                    MessageCode.FIELD_TARGET_NOT_PLAIN_TEXT,
+                    self._value_line_for(field_item, target_key),
+                )
             )
             return False
         stripped_target = target_value.strip()
@@ -701,19 +707,26 @@ class DAFields:
         if len(presentation_keys) > 1:
             self.errors.append(
                 _validator_error(
-                    MessageCode.FIELD_PRESENTATION_KEY_CONFLICT, self._key_line_for(field_item, presentation_keys[1])
+                    MessageCode.FIELD_PRESENTATION_KEY_CONFLICT,
+                    self._key_line_for(field_item, presentation_keys[1]),
                 )
             )
 
         if "label" in field_item and "field" not in field_item:
             self.errors.append(
-                _validator_error(MessageCode.FIELD_ITEM_MISSING_TARGET, self._key_line_for(field_item, "label"))
+                _validator_error(
+                    MessageCode.FIELD_ITEM_MISSING_TARGET,
+                    self._key_line_for(field_item, "label"),
+                )
             )
 
         input_type = field_item.get("input type")
         if "field" in field_item and "label" not in field_item and input_type != "hidden":
             self.errors.append(
-                _validator_error(MessageCode.FIELD_ITEM_MISSING_LABEL, self._key_line_for(field_item, "field"))
+                _validator_error(
+                    MessageCode.FIELD_ITEM_MISSING_LABEL,
+                    self._key_line_for(field_item, "field"),
+                )
             )
 
         if "label" in field_item and shorthand_keys:
@@ -766,7 +779,10 @@ class DAFields:
 
         if "exclude" in field_item and isinstance(field_item["exclude"], Mapping):
             self.errors.append(
-                _validator_error(MessageCode.FIELD_EXCLUDE_INVALID_FORMAT, self._key_line_for(field_item, "exclude"))
+                _validator_error(
+                    MessageCode.FIELD_EXCLUDE_INVALID_FORMAT,
+                    self._key_line_for(field_item, "exclude"),
+                )
             )
 
         if (
@@ -775,7 +791,10 @@ class DAFields:
             and not isinstance(field_item["default"], (list, str))
         ):
             self.errors.append(
-                _validator_error(MessageCode.FIELD_DEFAULT_INVALID_FORMAT, self._key_line_for(field_item, "default"))
+                _validator_error(
+                    MessageCode.FIELD_DEFAULT_INVALID_FORMAT,
+                    self._key_line_for(field_item, "default"),
+                )
             )
 
     def _validate_python_modifier(self, modifier_key, modifier_value, field_item, screen_variables):
@@ -929,7 +948,10 @@ class DAFields:
         for index, field_item in enumerate(fields_list):
             if not isinstance(field_item, dict):
                 self.errors.append(
-                    _validator_error(MessageCode.FIELD_ITEM_MUST_BE_DICT, _seq_item_line(fields_list, index))
+                    _validator_error(
+                        MessageCode.FIELD_ITEM_MUST_BE_DICT,
+                        _seq_item_line(fields_list, index),
+                    )
                 )
                 continue
 
@@ -939,7 +961,10 @@ class DAFields:
             if not self._field_item_has_content_target(field_item):
                 if "label" not in field_item and "field" not in field_item:
                     self.errors.append(
-                        _validator_error(MessageCode.FIELD_ITEM_MISSING_TARGET, self._line_for(field_item))
+                        _validator_error(
+                            MessageCode.FIELD_ITEM_MISSING_TARGET,
+                            self._line_for(field_item),
+                        )
                     )
                 continue
 
@@ -1011,7 +1036,13 @@ class DAFields:
                 )
                 for err in validator.errors:
                     err_msg, err_line, err_code = _normalize_validator_error(err)
-                    self.errors.append((err_msg, self._value_line_for(field_item, js_key, err_line), err_code))
+                    self.errors.append(
+                        (
+                            err_msg,
+                            self._value_line_for(field_item, js_key, err_line),
+                            err_code,
+                        )
+                    )
 
 
 # ---------------------------------------------------------------------------

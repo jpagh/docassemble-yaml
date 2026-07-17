@@ -161,9 +161,19 @@ FIELD_KEY_BLOCKED_DATATYPES: dict[str, frozenset[str]] = {
     "disable others": DISABLE_OTHERS_BLOCKED_DTYPES,
 }
 
-FIELDS_ITEM_SPECIAL_PYTHON_EXPR_KEYS = ("code", "validate", "object labeler", "help generator", "image generator")
+FIELDS_ITEM_SPECIAL_PYTHON_EXPR_KEYS = (
+    "code",
+    "validate",
+    "object labeler",
+    "help generator",
+    "image generator",
+)
 FIELDS_ITEM_SPECIAL_STRING_KEYS = ("validation code",)
-FIELDS_ITEM_SPECIAL_BOOLEAN_OR_ARRAY_KEYS = ("disable others", "uncheck others", "check others")
+FIELDS_ITEM_SPECIAL_BOOLEAN_OR_ARRAY_KEYS = (
+    "disable others",
+    "uncheck others",
+    "check others",
+)
 FIELDS_ITEM_SPECIAL_OBJECT_KEYS = ("validation messages",)
 FIELDS_ITEM_SPECIAL_INTEGER_KEYS = ("trigger at",)
 FIELDS_ITEM_SPECIAL_ENUM_KEYS = ("datatype", "input type")

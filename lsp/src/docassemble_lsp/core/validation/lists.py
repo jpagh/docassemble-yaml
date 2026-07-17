@@ -8,7 +8,11 @@ from __future__ import annotations
 from collections.abc import Mapping
 
 from docassemble_lsp.core.field_validators import _validator_error
-from docassemble_lsp.core.line_helpers import _is_internal_metadata_key, _lc_key_line, _lc_line
+from docassemble_lsp.core.line_helpers import (
+    _is_internal_metadata_key,
+    _lc_key_line,
+    _lc_line,
+)
 from docassemble_lsp.core.messages import MessageCode
 
 

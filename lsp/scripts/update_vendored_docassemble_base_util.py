@@ -116,7 +116,10 @@ def _render_decorators(node: ast.FunctionDef | ast.AsyncFunctionDef) -> list[str
 
 
 def _render_function(
-    node: ast.FunctionDef | ast.AsyncFunctionDef, *, indent: str = "", is_method: bool = False
+    node: ast.FunctionDef | ast.AsyncFunctionDef,
+    *,
+    indent: str = "",
+    is_method: bool = False,
 ) -> list[str]:
     prefix = "async def" if isinstance(node, ast.AsyncFunctionDef) else "def"
     arguments = _render_arguments(node.args, is_method=is_method)
@@ -228,7 +231,10 @@ def main() -> None:
     targets: list[Path] = []
     for module_name, target in TARGETS.items():
         source_path, tree = _load_tree(module_name)
-        target.write_text(_render_stub(tree, module_name=module_name, module_path=source_path), encoding="utf-8")
+        target.write_text(
+            _render_stub(tree, module_name=module_name, module_path=source_path),
+            encoding="utf-8",
+        )
         targets.append(target)
 
     subprocess.run(["uv", "run", "ruff", "check", "--fix", *map(str, targets)], check=True)

@@ -18,17 +18,6 @@
   },
   "publisher": "jackadamson",
   "main": "./dist/extension.js",
-  "scripts": {
-    "bundle-server": "node scripts/bundle-server.mjs",
-    "compile": "tsc -p ./",
-    "build": "npm run bundle-server && tsc -p ./ && esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --platform=node --target=node18 --format=cjs --sourcemap=external --minify",
-    "watch": "tsc -w -p ./",
-    "test": "node ./dist/test/runTest.js",
-    "test:real-lsp-extension": "DOCASSEMBLE_LSP_ENABLE_REAL_TEST=1 node ./dist/test/runTest.js",
-    "lint": "oxlint",
-    "format": "oxfmt --write",
-    "format:check": "oxfmt --check"
-  },
   "dependencies": {
     "@vscode/python-extension": "^1.0.5",
     "vscode-languageclient": "^10.0.0"
@@ -36,11 +25,7 @@
   "devDependencies": {
     "@types/node": "^22.20.0",
     "@types/vscode": "^1.93.0",
-    "@vscode/test-electron": "^3.0.0",
-    "esbuild": "^0.28.0",
-    "oxfmt": "^0.56.0",
-    "oxlint": "^1.71.0",
-    "typescript": "^5.8.3"
+    "@vscode/test-electron": "^3.0.0"
   },
   "contributes": {
     "codeActions": [
@@ -207,6 +192,7 @@
   "engines": {
     "vscode": "^1.93.0"
   },
+  "packageManager": "aube@latest",
   "__metadata": {
     "id": "517a3d61-d626-45e9-a011-03be13277f9a",
     "publisherId": "8651b88b-9643-4b29-83d9-b5407b14d9db",

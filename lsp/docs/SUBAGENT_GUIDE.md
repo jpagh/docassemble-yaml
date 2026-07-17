@@ -79,7 +79,7 @@ Prefer the smallest test family that can prove the feature.
    feature is purely protocol translation.
 5. Add or update adapter translation in `lsp/server.py`.
 6. Run the smallest discriminating test family.
-7. Run `ruff check --fix && just test type` before declaring the slice
+7. Run `mise run //lsp:check` before declaring the slice
    done.
 8. Update `RELEASE_GATE.md` only if the implementation-status summary
    or supported contract meaningfully changed.
@@ -163,7 +163,7 @@ For a normal architectural slice:
 
 1. run the focused test family first
 2. fix any diagnostics or typing issues in touched files
-3. run `ruff check --fix && just test type`
+3. run `mise run //lsp:check`
 
 If the work is only documentation, validate changed files for
 diagnostics and keep cross-links accurate.

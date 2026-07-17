@@ -16,7 +16,10 @@ from docassemble_lsp.core import (
 from docassemble_lsp.core import (
     resolve_workspace_symbol_targets as core_resolve_workspace_symbol_targets,
 )
-from docassemble_lsp.core.python_paths import path_from_uri_or_path, resolve_package_qualified_path
+from docassemble_lsp.core.python_paths import (
+    path_from_uri_or_path,
+    resolve_package_qualified_path,
+)
 from docassemble_lsp.core.workspace import WorkspaceIndex
 
 
@@ -43,7 +46,11 @@ def _workspace_index_from_test_args(
         return workspace_index
     current_path = path_from_uri_or_path(uri_or_path)
     roots = workspace_paths or ([current_path.parent] if current_path is not None else [])
-    return build_workspace_index(roots, current_path=current_path, current_source=source if current_path else None)
+    return build_workspace_index(
+        roots,
+        current_path=current_path,
+        current_source=source if current_path else None,
+    )
 
 
 def resolve_definition_targets(source: str, line: int, character: int, **kwargs: Any) -> Any:
@@ -120,7 +127,9 @@ def test_resolve_python_module_source_falls_back_to_vendored(monkeypatch) -> Non
     assert resolution.path.name == "vendored_docassemble_base_util.pyi"
 
 
-def test_resolve_python_module_source_falls_back_to_vendored_functions(monkeypatch) -> None:
+def test_resolve_python_module_source_falls_back_to_vendored_functions(
+    monkeypatch,
+) -> None:
     monkeypatch.setattr(python_modules.importlib.util, "find_spec", lambda _name: None)
 
     resolution = python_modules.resolve_python_module_source(
@@ -133,7 +142,9 @@ def test_resolve_python_module_source_falls_back_to_vendored_functions(monkeypat
     assert resolution.path.name == "vendored_docassemble_base_functions.pyi"
 
 
-def test_python_module_symbol_details_respect_all_and_imported_exports(tmp_path) -> None:
+def test_python_module_symbol_details_respect_all_and_imported_exports(
+    tmp_path,
+) -> None:
     package_dir = tmp_path / "docassemble" / "demo"
     package_dir.mkdir(parents=True)
     (package_dir / "shared.py").write_text(
@@ -179,7 +190,11 @@ def test_resolve_definition_targets_for_package_qualified_include(tmp_path) -> N
     pkg_ref = "docassemble.demo:data/questions/shared.yml"
 
     targets = resolve_definition_targets(
-        source, 1, source.splitlines()[1].index(pkg_ref) + 5, uri_or_path=source_path, workspace_paths=[tmp_path]
+        source,
+        1,
+        source.splitlines()[1].index(pkg_ref) + 5,
+        uri_or_path=source_path,
+        workspace_paths=[tmp_path],
     )
 
     assert len(targets) == 1
@@ -187,7 +202,9 @@ def test_resolve_definition_targets_for_package_qualified_include(tmp_path) -> N
     assert targets[0].line == 0
 
 
-def test_resolve_definition_targets_for_package_qualified_include_from_package_roots(tmp_path) -> None:
+def test_resolve_definition_targets_for_package_qualified_include_from_package_roots(
+    tmp_path,
+) -> None:
     pkg_root = tmp_path / "docassemble" / "demo"
     questions = pkg_root / "data" / "questions"
     questions.mkdir(parents=True)
@@ -210,7 +227,9 @@ def test_resolve_definition_targets_for_package_qualified_include_from_package_r
         assert targets[0].path == shared.resolve()
 
 
-def test_resolve_definition_targets_for_quoted_package_qualified_include(tmp_path) -> None:
+def test_resolve_definition_targets_for_quoted_package_qualified_include(
+    tmp_path,
+) -> None:
     pkg_root = tmp_path / "docassemble" / "demo"
     questions = pkg_root / "data" / "questions"
     questions.mkdir(parents=True)
@@ -241,7 +260,9 @@ def test_resolve_package_qualified_path_rejects_parent_traversal(tmp_path) -> No
     assert resolve_package_qualified_path("docassemble.demo:../../secret.yml", [tmp_path]) is None
 
 
-def test_resolve_definition_targets_for_package_qualified_template_file(tmp_path) -> None:
+def test_resolve_definition_targets_for_package_qualified_template_file(
+    tmp_path,
+) -> None:
     pkg_dir = tmp_path / "docassemble" / "demo" / "data" / "questions"
     templates = pkg_dir / "templates"
     templates.mkdir(parents=True)
@@ -252,7 +273,11 @@ def test_resolve_definition_targets_for_package_qualified_template_file(tmp_path
     pkg_ref = "docassemble.demo:data/questions/templates/letter.docx"
 
     targets = resolve_definition_targets(
-        source, 1, source.splitlines()[1].index(pkg_ref) + 5, uri_or_path=source_path, workspace_paths=[tmp_path]
+        source,
+        1,
+        source.splitlines()[1].index(pkg_ref) + 5,
+        uri_or_path=source_path,
+        workspace_paths=[tmp_path],
     )
 
     assert len(targets) == 1
@@ -260,7 +285,9 @@ def test_resolve_definition_targets_for_package_qualified_template_file(tmp_path
     assert targets[0].line == 0
 
 
-def test_resolve_definition_targets_for_static_css_file_wins_over_python_symbol(tmp_path) -> None:
+def test_resolve_definition_targets_for_static_css_file_wins_over_python_symbol(
+    tmp_path,
+) -> None:
     package_dir = tmp_path / "docassemble" / "demo"
     questions = package_dir / "data" / "questions"
     static = package_dir / "data" / "static"
@@ -286,7 +313,9 @@ def test_resolve_definition_targets_for_static_css_file_wins_over_python_symbol(
     assert [target.path for target in targets] == [stylesheet.resolve()]
 
 
-def test_resolve_definition_targets_for_static_javascript_file_wins_over_python_symbol(tmp_path) -> None:
+def test_resolve_definition_targets_for_static_javascript_file_wins_over_python_symbol(
+    tmp_path,
+) -> None:
     package_dir = tmp_path / "docassemble" / "demo"
     questions = package_dir / "data" / "questions"
     static = package_dir / "data" / "static"
@@ -312,7 +341,9 @@ def test_resolve_definition_targets_for_static_javascript_file_wins_over_python_
     assert [target.path for target in targets] == [script.resolve()]
 
 
-def test_resolve_definition_targets_for_missing_static_file_does_not_fall_back_to_python_symbol(tmp_path) -> None:
+def test_resolve_definition_targets_for_missing_static_file_does_not_fall_back_to_python_symbol(
+    tmp_path,
+) -> None:
     package_dir = tmp_path / "docassemble" / "demo"
     questions = package_dir / "data" / "questions"
     questions.mkdir(parents=True)
@@ -334,7 +365,9 @@ def test_resolve_definition_targets_for_missing_static_file_does_not_fall_back_t
     assert targets == []
 
 
-def test_resolve_reference_targets_for_quoted_package_qualified_include(tmp_path) -> None:
+def test_resolve_reference_targets_for_quoted_package_qualified_include(
+    tmp_path,
+) -> None:
     pkg_root = tmp_path / "docassemble" / "demo"
     questions = pkg_root / "data" / "questions"
     questions.mkdir(parents=True)
@@ -362,7 +395,9 @@ def test_resolve_reference_targets_for_quoted_package_qualified_include(tmp_path
     ]
 
 
-def test_resolve_definition_targets_for_objects_from_file_points_to_local_file(tmp_path) -> None:
+def test_resolve_definition_targets_for_objects_from_file_points_to_local_file(
+    tmp_path,
+) -> None:
     included = tmp_path / "object-map.yml"
     included.write_text("objects: []\n", encoding="utf-8")
     source_path = tmp_path / "interview.yml"
@@ -375,7 +410,9 @@ def test_resolve_definition_targets_for_objects_from_file_points_to_local_file(t
     assert targets[0].line == 0
 
 
-def test_resolve_definition_targets_for_action_points_to_matching_event(tmp_path) -> None:
+def test_resolve_definition_targets_for_action_points_to_matching_event(
+    tmp_path,
+) -> None:
     source_path = tmp_path / "interview.yml"
     source = (
         "question: Hi\n"
@@ -395,7 +432,9 @@ def test_resolve_definition_targets_for_action_points_to_matching_event(tmp_path
     assert targets[0].line == 5
 
 
-def test_resolve_definition_targets_for_error_action_points_to_matching_event(tmp_path) -> None:
+def test_resolve_definition_targets_for_error_action_points_to_matching_event(
+    tmp_path,
+) -> None:
     source_path = tmp_path / "interview.yml"
     source = "metadata:\n  error action: on_error\n---\nevent: on_error\nquestion: Sorry\n"
 
@@ -411,13 +450,18 @@ def test_resolve_definition_targets_for_action_ignores_external_urls(tmp_path) -
     source = "action buttons:\n  - label: Visit\n    action: https://docassemble.org\n"
 
     targets = resolve_definition_targets(
-        source, 2, len("    action: https://docassemble.org") - 2, uri_or_path=source_path
+        source,
+        2,
+        len("    action: https://docassemble.org") - 2,
+        uri_or_path=source_path,
     )
 
     assert targets == []
 
 
-def test_resolve_definition_targets_for_url_action_points_to_matching_event(tmp_path) -> None:
+def test_resolve_definition_targets_for_url_action_points_to_matching_event(
+    tmp_path,
+) -> None:
     source_path = tmp_path / "interview.yml"
     source = (
         "question: Hi\n"
@@ -477,7 +521,9 @@ def test_resolve_reference_targets_for_action_include_declaration(tmp_path) -> N
     ]
 
 
-def test_resolve_reference_targets_for_action_excludes_declaration_when_requested(tmp_path) -> None:
+def test_resolve_reference_targets_for_action_excludes_declaration_when_requested(
+    tmp_path,
+) -> None:
     source_path = tmp_path / "interview.yml"
     source = "action buttons:\n  - label: Run\n    action: my_event\n---\nevent: my_event\nquestion: Done\n"
 
@@ -557,10 +603,15 @@ def test_resolve_reference_targets_can_use_workspace_index(tmp_path) -> None:
         workspace_index=_workspace_index_for_tests(tmp_path),
     )
 
-    assert [(target.path.name, target.line) for target in targets] == [("library.yml", 0), ("main.yml", 2)]
+    assert [(target.path.name, target.line) for target in targets] == [
+        ("library.yml", 0),
+        ("main.yml", 2),
+    ]
 
 
-def test_resolve_reference_targets_does_not_fallback_to_yaml_file_on_unrelated_cursor(tmp_path) -> None:
+def test_resolve_reference_targets_does_not_fallback_to_yaml_file_on_unrelated_cursor(
+    tmp_path,
+) -> None:
     source_path = tmp_path / "interview.yml"
     source = "question: Hello there\n"
 
@@ -575,7 +626,9 @@ def test_resolve_reference_targets_does_not_fallback_to_yaml_file_on_unrelated_c
     assert targets == []
 
 
-def test_resolve_reference_targets_for_docx_template_file_from_target_file(tmp_path) -> None:
+def test_resolve_reference_targets_for_docx_template_file_from_target_file(
+    tmp_path,
+) -> None:
     package_dir = tmp_path / "docassemble" / "demo" / "data" / "questions"
     template_dir = package_dir / "templates"
     template_dir.mkdir(parents=True)
@@ -603,7 +656,9 @@ def test_resolve_reference_targets_for_docx_template_file_from_target_file(tmp_p
     ]
 
 
-def test_resolve_definition_targets_for_modules_symbol_in_mako_points_to_python_function(tmp_path) -> None:
+def test_resolve_definition_targets_for_modules_symbol_in_mako_points_to_python_function(
+    tmp_path,
+) -> None:
     package_dir = tmp_path / "docassemble" / "demo"
     questions_dir = package_dir / "data" / "questions"
     questions_dir.mkdir(parents=True)
@@ -625,7 +680,9 @@ def test_resolve_definition_targets_for_modules_symbol_in_mako_points_to_python_
     assert [(target.path.name, target.line) for target in targets] == [("helpers.py", 0)]
 
 
-def test_resolve_definition_targets_for_imports_namespace_points_to_python_method(tmp_path) -> None:
+def test_resolve_definition_targets_for_imports_namespace_points_to_python_method(
+    tmp_path,
+) -> None:
     package_dir = tmp_path / "docassemble" / "demo"
     questions_dir = package_dir / "data" / "questions"
     questions_dir.mkdir(parents=True)
@@ -650,7 +707,9 @@ def test_resolve_definition_targets_for_imports_namespace_points_to_python_metho
     assert targets == []
 
 
-def test_resolve_definition_targets_for_modules_entry_points_to_python_module(tmp_path) -> None:
+def test_resolve_definition_targets_for_modules_entry_points_to_python_module(
+    tmp_path,
+) -> None:
     package_dir = tmp_path / "docassemble" / "demo"
     questions_dir = package_dir / "data" / "questions"
     questions_dir.mkdir(parents=True)
@@ -670,7 +729,9 @@ def test_resolve_definition_targets_for_modules_entry_points_to_python_module(tm
     assert [(target.path.name, target.line) for target in targets] == [("helpers.py", 0)]
 
 
-def test_resolve_definition_targets_for_package_qualified_modules_entry(tmp_path) -> None:
+def test_resolve_definition_targets_for_package_qualified_modules_entry(
+    tmp_path,
+) -> None:
     pkg_root = tmp_path / "docassemble" / "demo"
     questions = pkg_root / "data" / "questions"
     questions.mkdir(parents=True)
@@ -692,7 +753,9 @@ def test_resolve_definition_targets_for_package_qualified_modules_entry(tmp_path
     assert targets[0].line == 0
 
 
-def test_resolve_reference_targets_for_package_qualified_modules_entry(tmp_path) -> None:
+def test_resolve_reference_targets_for_package_qualified_modules_entry(
+    tmp_path,
+) -> None:
     pkg_root = tmp_path / "docassemble" / "demo"
     questions = pkg_root / "data" / "questions"
     questions.mkdir(parents=True)
@@ -717,7 +780,9 @@ def test_resolve_reference_targets_for_package_qualified_modules_entry(tmp_path)
     assert source_path.resolve() in target_paths
 
 
-def test_resolve_reference_targets_for_python_symbol_scans_yaml_modules_and_imports(tmp_path) -> None:
+def test_resolve_reference_targets_for_python_symbol_scans_yaml_modules_and_imports(
+    tmp_path,
+) -> None:
     package_dir = tmp_path / "docassemble" / "demo"
     questions_dir = package_dir / "data" / "questions"
     questions_dir.mkdir(parents=True)
@@ -726,7 +791,10 @@ def test_resolve_reference_targets_for_python_symbol_scans_yaml_modules_and_impo
     main_path = questions_dir / "main.yml"
     main_source = "modules:\n  - .helpers\n---\nquestion: |\n  Result: ${ plus_one(3) }\n"
     second_path = questions_dir / "second.yml"
-    second_path.write_text("modules:\n  - .helpers\n---\ncode: |\n  value = plus_one(4)\n", encoding="utf-8")
+    second_path.write_text(
+        "modules:\n  - .helpers\n---\ncode: |\n  value = plus_one(4)\n",
+        encoding="utf-8",
+    )
     third_path = questions_dir / "third.yml"
     third_path.write_text(
         "imports:\n  - docassemble.demo.helpers\n---\ncode: |\n  value = helpers.plus_one(5)\n",
@@ -744,7 +812,9 @@ def test_resolve_reference_targets_for_python_symbol_scans_yaml_modules_and_impo
     assert targets == []
 
 
-def test_resolve_reference_targets_from_python_function_scans_yaml_namespaces(tmp_path) -> None:
+def test_resolve_reference_targets_from_python_function_scans_yaml_namespaces(
+    tmp_path,
+) -> None:
     package_dir = tmp_path / "docassemble" / "demo"
     questions_dir = package_dir / "data" / "questions"
     questions_dir.mkdir(parents=True)
@@ -752,10 +822,12 @@ def test_resolve_reference_targets_from_python_function_scans_yaml_namespaces(tm
     helper_source = "def plus_one(value):\n    return value + 1\n"
     helper_path.write_text(helper_source, encoding="utf-8")
     (questions_dir / "main.yml").write_text(
-        "modules:\n  - .helpers\n---\nquestion: |\n  Result: ${ plus_one(3) }\n", encoding="utf-8"
+        "modules:\n  - .helpers\n---\nquestion: |\n  Result: ${ plus_one(3) }\n",
+        encoding="utf-8",
     )
     (questions_dir / "second.yml").write_text(
-        "imports:\n  - docassemble.demo.helpers\n---\ncode: |\n  value = helpers.plus_one(4)\n", encoding="utf-8"
+        "imports:\n  - docassemble.demo.helpers\n---\ncode: |\n  value = helpers.plus_one(4)\n",
+        encoding="utf-8",
     )
 
     targets = resolve_reference_targets(
@@ -769,7 +841,9 @@ def test_resolve_reference_targets_from_python_function_scans_yaml_namespaces(tm
     assert targets == []
 
 
-def test_resolve_reference_targets_from_python_method_scans_yaml_namespaces(tmp_path) -> None:
+def test_resolve_reference_targets_from_python_method_scans_yaml_namespaces(
+    tmp_path,
+) -> None:
     package_dir = tmp_path / "docassemble" / "demo"
     questions_dir = package_dir / "data" / "questions"
     questions_dir.mkdir(parents=True)
@@ -800,7 +874,9 @@ def test_resolve_reference_targets_from_python_method_scans_yaml_namespaces(tmp_
     assert targets == []
 
 
-def test_resolve_definition_targets_for_imports_module_alias_points_to_python_function(tmp_path) -> None:
+def test_resolve_definition_targets_for_imports_module_alias_points_to_python_function(
+    tmp_path,
+) -> None:
     package_dir = tmp_path / "docassemble" / "demo"
     questions_dir = package_dir / "data" / "questions"
     questions_dir.mkdir(parents=True)
@@ -824,7 +900,9 @@ def test_resolve_definition_targets_for_imports_module_alias_points_to_python_fu
     assert [(target.path.name, target.line) for target in targets] == [("helpers.py", 0)]
 
 
-def test_resolve_definition_targets_for_imported_symbol_alias_points_to_python_function(tmp_path) -> None:
+def test_resolve_definition_targets_for_imported_symbol_alias_points_to_python_function(
+    tmp_path,
+) -> None:
     package_dir = tmp_path / "docassemble" / "demo"
     questions_dir = package_dir / "data" / "questions"
     questions_dir.mkdir(parents=True)
@@ -848,7 +926,9 @@ def test_resolve_definition_targets_for_imported_symbol_alias_points_to_python_f
     assert targets == []
 
 
-def test_resolve_reference_targets_from_python_function_scans_import_aliases(tmp_path) -> None:
+def test_resolve_reference_targets_from_python_function_scans_import_aliases(
+    tmp_path,
+) -> None:
     package_dir = tmp_path / "docassemble" / "demo"
     questions_dir = package_dir / "data" / "questions"
     questions_dir.mkdir(parents=True)
@@ -879,7 +959,9 @@ def test_resolve_reference_targets_from_python_function_scans_import_aliases(tmp
     assert targets == []
 
 
-def test_resolve_definition_targets_for_imported_class_alias_points_to_python_method(tmp_path) -> None:
+def test_resolve_definition_targets_for_imported_class_alias_points_to_python_method(
+    tmp_path,
+) -> None:
     package_dir = tmp_path / "docassemble" / "demo"
     questions_dir = package_dir / "data" / "questions"
     questions_dir.mkdir(parents=True)
@@ -910,7 +992,9 @@ def test_resolve_definition_targets_for_imported_class_alias_points_to_python_me
     assert targets == []
 
 
-def test_resolve_reference_targets_from_python_method_scans_imported_class_alias(tmp_path) -> None:
+def test_resolve_reference_targets_from_python_method_scans_imported_class_alias(
+    tmp_path,
+) -> None:
     package_dir = tmp_path / "docassemble" / "demo"
     questions_dir = package_dir / "data" / "questions"
     questions_dir.mkdir(parents=True)
@@ -937,7 +1021,9 @@ def test_resolve_reference_targets_from_python_method_scans_imported_class_alias
     assert targets == []
 
 
-def test_resolve_definition_targets_for_child_yaml_uses_parent_import_bindings(tmp_path) -> None:
+def test_resolve_definition_targets_for_child_yaml_uses_parent_import_bindings(
+    tmp_path,
+) -> None:
     package_dir = tmp_path / "docassemble" / "demo"
     questions_dir = package_dir / "data" / "questions"
     questions_dir.mkdir(parents=True)
@@ -962,7 +1048,9 @@ def test_resolve_definition_targets_for_child_yaml_uses_parent_import_bindings(t
     assert [(target.path.name, target.line) for target in targets] == [("helpers.py", 0)]
 
 
-def test_resolve_reference_targets_from_python_function_reaches_child_through_parent_import_bindings(tmp_path) -> None:
+def test_resolve_reference_targets_from_python_function_reaches_child_through_parent_import_bindings(
+    tmp_path,
+) -> None:
     package_dir = tmp_path / "docassemble" / "demo"
     questions_dir = package_dir / "data" / "questions"
     questions_dir.mkdir(parents=True)
@@ -974,7 +1062,8 @@ def test_resolve_reference_targets_from_python_function_reaches_child_through_pa
         encoding="utf-8",
     )
     (questions_dir / "child.yml").write_text(
-        "imports:\n  - docassemble.demo.helpers\n---\ncode: |\n  result = helpers.plus_one(3)\n", encoding="utf-8"
+        "imports:\n  - docassemble.demo.helpers\n---\ncode: |\n  result = helpers.plus_one(3)\n",
+        encoding="utf-8",
     )
 
     targets = resolve_reference_targets(
@@ -991,7 +1080,9 @@ def test_resolve_reference_targets_from_python_function_reaches_child_through_pa
     assert targets == []
 
 
-def test_resolve_definition_targets_for_modules_symbol_follows_include_bindings(tmp_path) -> None:
+def test_resolve_definition_targets_for_modules_symbol_follows_include_bindings(
+    tmp_path,
+) -> None:
     package_dir = tmp_path / "docassemble" / "demo"
     questions_dir = package_dir / "data" / "questions"
     questions_dir.mkdir(parents=True)
@@ -1014,7 +1105,9 @@ def test_resolve_definition_targets_for_modules_symbol_follows_include_bindings(
     assert [(target.path.name, target.line) for target in targets] == [("helpers.py", 0)]
 
 
-def test_resolve_reference_targets_from_python_function_follows_include_bindings(tmp_path) -> None:
+def test_resolve_reference_targets_from_python_function_follows_include_bindings(
+    tmp_path,
+) -> None:
     package_dir = tmp_path / "docassemble" / "demo"
     questions_dir = package_dir / "data" / "questions"
     questions_dir.mkdir(parents=True)
@@ -1023,7 +1116,10 @@ def test_resolve_reference_targets_from_python_function_follows_include_bindings
     helper_path.write_text(helper_source, encoding="utf-8")
     (questions_dir / "library.yml").write_text("modules:\n  - .helpers\n", encoding="utf-8")
     main_path = questions_dir / "main.yml"
-    main_path.write_text("modules:\n  - .helpers\n---\nquestion: |\n  Result: ${ plus_one(3) }\n", encoding="utf-8")
+    main_path.write_text(
+        "modules:\n  - .helpers\n---\nquestion: |\n  Result: ${ plus_one(3) }\n",
+        encoding="utf-8",
+    )
 
     targets = resolve_reference_targets(
         helper_source,
@@ -1039,7 +1135,9 @@ def test_resolve_reference_targets_from_python_function_follows_include_bindings
     assert targets == []
 
 
-def test_resolve_definition_targets_for_import_symbol_follows_include_bindings(tmp_path) -> None:
+def test_resolve_definition_targets_for_import_symbol_follows_include_bindings(
+    tmp_path,
+) -> None:
     package_dir = tmp_path / "docassemble" / "demo"
     questions_dir = package_dir / "data" / "questions"
     questions_dir.mkdir(parents=True)
@@ -1067,7 +1165,9 @@ def test_resolve_definition_targets_for_import_symbol_follows_include_bindings(t
 # ---------------------------------------------------------------------------
 
 
-def test_resolve_definition_targets_for_field_key_declaration_returns_self(tmp_path) -> None:
+def test_resolve_definition_targets_for_field_key_declaration_returns_self(
+    tmp_path,
+) -> None:
     source_path = tmp_path / "interview.yml"
     source = "question: What is it?\nfields:\n  - field: user_name\n    datatype: text\n"
     # cursor on "user_name" in "  - field: user_name" (line 2)
@@ -1081,7 +1181,9 @@ def test_resolve_definition_targets_for_field_key_declaration_returns_self(tmp_p
     assert targets[0].line == line
 
 
-def test_resolve_definition_targets_for_label_style_field_declaration_returns_self(tmp_path) -> None:
+def test_resolve_definition_targets_for_label_style_field_declaration_returns_self(
+    tmp_path,
+) -> None:
     source_path = tmp_path / "interview.yml"
     source = "question: What is it?\nfields:\n  - Full name: user_name\n"
     line = 2
@@ -1094,7 +1196,9 @@ def test_resolve_definition_targets_for_label_style_field_declaration_returns_se
     assert targets[0].line == line
 
 
-def test_resolve_definition_targets_for_show_if_variable_points_to_field_declaration(tmp_path) -> None:
+def test_resolve_definition_targets_for_show_if_variable_points_to_field_declaration(
+    tmp_path,
+) -> None:
     source_path = tmp_path / "interview.yml"
     source = (
         "question: What is it?\n"
@@ -1118,7 +1222,9 @@ def test_resolve_definition_targets_for_show_if_variable_points_to_field_declara
     assert targets[0].line == 3  # "  - field: show_details"
 
 
-def test_resolve_definition_targets_for_hide_if_variable_points_to_field_declaration(tmp_path) -> None:
+def test_resolve_definition_targets_for_hide_if_variable_points_to_field_declaration(
+    tmp_path,
+) -> None:
     source_path = tmp_path / "interview.yml"
     source = (
         "question: Details\n"
@@ -1140,7 +1246,9 @@ def test_resolve_definition_targets_for_hide_if_variable_points_to_field_declara
     assert targets[0].line == 2  # "  - field: is_adult"
 
 
-def test_resolve_definition_targets_for_field_var_returns_empty_for_unknown_variable(tmp_path) -> None:
+def test_resolve_definition_targets_for_field_var_returns_empty_for_unknown_variable(
+    tmp_path,
+) -> None:
     source_path = tmp_path / "interview.yml"
     source = (
         "question: Details\n"
@@ -1158,7 +1266,9 @@ def test_resolve_definition_targets_for_field_var_returns_empty_for_unknown_vari
     assert targets == []
 
 
-def test_resolve_reference_targets_for_field_declaration_finds_show_if_uses(tmp_path) -> None:
+def test_resolve_reference_targets_for_field_declaration_finds_show_if_uses(
+    tmp_path,
+) -> None:
     source_path = tmp_path / "interview.yml"
     source = (
         "question: What is it?\n"
@@ -1186,7 +1296,9 @@ def test_resolve_reference_targets_for_field_declaration_finds_show_if_uses(tmp_
     assert 10 in lines  # hide if variable reference
 
 
-def test_resolve_reference_targets_for_field_var_excludes_declaration_when_requested(tmp_path) -> None:
+def test_resolve_reference_targets_for_field_var_excludes_declaration_when_requested(
+    tmp_path,
+) -> None:
     source_path = tmp_path / "interview.yml"
     source = (
         "question: What is it?\n"
@@ -1208,7 +1320,9 @@ def test_resolve_reference_targets_for_field_var_excludes_declaration_when_reque
     assert 6 in lines  # show if reference included
 
 
-def test_resolve_reference_targets_for_show_if_variable_finds_declaration(tmp_path) -> None:
+def test_resolve_reference_targets_for_show_if_variable_finds_declaration(
+    tmp_path,
+) -> None:
     source_path = tmp_path / "interview.yml"
     source = (
         "question: What is it?\n"
@@ -1231,7 +1345,9 @@ def test_resolve_reference_targets_for_show_if_variable_finds_declaration(tmp_pa
     assert 6 in lines  # reference itself
 
 
-def test_resolve_definition_targets_for_field_var_scans_workspace_files(tmp_path) -> None:
+def test_resolve_definition_targets_for_field_var_scans_workspace_files(
+    tmp_path,
+) -> None:
     source_path = tmp_path / "main.yml"
     source = (
         "question: Details\n"
@@ -1261,7 +1377,9 @@ def test_resolve_definition_targets_for_field_var_scans_workspace_files(tmp_path
     assert targets[0].line == 2
 
 
-def test_resolve_reference_targets_for_field_var_scans_workspace_files(tmp_path) -> None:
+def test_resolve_reference_targets_for_field_var_scans_workspace_files(
+    tmp_path,
+) -> None:
     decl_path = tmp_path / "fields.yml"
     decl_source = "question: Name?\nfields:\n  - field: user_name\n    datatype: text\n"
     decl_path.write_text(decl_source, encoding="utf-8")
@@ -1285,12 +1403,15 @@ def test_resolve_reference_targets_for_field_var_scans_workspace_files(tmp_path)
     assert ("conditional.yml", 4) in file_lines  # cross-file reference
 
 
-def test_resolve_definition_targets_for_action_finds_event_in_workspace(tmp_path) -> None:
+def test_resolve_definition_targets_for_action_finds_event_in_workspace(
+    tmp_path,
+) -> None:
     package_dir = tmp_path / "docassemble" / "demo" / "data" / "questions"
     package_dir.mkdir(parents=True)
     main = package_dir / "main.yml"
     main.write_text(
-        "include:\n  - library.yml\naction buttons:\n  - label: Run\n    action: library_event\n", encoding="utf-8"
+        "include:\n  - library.yml\naction buttons:\n  - label: Run\n    action: library_event\n",
+        encoding="utf-8",
     )
     library = package_dir / "library.yml"
     library.write_text("event: library_event\nquestion: From library\n", encoding="utf-8")
@@ -1328,7 +1449,9 @@ def test_resolve_definition_targets_can_use_workspace_index(tmp_path) -> None:
     assert [(target.path.name, target.line) for target in targets] == [("library.yml", 0)]
 
 
-def test_resolve_definition_targets_for_usedefs_finds_def_in_workspace(tmp_path) -> None:
+def test_resolve_definition_targets_for_usedefs_finds_def_in_workspace(
+    tmp_path,
+) -> None:
     package_dir = tmp_path / "docassemble" / "demo" / "data" / "questions"
     package_dir.mkdir(parents=True)
     main = package_dir / "main.yml"
@@ -1354,7 +1477,8 @@ def test_resolve_reference_targets_for_event_scans_workspace(tmp_path) -> None:
     package_dir.mkdir(parents=True)
     main = package_dir / "main.yml"
     main.write_text(
-        "include:\n  - library.yml\naction buttons:\n  - label: Run\n    action: library_event\n", encoding="utf-8"
+        "include:\n  - library.yml\naction buttons:\n  - label: Run\n    action: library_event\n",
+        encoding="utf-8",
     )
     library = package_dir / "library.yml"
     library.write_text("event: library_event\nquestion: From library\n", encoding="utf-8")

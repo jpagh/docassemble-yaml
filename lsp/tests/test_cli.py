@@ -92,7 +92,9 @@ validation code: |
     assert exit_code == 1
 
 
-def test_check_command_specific_convention_is_zero_without_strict(tmp_path: Path) -> None:
+def test_check_command_specific_convention_is_zero_without_strict(
+    tmp_path: Path,
+) -> None:
     source = tmp_path / "convention.yml"
     source.write_text(
         "question: Hi\nfields:\n  - Name: user.name\n",
@@ -141,7 +143,9 @@ def test_check_command_fix_rewrites_field_label_shorthand_file(tmp_path: Path) -
     )
 
 
-def test_check_command_fix_rewrites_radio_datatype_with_choices_file(tmp_path: Path) -> None:
+def test_check_command_fix_rewrites_radio_datatype_with_choices_file(
+    tmp_path: Path,
+) -> None:
     source = tmp_path / "radio.yml"
     source.write_text(
         'question: Hi\nfields:\n  - label: May we text you?\n    field: texting_allowed\n    datatype: radio\n    choices:\n      - "A"\n      - "B"\n',
@@ -193,7 +197,9 @@ def test_check_command_reads_ignore_codes_from_pyproject(tmp_path: Path) -> None
     assert exit_code == 0
 
 
-def test_check_command_reads_ignore_codes_snake_case_from_pyproject(tmp_path: Path) -> None:
+def test_check_command_reads_ignore_codes_snake_case_from_pyproject(
+    tmp_path: Path,
+) -> None:
     pyproject = tmp_path / "pyproject.toml"
     pyproject.write_text(
         '[tool.docassemble-lsp]\nignore_codes = ["E301", "E306"]\n',
@@ -268,7 +274,9 @@ def test_check_command_default_no_warnings_is_false() -> None:
     assert parsed.no_warnings is False
 
 
-def test_check_command_ignores_convert_tabs_to_spaces_from_shared_args(tmp_path: Path) -> None:
+def test_check_command_ignores_convert_tabs_to_spaces_from_shared_args(
+    tmp_path: Path,
+) -> None:
     pyproject = tmp_path / "pyproject.toml"
     pyproject.write_text(
         '[tool.docassemble-lsp]\nargs = ["--convert-tabs-to-spaces"]\n',
@@ -282,7 +290,9 @@ def test_check_command_ignores_convert_tabs_to_spaces_from_shared_args(tmp_path:
     assert exit_code == 0
 
 
-def test_check_command_merges_conventions_from_args_and_pyproject(tmp_path: Path) -> None:
+def test_check_command_merges_conventions_from_args_and_pyproject(
+    tmp_path: Path,
+) -> None:
     pyproject = tmp_path / "pyproject.toml"
     pyproject.write_text(
         '[tool.docassemble-lsp]\nconventions = ["C102"]\n',
@@ -311,7 +321,9 @@ def test_check_command_accepts_multiple_codes_after_single_flag(tmp_path: Path) 
     assert exit_code == 1
 
 
-def test_check_command_accepts_multiple_ignore_codes_after_single_flag(tmp_path: Path) -> None:
+def test_check_command_accepts_multiple_ignore_codes_after_single_flag(
+    tmp_path: Path,
+) -> None:
     source = tmp_path / "ignored.yml"
     source.write_text("---\nfoo: bar\n", encoding="utf-8")
 
@@ -396,7 +408,9 @@ def test_format_command_can_convert_tabs_to_spaces(tmp_path: Path) -> None:
     assert source.read_text(encoding="utf-8") == "question:  Hi\n"
 
 
-def test_format_command_can_read_convert_tabs_to_spaces_from_pyproject(tmp_path: Path) -> None:
+def test_format_command_can_read_convert_tabs_to_spaces_from_pyproject(
+    tmp_path: Path,
+) -> None:
     pyproject = tmp_path / "pyproject.toml"
     pyproject.write_text(
         '[tool.docassemble-lsp]\nformat_args = ["--convert-tabs-to-spaces"]\n',
@@ -411,7 +425,9 @@ def test_format_command_can_read_convert_tabs_to_spaces_from_pyproject(tmp_path:
     assert source.read_text(encoding="utf-8") == "question:  Hi\n"
 
 
-def test_format_command_can_read_convert_tabs_to_spaces_from_shared_args(tmp_path: Path) -> None:
+def test_format_command_can_read_convert_tabs_to_spaces_from_shared_args(
+    tmp_path: Path,
+) -> None:
     pyproject = tmp_path / "pyproject.toml"
     pyproject.write_text(
         '[tool.docassemble-lsp]\nargs = ["--convert-tabs-to-spaces"]\n',
@@ -426,7 +442,9 @@ def test_format_command_can_read_convert_tabs_to_spaces_from_shared_args(tmp_pat
     assert source.read_text(encoding="utf-8") == "question:  Hi\n"
 
 
-def test_lsp_command_accepts_stdio_flag_as_noop(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_lsp_command_accepts_stdio_flag_as_noop(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     parser = build_parser()
 
     parsed = parser.parse_args(["lsp", "--stdio"])
@@ -438,7 +456,9 @@ def test_lsp_command_accepts_stdio_flag_as_noop(monkeypatch: pytest.MonkeyPatch)
     assert main(["lsp", "--stdio"]) == 17
 
 
-def test_lsp_command_accepts_conventions_and_ignore_codes(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_lsp_command_accepts_conventions_and_ignore_codes(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     parser = build_parser()
 
     parsed = parser.parse_args(["lsp", "--conventions", "C102", "C103", "--ignore-codes", "E301", "W603"])
@@ -465,7 +485,9 @@ def test_lsp_command_accepts_conventions_and_ignore_codes(monkeypatch: pytest.Mo
     assert formatter_config.convert_tabs_to_spaces is False
 
 
-def test_lsp_command_accepts_convert_tabs_to_spaces(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_lsp_command_accepts_convert_tabs_to_spaces(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     parser = build_parser()
 
     parsed = parser.parse_args(["lsp", "--convert-tabs-to-spaces"])
@@ -551,7 +573,9 @@ def test_lsp_command_log_level_accepts_lowercase() -> None:
     assert parsed.log_level == "DEBUG"
 
 
-def test_lsp_command_log_level_passed_to_run_server(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_lsp_command_log_level_passed_to_run_server(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     captured: dict[str, object] = {}
 
     def fake_run_server(*, runtime_options=None, formatter_config=None, log_level="WARNING"):
@@ -679,7 +703,14 @@ def test_check_command_short_quiet_flag_accepted(tmp_path: Path) -> None:
 def test_check_command_accessibility_error_on_widget_propagates() -> None:
     parser = build_parser()
     parsed = parser.parse_args(
-        ["check", "--accessibility-error-on-widget", "foo", "--accessibility-error-on-widget", "bar", "dummy.yml"]
+        [
+            "check",
+            "--accessibility-error-on-widget",
+            "foo",
+            "--accessibility-error-on-widget",
+            "bar",
+            "dummy.yml",
+        ]
     )
     opts = cli._runtime_options_from_args(parsed)
     assert opts.accessibility_error_on_widgets == frozenset({"foo", "bar"})
@@ -696,7 +727,9 @@ def test_check_command_format_on_success_rewrites_clean_file(tmp_path: Path) -> 
     assert "x = " in content or "x={" not in content
 
 
-def test_check_command_format_on_success_skips_files_with_errors(tmp_path: Path) -> None:
+def test_check_command_format_on_success_skips_files_with_errors(
+    tmp_path: Path,
+) -> None:
     source = tmp_path / "error_file.yml"
     source.write_text("foo: bar\ncode: |\n  x={'a':1}\n", encoding="utf-8")
 
@@ -707,7 +740,9 @@ def test_check_command_format_on_success_skips_files_with_errors(tmp_path: Path)
     assert source.read_text(encoding="utf-8") == original
 
 
-def test_check_command_fix_and_format_on_success_run_both_passes(tmp_path: Path) -> None:
+def test_check_command_fix_and_format_on_success_run_both_passes(
+    tmp_path: Path,
+) -> None:
     source = tmp_path / "both.yml"
     source.write_text(
         "question: Hi\nfields:\n  - Name: user.name\n---\ncode: |\n  x={'a':1}\n",

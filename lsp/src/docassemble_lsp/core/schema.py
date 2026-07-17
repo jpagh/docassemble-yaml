@@ -4,9 +4,15 @@ import re
 from functools import lru_cache
 from pathlib import Path
 
-from docassemble_lsp.core.completion_context import build_completion_context, completion_scope, line_at
+from docassemble_lsp.core.completion_context import (
+    build_completion_context,
+    completion_scope,
+    line_at,
+)
 from docassemble_lsp.core.completion_registry import CompletionRegistry
-from docassemble_lsp.core.completion_registry import property_documentation as _documentation
+from docassemble_lsp.core.completion_registry import (
+    property_documentation as _documentation,
+)
 from docassemble_lsp.core.completion_rules import SchemaMetadata, load_rule_registry
 from docassemble_lsp.core.files import templates_dir_for_path
 from docassemble_lsp.core.schema_models import CompletionCandidate, HoverInfo

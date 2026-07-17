@@ -485,7 +485,7 @@ class DocassembleLspController {
         this.setServerState("missing");
         this.log(
           `Bundled server not found at ${bundledEntry}. ` +
-            `Run "npm run bundle-server" or set docassemble-lsp.importStrategy to "fromEnvironment".`,
+            `Run "mise run //vscode:bundle:server" or set docassemble-lsp.importStrategy to "fromEnvironment".`,
         );
         return undefined;
       }

@@ -6,7 +6,9 @@ from pathlib import Path
 
 from docassemble_lsp.core.definition_models import DefinitionTarget
 from docassemble_lsp.core.document_facts import DocumentFact, build_document_facts
-from docassemble_lsp.core.field_keys import FIELD_ITEM_KNOWN_KEYS as _FIELD_ITEM_KNOWN_KEYS
+from docassemble_lsp.core.field_keys import (
+    FIELD_ITEM_KNOWN_KEYS as _FIELD_ITEM_KNOWN_KEYS,
+)
 from docassemble_lsp.core.files import collect_yaml_files, detect_docassemble_package
 from docassemble_lsp.core.yaml_shared import (
     _KEY_VALUE_RE,
@@ -124,7 +126,11 @@ class WorkspaceIndex:
 
     @classmethod
     def empty_for_roots(cls, search_roots: tuple[Path, ...] = ()) -> WorkspaceIndex:
-        return cls(yaml_sources=WorkspaceYamlSources(()), facts_by_path={}, search_roots=search_roots)
+        return cls(
+            yaml_sources=WorkspaceYamlSources(()),
+            facts_by_path={},
+            search_roots=search_roots,
+        )
 
     @classmethod
     def from_yaml_roots(
@@ -180,7 +186,9 @@ class WorkspaceIndex:
     def document_facts(self, path: Path) -> tuple[DocumentFact, ...]:
         return self.facts_by_path.get(path.resolve(), ())
 
-    def as_document_fact_entries(self) -> list[tuple[Path, str, tuple[DocumentFact, ...]]]:
+    def as_document_fact_entries(
+        self,
+    ) -> list[tuple[Path, str, tuple[DocumentFact, ...]]]:
         return [(source.path, source.text, self.document_facts(source.path)) for source in self.yaml_sources.sources]
 
     def templates_dir_for(self, path: Path) -> Path | None:
@@ -242,12 +250,22 @@ class WorkspaceIndex:
                     if kf.name == "event" and value:
                         event_decls.setdefault(
                             value,
-                            DefinitionTarget(path=path, line=kf.line, start_character=0, end_character=0),
+                            DefinitionTarget(
+                                path=path,
+                                line=kf.line,
+                                start_character=0,
+                                end_character=0,
+                            ),
                         )
                     elif kf.name == "def" and value:
                         def_decls.setdefault(
                             value,
-                            DefinitionTarget(path=path, line=kf.line, start_character=0, end_character=0),
+                            DefinitionTarget(
+                                path=path,
+                                line=kf.line,
+                                start_character=0,
+                                end_character=0,
+                            ),
                         )
                     elif kf.name == "id" and value:
                         block_ids.add(value)

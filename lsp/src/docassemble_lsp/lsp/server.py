@@ -94,12 +94,26 @@ from docassemble_lsp.core import (
     resolve_reference_targets,
     resolve_workspace_symbol_targets,
 )
-from docassemble_lsp.core.definitions import overlay_workspace_documents, python_discovery_signature
+from docassemble_lsp.core.definitions import (
+    overlay_workspace_documents,
+    python_discovery_signature,
+)
 from docassemble_lsp.core.document_links import resolve_document_link_targets
 from docassemble_lsp.core.files import clear_detect_package_cache
-from docassemble_lsp.core.fixes import SourceEdit, resolve_diagnostic_fixes, resolve_fix_all_fixes
-from docassemble_lsp.core.indentation import indent_unit_between, infer_indent_unit, leading_whitespace
-from docassemble_lsp.core.python_modules import clear_module_index_cache, resolve_python_module_source
+from docassemble_lsp.core.fixes import (
+    SourceEdit,
+    resolve_diagnostic_fixes,
+    resolve_fix_all_fixes,
+)
+from docassemble_lsp.core.indentation import (
+    indent_unit_between,
+    infer_indent_unit,
+    leading_whitespace,
+)
+from docassemble_lsp.core.python_modules import (
+    clear_module_index_cache,
+    resolve_python_module_source,
+)
 from docassemble_lsp.core.python_navigation import enclosing_block_scalar_region
 from docassemble_lsp.core.python_paths import path_from_uri_or_path
 from docassemble_lsp.core.schema import load_schema
@@ -178,7 +192,12 @@ def build_lsp_diagnostics(
     runtime_options: RuntimeOptions | None = None,
     workspace_index: WorkspaceIndex | None = None,
 ) -> list[LspDiagnostic]:
-    diagnostics = analyze_text(source, path=uri, runtime_options=runtime_options, workspace_index=workspace_index)
+    diagnostics = analyze_text(
+        source,
+        path=uri,
+        runtime_options=runtime_options,
+        workspace_index=workspace_index,
+    )
     return [
         LspDiagnostic(
             range=_diagnostic_range(source, diagnostic.line),
@@ -269,7 +288,13 @@ def build_hover(
     uri_or_path: str | None = None,
     workspace_index: WorkspaceIndex | None = None,
 ) -> LspHover | None:
-    hover = get_hover(source, line, character, workspace_index=workspace_index, uri_or_path=uri_or_path)
+    hover = get_hover(
+        source,
+        line,
+        character,
+        workspace_index=workspace_index,
+        uri_or_path=uri_or_path,
+    )
     if hover is not None:
         return LspHover(contents=MarkupContent(kind=MarkupKind.Markdown, value=hover.contents))
 
@@ -761,7 +786,10 @@ def build_code_actions(
 
     if wants_fix_all:
         all_core_diagnostics = analyze_text(
-            source, path=uri, runtime_options=runtime_options, workspace_index=workspace_index
+            source,
+            path=uri,
+            runtime_options=runtime_options,
+            workspace_index=workspace_index,
         )
         fix_all_fixes = resolve_fix_all_fixes(source, all_core_diagnostics)
         if fix_all_fixes:
@@ -864,7 +892,10 @@ def build_document_links(
     search_roots = workspace_index.search_roots if workspace_index is not None else ()
     links: list[DocumentLink] = []
     for target in resolve_document_link_targets(
-        source, uri_or_path=uri, search_roots=search_roots, workspace_index=workspace_index
+        source,
+        uri_or_path=uri,
+        search_roots=search_roots,
+        workspace_index=workspace_index,
     ):
         try:
             target_uri = target.target_path.as_uri()
@@ -1101,7 +1132,10 @@ def create_server(
     ) -> None:
         if ls.protocol.trace not in (None, TraceValue.Off):
             ls.window_log_message(
-                LogMessageParams(message=f"Workspace root: {ls.workspace.root_path}", type=MessageType.Log)
+                LogMessageParams(
+                    message=f"Workspace root: {ls.workspace.root_path}",
+                    type=MessageType.Log,
+                )
             )
         workspace_indexes.for_workspace(ls.workspace.root_path)
 
@@ -1239,7 +1273,11 @@ def create_server(
         )
         cached_links = workspace_indexes.cached_document_links(params.text_document.uri, document.source)
         if cached_links is not None:
-            logger.debug("LSP document link cache hit for %s: count=%d", params.text_document.uri, len(cached_links))
+            logger.debug(
+                "LSP document link cache hit for %s: count=%d",
+                params.text_document.uri,
+                len(cached_links),
+            )
             return cached_links
         links = build_document_links(
             params.text_document.uri,
@@ -1278,7 +1316,11 @@ def create_server(
             params.position.line,
             params.position.character,
             params.ch,
-            insert_spaces=getattr(params.options, "insert_spaces", getattr(params.options, "insertSpaces", True)),
+            insert_spaces=getattr(
+                params.options,
+                "insert_spaces",
+                getattr(params.options, "insertSpaces", True),
+            ),
             tab_size=getattr(params.options, "tab_size", getattr(params.options, "tabSize", 2)),
         )
 
@@ -1330,6 +1372,11 @@ def run_server(
     for module_name in ("docassemble.base.util", "docassemble.base.functions"):
         resolution = resolve_python_module_source(module_name, workspace_index=WorkspaceIndex.empty())
         path_text = str(resolution.path) if resolution.path is not None else "<unresolved>"
-        logger.info("Using %s from %s: %s", resolution.module_name, resolution.source_kind, path_text)
+        logger.info(
+            "Using %s from %s: %s",
+            resolution.module_name,
+            resolution.source_kind,
+            path_text,
+        )
     create_server(runtime_options=runtime_options, formatter_config=formatter_config).start_io()
     return 0

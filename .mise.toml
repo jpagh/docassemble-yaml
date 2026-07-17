@@ -1,0 +1,31 @@
+monorepo_root = true
+
+[env]
+    DYLD_FALLBACK_LIBRARY_PATH = "/opt/homebrew/lib"
+
+[tools]
+    tombi = "latest"
+
+[settings]
+    experimental        = true
+    python.uv_venv_auto = "create|source"
+
+[monorepo]
+    config_roots = ["lsp", "vscode"]
+
+[tasks.check]
+    description = "Format, lint, type, and test the whole monorepo"
+    depends     = ["//lsp:check", "//vscode:check"]
+
+[tasks.gate]
+    description = "Full pre-release gate for the whole monorepo"
+    depends     = ["//lsp:gate", "//vscode:gate"]
+
+[tasks.bump]
+    description = "Bump the patch digit (CalVer YY.MM.patch → YY.MM.patch+1) and push"
+    run         = "bump-my-version bump patch && git push --follow-tags"
+
+[tasks.publish]
+    description = "Full release: gate, bump patch, package VSIX, publish to marketplace"
+    depends     = ["gate", "bump", "//vscode:package"]
+    run         = "vsce publish"

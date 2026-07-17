@@ -4,7 +4,11 @@ import logging
 from pathlib import Path
 
 from docassemble_lsp.core.definition_models import DocumentLinkTarget
-from docassemble_lsp.core.files import resolve_static_target, resolve_template_names, templates_dir_for_path
+from docassemble_lsp.core.files import (
+    resolve_static_target,
+    resolve_template_names,
+    templates_dir_for_path,
+)
 from docassemble_lsp.core.python_modules import resolve_python_module_path
 from docassemble_lsp.core.python_paths import (
     module_name_from_python_path,
@@ -368,7 +372,11 @@ def resolve_document_link_targets(
                                 if template_path.exists():
                                     target_path = template_path
                             except OSError as exc:
-                                logger.warning("Template link resolution failed for %r: %s", value, exc)
+                                logger.warning(
+                                    "Template link resolution failed for %r: %s",
+                                    value,
+                                    exc,
+                                )
 
                 if target_path is not None:
                     _append_link(
@@ -452,7 +460,11 @@ def resolve_document_link_targets(
                         try:
                             target_path = resolve_python_module_path(normalized, current_path, workspace_index)
                         except Exception as exc:
-                            logger.debug("Module link resolution failed: normalized=%r error=%s", normalized, exc)
+                            logger.debug(
+                                "Module link resolution failed: normalized=%r error=%s",
+                                normalized,
+                                exc,
+                            )
                             target_path = None
                     logger.debug(
                         "Module link resolved: normalized=%r target_path=%s",
@@ -489,6 +501,13 @@ def resolve_document_link_targets(
                 target_path=target_path,
             )
 
-    links.sort(key=lambda link: (link.line, link.start_character, link.end_character, str(link.target_path)))
+    links.sort(
+        key=lambda link: (
+            link.line,
+            link.start_character,
+            link.end_character,
+            str(link.target_path),
+        )
+    )
     logger.debug("Document links produced for %s: count=%d", current_path, len(links))
     return links

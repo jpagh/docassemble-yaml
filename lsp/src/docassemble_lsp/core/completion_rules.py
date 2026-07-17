@@ -576,14 +576,26 @@ def _build_registry() -> SchemaMetadata:
 
     _TABLE_BLOCK_RULES = _merge_rule_maps(
         _rules(("table",), value_types=("string", "object"), insert_kind="object"),
-        _rules(("rows",), value_types=("string",), display_value_types=_PYTHON_EXPR_DISPLAY_TYPES),
+        _rules(
+            ("rows",),
+            value_types=("string",),
+            display_value_types=_PYTHON_EXPR_DISPLAY_TYPES,
+        ),
         _rules(("columns",), value_types=("array",), insert_kind="array"),
         _rules(("require gathered",), value_types=("boolean",)),
         _rules(("allow reordering", "confirm"), value_types=("boolean",)),
         _rules(("edit",), value_types=("boolean", "array"), insert_kind="array"),
         _rules(("read only", "not available label"), value_types=("string",)),
-        _rules(("edit header",), value_types=("string",), display_value_types=_TEMPLATE_STRING_DISPLAY_TYPES),
-        _rules(("sort key",), value_types=("string",), display_value_types=_PYTHON_EXPR_DISPLAY_TYPES),
+        _rules(
+            ("edit header",),
+            value_types=("string",),
+            display_value_types=_TEMPLATE_STRING_DISPLAY_TYPES,
+        ),
+        _rules(
+            ("sort key",),
+            value_types=("string",),
+            display_value_types=_PYTHON_EXPR_DISPLAY_TYPES,
+        ),
         _rules(("indent",), value_types=("integer", "string")),
         _bool_expr_rules(("sort reverse",)),
     )
@@ -1912,7 +1924,10 @@ def _build_registry() -> SchemaMetadata:
     )
 
     _FEATURES_NUMERIC_RULES = _merge_rule_maps(
-        _rules(("table width", "loop limit", "recursion limit", "checkin interval"), value_types=("integer",)),
+        _rules(
+            ("table width", "loop limit", "recursion limit", "checkin interval"),
+            value_types=("integer",),
+        ),
         _rules(("progress bar multiplier",), value_types=("number",)),
     )
 
@@ -1927,7 +1942,13 @@ def _build_registry() -> SchemaMetadata:
             value_types=("string", "array"),
             insert_kind="array",
         ),
-        {"review button color": _rule("review button color", value_types=("string",), enum_values=_BOOTSTRAP_COLORS)},
+        {
+            "review button color": _rule(
+                "review button color",
+                value_types=("string",),
+                enum_values=_BOOTSTRAP_COLORS,
+            )
+        },
     )
 
     _FEATURES_RULES = _merge_rule_maps(
@@ -1982,7 +2003,9 @@ def _build_registry() -> SchemaMetadata:
                 description="When true, displays fields side by side on wide screens for a more compact layout.",
             ),
             "debug": _rule(
-                "debug", value_types=("boolean",), description="When true, enables debug mode showing variable details."
+                "debug",
+                value_types=("boolean",),
+                description="When true, enables debug mode showing variable details.",
             ),
             "cache documents": _rule(
                 "cache documents",
@@ -2477,7 +2500,11 @@ def _build_registry() -> SchemaMetadata:
             value_types=("string", "array", "null"),
             insert_kind="array",
         ),
-        _rules(("sessions are unique",), value_types=("boolean", "array"), insert_kind="array"),
+        _rules(
+            ("sessions are unique",),
+            value_types=("boolean", "array"),
+            insert_kind="array",
+        ),
         _rules(("social",), value_types=("object",), insert_kind="object"),
     )
 
@@ -2782,55 +2809,117 @@ def _build_registry() -> SchemaMetadata:
     )
 
     _METADATA_AUTHOR_ITEM_RULES = {
-        "name": _rule("name", value_types=("string",), description="Author name for the interview metadata."),
+        "name": _rule(
+            "name",
+            value_types=("string",),
+            description="Author name for the interview metadata.",
+        ),
         "organization": _rule(
-            "organization", value_types=("string",), description="Author organization for the interview metadata."
+            "organization",
+            value_types=("string",),
+            description="Author organization for the interview metadata.",
         ),
     }
 
     _METADATA_SOCIAL_RULES = {
-        "name": _rule("name", value_types=("string",), description="Social meta tag name for the interview page."),
+        "name": _rule(
+            "name",
+            value_types=("string",),
+            description="Social meta tag name for the interview page.",
+        ),
         "description": _rule(
             "description",
             value_types=("string",),
             description="Social meta description for the interview page.",
         ),
-        "image": _rule("image", value_types=("string",), description="Social meta image URL for the interview page."),
+        "image": _rule(
+            "image",
+            value_types=("string",),
+            description="Social meta image URL for the interview page.",
+        ),
         "twitter": _rule(
-            "twitter", value_types=("object",), description="Twitter Card meta tag configuration.", insert_kind="object"
+            "twitter",
+            value_types=("object",),
+            description="Twitter Card meta tag configuration.",
+            insert_kind="object",
         ),
         "og": _rule(
-            "og", value_types=("object",), description="Open Graph meta tag configuration.", insert_kind="object"
+            "og",
+            value_types=("object",),
+            description="Open Graph meta tag configuration.",
+            insert_kind="object",
         ),
     }
 
     _METADATA_SOCIAL_TWITTER_RULES = {
         "card": _rule(
-            "card", value_types=("string",), description="Twitter Card type (e.g. 'summary', 'summary_large_image')."
+            "card",
+            value_types=("string",),
+            description="Twitter Card type (e.g. 'summary', 'summary_large_image').",
         ),
-        "title": _rule("title", value_types=("string",), description="Twitter Card title for the interview page."),
-        "site": _rule("site", value_types=("string",), description="Twitter @username for the site."),
+        "title": _rule(
+            "title",
+            value_types=("string",),
+            description="Twitter Card title for the interview page.",
+        ),
+        "site": _rule(
+            "site",
+            value_types=("string",),
+            description="Twitter @username for the site.",
+        ),
         "description": _rule(
-            "description", value_types=("string",), description="Twitter Card description for the interview page."
+            "description",
+            value_types=("string",),
+            description="Twitter Card description for the interview page.",
         ),
-        "image": _rule("image", value_types=("string",), description="Twitter Card image URL for the interview page."),
-        "image:alt": _rule("image:alt", value_types=("string",), description="Alt text for the Twitter Card image."),
+        "image": _rule(
+            "image",
+            value_types=("string",),
+            description="Twitter Card image URL for the interview page.",
+        ),
+        "image:alt": _rule(
+            "image:alt",
+            value_types=("string",),
+            description="Alt text for the Twitter Card image.",
+        ),
     }
 
     _METADATA_SOCIAL_OG_RULES = {
-        "title": _rule("title", value_types=("string",), description="Open Graph title for the interview page."),
-        "url": _rule("url", value_types=("string",), description="Open Graph URL for the interview page."),
-        "site_name": _rule(
-            "site_name", value_types=("string",), description="Open Graph site name for the interview page."
+        "title": _rule(
+            "title",
+            value_types=("string",),
+            description="Open Graph title for the interview page.",
         ),
-        "locale": _rule("locale", value_types=("string",), description="Open Graph locale for the interview page."),
+        "url": _rule(
+            "url",
+            value_types=("string",),
+            description="Open Graph URL for the interview page.",
+        ),
+        "site_name": _rule(
+            "site_name",
+            value_types=("string",),
+            description="Open Graph site name for the interview page.",
+        ),
+        "locale": _rule(
+            "locale",
+            value_types=("string",),
+            description="Open Graph locale for the interview page.",
+        ),
         "type": _rule(
-            "type", value_types=("string",), description="Open Graph type for the interview page (e.g. 'website')."
+            "type",
+            value_types=("string",),
+            description="Open Graph type for the interview page (e.g. 'website').",
         ),
         "description": _rule(
-            "description", value_types=("string",), description="Open Graph description for the interview page."
+            "description",
+            value_types=("string",),
+            description="Open Graph description for the interview page.",
         ),
-        "image": _rule("image", value_types=("string",), description="Open Graph image URL for the interview page."),
+        "image": _rule(
+            "image",
+            value_types=("string",),
+            description="Open Graph image URL for the interview page.",
+        ),
     }
 
     _ATTACHMENT_METADATA_TEXT_RULES = _merge_rule_maps(
@@ -2871,7 +2960,11 @@ def _build_registry() -> SchemaMetadata:
             value_types=("string",),
         ),
         {
-            "fontsize": _rule("fontsize", value_types=("string",), enum_values=("10pt", "11pt", "12pt")),
+            "fontsize": _rule(
+                "fontsize",
+                value_types=("string",),
+                enum_values=("10pt", "11pt", "12pt"),
+            ),
         },
     )
 
@@ -2899,8 +2992,16 @@ def _build_registry() -> SchemaMetadata:
         _ATTACHMENT_METADATA_COLLECTION_RULES,
         _ATTACHMENT_METADATA_BOOLEANISH_RULES,
         {
-            "title": _rule("title", value_types=("string",), description="Document title passed to Pandoc metadata."),
-            "date": _rule("date", value_types=("string",), description="Document date passed to Pandoc metadata."),
+            "title": _rule(
+                "title",
+                value_types=("string",),
+                description="Document title passed to Pandoc metadata.",
+            ),
+            "date": _rule(
+                "date",
+                value_types=("string",),
+                description="Document date passed to Pandoc metadata.",
+            ),
             "fontsize": _rule(
                 "fontsize",
                 value_types=("string",),
@@ -3238,10 +3339,17 @@ def _build_registry() -> SchemaMetadata:
     )
 
     _REVIEW_ITEM_RULES = _merge_rule_maps(
-        _rules(("label",), value_types=("string",), display_value_types=_TEMPLATE_STRING_DISPLAY_TYPES),
+        _rules(
+            ("label",),
+            value_types=("string",),
+            display_value_types=_TEMPLATE_STRING_DISPLAY_TYPES,
+        ),
         _rules(("action", "button", "css class"), value_types=("string",)),
         _rules(
-            ("field",), value_types=("string", "array"), display_value_types=("python", "array"), insert_kind="array"
+            ("field",),
+            value_types=("string", "array"),
+            display_value_types=("python", "array"),
+            insert_kind="array",
         ),
         _rules(
             ("fields", "show if"),
@@ -3251,7 +3359,9 @@ def _build_registry() -> SchemaMetadata:
         ),
         _rules(("help",), value_types=("string", "array", "object"), insert_kind="object"),
         _rules(
-            ("note", "html", "raw html"), value_types=("string",), display_value_types=_TEMPLATE_STRING_DISPLAY_TYPES
+            ("note", "html", "raw html"),
+            value_types=("string",),
+            display_value_types=_TEMPLATE_STRING_DISPLAY_TYPES,
         ),
         {
             "label": _rule(
@@ -3325,7 +3435,9 @@ def _build_registry() -> SchemaMetadata:
 
     _REVIEW_FIELD_ITEM_RULES = _merge_rule_maps(
         _rules(
-            ("set", "follow up", "undefine", "invalidate", "recompute"), value_types=("array",), insert_kind="array"
+            ("set", "follow up", "undefine", "invalidate", "recompute"),
+            value_types=("array",),
+            insert_kind="array",
         ),
         _rules(("action",), value_types=("string",)),
         _rules(("arguments",), value_types=("object",), insert_kind="object"),
@@ -3413,14 +3525,24 @@ def _build_registry() -> SchemaMetadata:
 
     _ATTACHMENT_ITEM_PERMISSION_RULES = _merge_rule_maps(
         _bool_expr_rules(("persistent", "private", "editable", "update references")),
-        _rules(("allow privileges",), value_types=("string", "array", "object"), insert_kind="array"),
-        _rules(("allow users",), value_types=("string", "integer", "array", "object"), insert_kind="array"),
+        _rules(
+            ("allow privileges",),
+            value_types=("string", "array", "object"),
+            insert_kind="array",
+        ),
+        _rules(
+            ("allow users",),
+            value_types=("string", "integer", "array", "object"),
+            insert_kind="array",
+        ),
     )
 
     _ATTACHMENT_ITEM_DOCUMENT_RULES = _merge_rule_maps(
         _bool_expr_rules(("skip undefined", "redact", "pdf/a", "pdftk", "tagged pdf")),
         _rules(
-            ("decimal places",), value_types=("integer", "string"), display_value_types=("integer", "string", "mako")
+            ("decimal places",),
+            value_types=("integer", "string"),
+            display_value_types=("integer", "string", "mako"),
         ),
         _rules(("usedefs",), value_types=("string", "array"), insert_kind="array"),
     )
@@ -3433,7 +3555,11 @@ def _build_registry() -> SchemaMetadata:
             value_types=("string",),
             display_value_types=_TEMPLATE_STRING_DISPLAY_TYPES,
         ),
-        _rules(("code", "manual code"), value_types=("string",), display_value_types=_PYTHON_EXPR_DISPLAY_TYPES),
+        _rules(
+            ("code", "manual code"),
+            value_types=("string",),
+            display_value_types=_PYTHON_EXPR_DISPLAY_TYPES,
+        ),
         _rules(
             ("field variables", "raw field variables", "field code"),
             value_types=("string", "array"),
@@ -3710,8 +3836,15 @@ def _build_registry() -> SchemaMetadata:
     )
 
     _ATTACHMENT_OPTIONS_RULES = _merge_rule_maps(
-        _rules(("initial yaml", "additional yaml"), value_types=("string", "array"), insert_kind="array"),
-        _rules(("template file", "rtf template file", "docx reference file"), value_types=("string",)),
+        _rules(
+            ("initial yaml", "additional yaml"),
+            value_types=("string", "array"),
+            insert_kind="array",
+        ),
+        _rules(
+            ("template file", "rtf template file", "docx reference file"),
+            value_types=("string",),
+        ),
         _rules(("metadata",), value_types=("object",), insert_kind="object"),
         {
             "initial yaml": _rule(
@@ -3820,9 +3953,15 @@ def _build_registry() -> SchemaMetadata:
             description="Offset (margin left) for the grid column.",
         ),
         "start": _rule(
-            "start", value_types=("boolean", "string", "null"), description="Column start visibility state."
+            "start",
+            value_types=("boolean", "string", "null"),
+            description="Column start visibility state.",
         ),
-        "end": _rule("end", value_types=("boolean", "string", "null"), description="Column end visibility state."),
+        "end": _rule(
+            "end",
+            value_types=("boolean", "string", "null"),
+            description="Column end visibility state.",
+        ),
         "breakpoint": _rule(
             "breakpoint",
             value_types=("string",),
@@ -4574,7 +4713,11 @@ def _build_registry() -> SchemaMetadata:
             value_types=("string",),
             display_value_types=_TEMPLATE_STRING_DISPLAY_TYPES,
         ),
-        _rules(("code",), value_types=("string",), display_value_types=_PYTHON_EXPR_DISPLAY_TYPES),
+        _rules(
+            ("code",),
+            value_types=("string",),
+            display_value_types=_PYTHON_EXPR_DISPLAY_TYPES,
+        ),
         _rules(("arguments",), value_types=("object",), insert_kind="object"),
         {
             "action": _rule(

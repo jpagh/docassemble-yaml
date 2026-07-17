@@ -134,7 +134,10 @@ def detect_docassemble_package(path: Path) -> Path | None:
             if not pkg_dir.is_dir():
                 continue
             if (pkg_dir / "__init__.py").is_file() and (pkg_dir / "data").is_dir():
-                _detect_package_cache[candidate] = (directory, pyproject.stat().st_mtime)
+                _detect_package_cache[candidate] = (
+                    directory,
+                    pyproject.stat().st_mtime,
+                )
                 return directory
     return None
 

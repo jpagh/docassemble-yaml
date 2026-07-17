@@ -19,7 +19,11 @@ from docassemble_lsp.core import (
     format_text,
 )
 from docassemble_lsp.core.diagnostics import diagnostic_to_dict
-from docassemble_lsp.core.files import collect_dayaml_cli_args, collect_dayaml_conventions, collect_dayaml_ignore_codes
+from docassemble_lsp.core.files import (
+    collect_dayaml_cli_args,
+    collect_dayaml_conventions,
+    collect_dayaml_ignore_codes,
+)
 from docassemble_lsp.core.messages import MESSAGE_DEFINITIONS
 from docassemble_lsp.core.validation_config import RuntimeOptions, parse_ignore_codes
 from docassemble_lsp.lsp.server import run_server
@@ -212,7 +216,10 @@ def _codes_command(_args: argparse.Namespace) -> int:
     severity_width = max(len(severity) for _, severity, _ in rows)
 
     for code, severity, summary in rows:
-        print(f"{code:<{code_width}}  {severity:<{severity_width}}  {summary}", file=sys.stdout)
+        print(
+            f"{code:<{code_width}}  {severity:<{severity_width}}  {summary}",
+            file=sys.stdout,
+        )
     return 0
 
 

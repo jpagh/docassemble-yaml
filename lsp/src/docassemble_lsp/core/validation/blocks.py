@@ -25,7 +25,11 @@ from docassemble_lsp.core.line_helpers import (
     _relative_value_line,
     _safe_ast_parse,
 )
-from docassemble_lsp.core.messages import MessageCode, format_message, is_experimental_code
+from docassemble_lsp.core.messages import (
+    MessageCode,
+    format_message,
+    is_experimental_code,
+)
 from docassemble_lsp.core.validation.fields import (
     _CONDITIONAL_MODIFIERS,
     _HIDE_STYLE_MODIFIERS,
@@ -1067,7 +1071,11 @@ def _max_screen_visibility_nesting_depth(doc: dict[str, Any]) -> tuple[int, int 
         memo[var_name] = max_result
         return max_result
 
-    return max((depth(var) for var in adjacency.keys()), default=(0, None), key=lambda result: result[0])
+    return max(
+        (depth(var) for var in adjacency.keys()),
+        default=(0, None),
+        key=lambda result: result[0],
+    )
 
 
 _TAGGED_PDF_TRUE_RE = re.compile(

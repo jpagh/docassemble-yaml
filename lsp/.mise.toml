@@ -1,0 +1,52 @@
+[tools]
+    python = "3.14"
+    uv     = "latest"
+
+[tasks.sync]
+    description = "Install/sync LSP dev dependencies"
+    run         = "uv sync"
+
+[tasks.format]
+    description = "ruff format"
+    depends     = ["sync"]
+    run         = "uv run ruff format"
+
+[tasks.lint]
+    description = "ruff check --fix"
+    depends     = ["sync"]
+    run         = "uv run ruff check --fix"
+
+[tasks.type]
+    description = "mypy on src/"
+    depends     = ["sync"]
+    run         = "uv run mypy src/"
+
+[tasks.test]
+    description = "pytest with xdist"
+    depends     = ["sync"]
+    run         = "uv run pytest -q -n auto"
+
+[tasks."test:coverage"]
+    description = "pytest with coverage reports"
+    depends     = ["sync"]
+    run         = "uv run pytest --cov --cov-report=term-missing --cov-report=html"
+
+[tasks."test:all-pythons"]
+    description = "Run tests against all supported Python versions"
+    run         = [
+        "for v in 3.10 3.11 3.12 3.13 3.14; do echo \"=== Python $v ===\"; UV_PROJECT_ENVIRONMENT=.venv-$v DYLD_FALLBACK_LIBRARY_PATH={{ env.DYLD_FALLBACK_LIBRARY_PATH | quote }} uv run --python $v --only-group test pytest -n auto || exit 1; done",
+        "rm -rf .venv-3.10 .venv-3.11 .venv-3.12 .venv-3.13 .venv-3.14",
+    ]
+
+[tasks."vendor:stubs"]
+    description = "Regenerate vendored docassemble stubs"
+    depends     = ["sync"]
+    run         = "uv run python scripts/update_vendored_docassemble_base_util.py"
+
+[tasks.check]
+    description = "Format, lint, type, and test"
+    depends     = ["format", "lint", "type", "test"]
+
+[tasks.gate]
+    description = "Full pre-release gate for LSP"
+    depends     = ["format", "lint", "type", "test:all-pythons"]

@@ -1024,7 +1024,12 @@ def variables_as_json(include_internal: Any = ...) -> Any:
     """
     ...
 
-def all_variables(simplify: Any = ..., include_internal: Any = ..., special: Any = ..., make_copy: Any = ...) -> Any:
+def all_variables(
+    simplify: Any = ...,
+    include_internal: Any = ...,
+    special: Any = ...,
+    make_copy: Any = ...,
+) -> Any:
     """
     Return the interview session variables as a dictionary.
 

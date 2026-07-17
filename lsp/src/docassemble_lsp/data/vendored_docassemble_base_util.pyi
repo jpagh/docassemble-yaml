@@ -306,7 +306,11 @@ class Address(DAObject):
     def init(self, *pargs: Any, **kwargs: Any) -> Any: ...
     def __str__(self) -> Any: ...
     def on_one_line(
-        self, include_unit: Any = ..., omit_default_country: Any = ..., language: Any = ..., show_country: Any = ...
+        self,
+        include_unit: Any = ...,
+        omit_default_country: Any = ...,
+        language: Any = ...,
+        show_country: Any = ...,
     ) -> Any:
         """
         Return the address as a single line of text.
@@ -1182,7 +1186,12 @@ class DAObject:
         ...
     def is_peer_relation(self, target: Any, relationship_type: Any, tree: Any) -> Any: ...
     def is_relation(
-        self, target: Any, relationship_type: Any, tree: Any, self_is: Any = ..., filter_by: Any = ...
+        self,
+        target: Any,
+        relationship_type: Any,
+        tree: Any,
+        self_is: Any = ...,
+        filter_by: Any = ...,
     ) -> Any: ...
     def get_relation(
         self,
@@ -1209,7 +1218,12 @@ class DAObject:
     ) -> Any: ...
     def set_peer_relationship(self, target: Any, relationship_type: Any, tree: Any, replace: Any = ...) -> Any: ...
     def set_relationship(
-        self, target: Any, relationship_type: Any, self_is: Any, tree: Any, replace: Any = ...
+        self,
+        target: Any,
+        relationship_type: Any,
+        self_is: Any,
+        tree: Any,
+        replace: Any = ...,
     ) -> Any: ...
     def get_point_of_view(self) -> Any: ...
     def fix_instance_name(self, old_instance_name: Any, new_instance_name: Any) -> Any:
@@ -2052,7 +2066,11 @@ class DAList(DAObject):
     def _allow_appending(self) -> Any: ...
     def _disallow_appending(self) -> Any: ...
     def gather(
-        self, number: Any = ..., item_object_type: Any = ..., minimum: Any = ..., complete_attribute: Any = ...
+        self,
+        number: Any = ...,
+        item_object_type: Any = ...,
+        minimum: Any = ...,
+        complete_attribute: Any = ...,
     ) -> Any:
         """
         Trigger the gathering process for the list and return True.
@@ -4529,7 +4547,10 @@ class DALink(DAObject):
         ...
 
 def last_access_time(
-    include_privileges: Any = ..., exclude_privileges: Any = ..., include_cron: Any = ..., timezone: Any = ...
+    include_privileges: Any = ...,
+    exclude_privileges: Any = ...,
+    include_cron: Any = ...,
+    timezone: Any = ...,
 ) -> Any:
     """
     Return the most recent time the interview was accessed.
@@ -5140,7 +5161,15 @@ def ocr_file_in_background(*pargs: Any, **kwargs: Any) -> Any:
     """
     ...
 
-def read_qr(image_file: Any, f: Any = ..., l: Any = ..., x: Any = ..., y: Any = ..., W: Any = ..., H: Any = ...) -> Any:
+def read_qr(
+    image_file: Any,
+    f: Any = ...,
+    l: Any = ...,
+    x: Any = ...,
+    y: Any = ...,
+    W: Any = ...,
+    H: Any = ...,
+) -> Any:
     """
     Decode QR codes found in image or PDF files.
 
@@ -5173,7 +5202,12 @@ def get_sms_session(phone_number: Any, config: Any = ...) -> Any:
     ...
 
 def initiate_sms_session(
-    phone_number: Any, yaml_filename: Any = ..., email: Any = ..., new: Any = ..., send: Any = ..., config: Any = ...
+    phone_number: Any,
+    yaml_filename: Any = ...,
+    email: Any = ...,
+    new: Any = ...,
+    send: Any = ...,
+    config: Any = ...,
 ) -> Any:
     """
     Initiate an SMS session for a phone number.

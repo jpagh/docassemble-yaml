@@ -11,8 +11,14 @@ _PUBLIC_EXPORTS = {
     "WorkspaceIndex": ("docassemble_lsp.core.workspace", "WorkspaceIndex"),
     "analyze_path": ("docassemble_lsp.core.diagnostics", "analyze_path"),
     "analyze_text": ("docassemble_lsp.core.diagnostics", "analyze_text"),
-    "build_document_facts": ("docassemble_lsp.core.document_facts", "build_document_facts"),
-    "build_workspace_index": ("docassemble_lsp.core.definitions", "build_workspace_index"),
+    "build_document_facts": (
+        "docassemble_lsp.core.document_facts",
+        "build_document_facts",
+    ),
+    "build_workspace_index": (
+        "docassemble_lsp.core.definitions",
+        "build_workspace_index",
+    ),
     "collect_yaml_files": ("docassemble_lsp.core.files", "collect_yaml_files"),
     "configure_logging": ("docassemble_lsp.core.logging", "configure_logging"),
     "reset_logging": ("docassemble_lsp.core.logging", "reset_logging"),
@@ -22,10 +28,22 @@ _PUBLIC_EXPORTS = {
     "format_text": ("docassemble_lsp.core.formatting", "format_text"),
     "get_completions": ("docassemble_lsp.core.schema", "get_completions"),
     "get_hover": ("docassemble_lsp.core.schema", "get_hover"),
-    "resolve_definition_targets": ("docassemble_lsp.core.definitions", "resolve_definition_targets"),
-    "resolve_python_hover": ("docassemble_lsp.core.definitions", "resolve_python_hover"),
-    "resolve_reference_targets": ("docassemble_lsp.core.definitions", "resolve_reference_targets"),
-    "resolve_workspace_symbol_targets": ("docassemble_lsp.core.definitions", "resolve_workspace_symbol_targets"),
+    "resolve_definition_targets": (
+        "docassemble_lsp.core.definitions",
+        "resolve_definition_targets",
+    ),
+    "resolve_python_hover": (
+        "docassemble_lsp.core.definitions",
+        "resolve_python_hover",
+    ),
+    "resolve_reference_targets": (
+        "docassemble_lsp.core.definitions",
+        "resolve_reference_targets",
+    ),
+    "resolve_workspace_symbol_targets": (
+        "docassemble_lsp.core.definitions",
+        "resolve_workspace_symbol_targets",
+    ),
 }
 
 

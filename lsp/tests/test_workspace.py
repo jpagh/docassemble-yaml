@@ -331,7 +331,9 @@ def test_workspace_index_templates_propagate_through_with_overlays(tmp_path) -> 
     assert overlaid.template_file_names == frozenset({"letter.docx"})
 
 
-def test_workspace_index_templates_propagate_through_with_current_document(tmp_path) -> None:
+def test_workspace_index_templates_propagate_through_with_current_document(
+    tmp_path,
+) -> None:
     """package_templates_dirs and template_file_names propagate through with_current_document()."""
     pkg_dir = tmp_path / "docassemble" / "demo"
     questions_dir = pkg_dir / "data" / "questions"
@@ -474,7 +476,9 @@ def test_workspace_index_from_yaml_roots_sets_package_root(tmp_path) -> None:
     assert idx.package_root == tmp_path
 
 
-def test_workspace_index_from_yaml_roots_empty_roots_package_root_is_none(tmp_path) -> None:
+def test_workspace_index_from_yaml_roots_empty_roots_package_root_is_none(
+    tmp_path,
+) -> None:
     idx = WorkspaceIndex.from_yaml_roots([])
     assert idx.package_root is None
 

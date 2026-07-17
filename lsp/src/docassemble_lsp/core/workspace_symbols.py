@@ -2,7 +2,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from docassemble_lsp.core.definition_models import DefinitionTarget, ReferenceRequest, WorkspaceSymbolTarget
+from docassemble_lsp.core.definition_models import (
+    DefinitionTarget,
+    ReferenceRequest,
+    WorkspaceSymbolTarget,
+)
 from docassemble_lsp.core.document_facts import DocumentFact
 from docassemble_lsp.core.workspace import WorkspaceIndex
 from docassemble_lsp.core.yaml_shared import _document_lines, _strip_quotes
@@ -104,5 +108,12 @@ class WorkspaceSymbolService:
                     )
                 )
 
-        targets.sort(key=lambda target: (target.name.lower(), str(target.path), target.line, target.start_character))
+        targets.sort(
+            key=lambda target: (
+                target.name.lower(),
+                str(target.path),
+                target.line,
+                target.start_character,
+            )
+        )
         return targets

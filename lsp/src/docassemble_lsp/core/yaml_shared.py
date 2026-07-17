@@ -3,7 +3,11 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from docassemble_lsp.core.definition_models import BlockScalarRegion, DefinitionTarget, MakoBlockRegion
+from docassemble_lsp.core.definition_models import (
+    BlockScalarRegion,
+    DefinitionTarget,
+    MakoBlockRegion,
+)
 
 _BLOCK_SCALAR_MARKERS = frozenset({"|", ">", "|-", ">-", "|+", ">+"})
 

@@ -1,0 +1,70 @@
+[tools]
+aube = "latest"
+node = "lts"
+"npm:typescript" = "latest"
+"npm:esbuild" = "latest"
+"npm:oxlint" = "latest"
+"npm:oxfmt" = "latest"
+"npm:@vscode/vsce" = "latest"
+
+[tasks.sync]
+description = "Install vscode runtime dependencies via aube"
+run = "aube install"
+
+[tasks."bundle:server"]
+description = "Bundle the Python LSP into vscode/bundled/"
+depends = ["//lsp:sync"]
+run = "node scripts/bundle-server.mjs"
+
+[tasks.compile]
+description = "TypeScript compile only"
+depends = ["sync"]
+run = "tsc -p ./"
+
+[tasks.build]
+description = "Full build: bundle server + tsc + esbuild bundle"
+depends = ["bundle:server", "compile"]
+run = "esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --platform=node --target=node18 --format=cjs --sourcemap=external --minify"
+
+[tasks.format]
+description = "Format TS/JS"
+depends = ["sync"]
+run = "oxfmt --write"
+
+[tasks."format:check"]
+description = "Check TS/JS formatting"
+depends = ["sync"]
+run = "oxfmt --check"
+
+[tasks.lint]
+description = "Lint TS/JS"
+depends = ["sync"]
+run = "oxlint"
+
+[tasks.test]
+description = "Run VS Code extension tests (mock LSP)"
+depends = ["build"]
+run = "node ./dist/test/runTest.js"
+
+[tasks."test:real-lsp"]
+description = "Run extension tests against the real docassemble-lsp"
+depends = ["build"]
+run = "DOCASSEMBLE_LSP_ENABLE_REAL_TEST=1 node ./dist/test/runTest.js"
+
+[tasks.package]
+description = "Package the VSIX"
+depends = ["build"]
+run = "vsce package"
+
+[tasks.check]
+description = "Format, lint, build, and test (mock)"
+depends = ["format", "lint", "build", "test"]
+
+[tasks.watch]
+description = "Watch TypeScript"
+depends = ["sync"]
+run = "tsc -w -p ./"
+
+[tasks.gate]
+description = "Full pre-release gate for VSCode: format-check, lint, real-LSP tests"
+depends = ["format:check", "lint", "test:real-lsp"]

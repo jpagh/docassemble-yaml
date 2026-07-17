@@ -59,20 +59,19 @@ installs its dependencies into `bundled/libs/` using `uv pip install`
 (falling back to `pip`).
 
 ```sh
-npm run build          # bundles server, installs deps, compiles TypeScript
-npm run bundle-server  # bundle step only
-vsce package           # packages the VSIX
+mise run //vscode:build  # bundles server, installs deps, compiles TypeScript
+mise run //vscode:bundle:server  # bundle step only
+mise run //vscode:package  # packages the VSIX
 ```
 
 The `bundled/` directory is git-ignored and regenerated on every
 build. The build is platform-specific — it embeds a specific
 CPython version, OS, and architecture, so contributors on a
 different platform must rebuild before running the real-LSP tests.
-The `just` recipes handle this: `just vscode::test` and
-`just vscode::test-mock` both depend on `vscode::build` and rebuild
-the bundle as a side effect. The default `npm test` (mock server)
-does not need the bundle — only `npm run test:real-lsp-extension`
-and the real-LSP path in `just vscode::test` do.
+The mise tasks handle this: `mise run //vscode:test` and
+`mise run //vscode:test:real-lsp` both depend on `//vscode:build` and rebuild
+the bundle as a side effect. The default `mise run //vscode:test` (mock server)
+does not need the bundle — only `//vscode:test:real-lsp` does.
 
 ## Commands
 
@@ -101,11 +100,8 @@ and the real-LSP path in `just vscode::test` do.
 
 ## Validation
 
-- `npm test` runs the default extension-host smoke suite.
-- `npm run test:real-lsp` runs a direct smoke test against the system
-  `docassemble-lsp` command.
-- `npm run test:real-lsp-extension` runs the opt-in extension-host
-  real-server smoke path.
+- `mise run //vscode:test` runs the default extension-host smoke suite.
+- `mise run //vscode:test:real-lsp` runs the opt-in extension-host real-server smoke path.
 - The extension-host suite includes an Enter/on-type regression test
   that verifies the client sends `textDocument/onTypeFormatting` and
   applies the returned edit.

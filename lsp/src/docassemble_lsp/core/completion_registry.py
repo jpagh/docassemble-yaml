@@ -6,7 +6,11 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
-from docassemble_lsp.core.completion_rules import CompletionScope, PropertyRule, SchemaMetadata
+from docassemble_lsp.core.completion_rules import (
+    CompletionScope,
+    PropertyRule,
+    SchemaMetadata,
+)
 from docassemble_lsp.core.definition_models import PythonCompletionTarget
 from docassemble_lsp.core.field_keys import BOOLEAN_DATATYPES
 from docassemble_lsp.core.python_modules import VENDORED_MODULE_NAMES
@@ -14,7 +18,9 @@ from docassemble_lsp.core.python_navigation import resolve_python_completion_tar
 from docassemble_lsp.core.python_paths import path_from_uri_or_path
 from docassemble_lsp.core.schema_insert_text import contextualize_completion_candidates
 from docassemble_lsp.core.schema_models import CompletionCandidate
-from docassemble_lsp.core.schema_snippets import shorthand_candidates as build_shorthand_candidates
+from docassemble_lsp.core.schema_snippets import (
+    shorthand_candidates as build_shorthand_candidates,
+)
 from docassemble_lsp.core.validation_config import RuntimeOptions
 from docassemble_lsp.core.workspace import WorkspaceIndex
 from docassemble_lsp.core.yaml_shared import _ATTACHMENT_FILE_KEYS, _LIST_ITEM_VALUE_RE
@@ -212,7 +218,9 @@ def _line_at(source: str, line: int) -> str:
     return lines[line]
 
 
-def python_completion_provider(context: CompletionContext) -> list[CompletionCandidate] | None:
+def python_completion_provider(
+    context: CompletionContext,
+) -> list[CompletionCandidate] | None:
     python_targets = resolve_python_completion_targets(
         context.source,
         context.line,
@@ -251,7 +259,9 @@ def _keyword_insert_text(target: PythonCompletionTarget) -> str | None:
     return None
 
 
-def value_completion_provider(context: CompletionContext) -> list[CompletionCandidate] | None:
+def value_completion_provider(
+    context: CompletionContext,
+) -> list[CompletionCandidate] | None:
     scope_properties = context.metadata.scoped_properties[context.scope]
     value_match = _VALUE_RE.match(context.line_prefix)
     if value_match:
@@ -338,7 +348,9 @@ def value_completion_provider(context: CompletionContext) -> list[CompletionCand
     return None
 
 
-def property_completion_provider(context: CompletionContext) -> list[CompletionCandidate]:
+def property_completion_provider(
+    context: CompletionContext,
+) -> list[CompletionCandidate]:
     if not re.fullmatch(r"\s*(?:-\s*)?[\w/.-][\w /.-]*", context.line_prefix) and not re.fullmatch(
         r"\s*(?:-\s*)?", context.line_prefix
     ):
@@ -401,7 +413,9 @@ def _list_item_partial_value(context: CompletionContext) -> str:
     return context.line_prefix.strip()
 
 
-def _file_value_completion_provider(context: CompletionContext) -> list[CompletionCandidate] | None:
+def _file_value_completion_provider(
+    context: CompletionContext,
+) -> list[CompletionCandidate] | None:
     scope = context.scope
 
     if scope in ("include_item", "translations_item", "objects_from_file_item"):
@@ -425,7 +439,9 @@ def _file_value_completion_provider(context: CompletionContext) -> list[Completi
     return None
 
 
-def _complete_file_paths(context: CompletionContext) -> list[CompletionCandidate] | None:
+def _complete_file_paths(
+    context: CompletionContext,
+) -> list[CompletionCandidate] | None:
     scope = context.scope
     partial = _list_item_partial_value(context)
     if ":" in partial:
@@ -461,11 +477,18 @@ def _complete_file_paths(context: CompletionContext) -> list[CompletionCandidate
         candidates.append(CompletionCandidate(label=rel, insert_text=rel, is_value=True))
 
     if candidates:
-        candidates.sort(key=lambda c: (0 if c.label.lower().startswith(partial.lower()) else 1, c.label))
+        candidates.sort(
+            key=lambda c: (
+                0 if c.label.lower().startswith(partial.lower()) else 1,
+                c.label,
+            )
+        )
     return candidates if candidates else None
 
 
-def _complete_module_names(context: CompletionContext) -> list[CompletionCandidate] | None:
+def _complete_module_names(
+    context: CompletionContext,
+) -> list[CompletionCandidate] | None:
     # Only activate when a workspace context exists (document path is set).
     # Without it, the snippet-based templates are more helpful.
     if not context.uri_or_path:
@@ -526,7 +549,9 @@ def _complete_module_names(context: CompletionContext) -> list[CompletionCandida
     return candidates if candidates else None
 
 
-def _complete_variable_names(context: CompletionContext) -> list[CompletionCandidate] | None:
+def _complete_variable_names(
+    context: CompletionContext,
+) -> list[CompletionCandidate] | None:
     partial = _list_item_partial_value(context)
     seen: set[str] = set()
     candidates: list[CompletionCandidate] = []
@@ -554,7 +579,12 @@ def _complete_block_ids(context: CompletionContext) -> list[CompletionCandidate]
         if partial.lower() in bid.lower():
             candidates.append(CompletionCandidate(label=bid, insert_text=bid, is_value=True))
     if candidates:
-        candidates.sort(key=lambda c: (0 if c.label.lower().startswith(partial.lower()) else 1, c.label))
+        candidates.sort(
+            key=lambda c: (
+                0 if c.label.lower().startswith(partial.lower()) else 1,
+                c.label,
+            )
+        )
     return candidates if candidates else None
 
 
@@ -570,7 +600,9 @@ _ATTACHMENT_KEY_EXTENSIONS: dict[str, tuple[str, ...]] = {
 }
 
 
-def _complete_attachment_template_paths(context: CompletionContext) -> list[CompletionCandidate] | None:
+def _complete_attachment_template_paths(
+    context: CompletionContext,
+) -> list[CompletionCandidate] | None:
     value_match = _VALUE_RE.match(context.line_prefix)
     if not value_match:
         return None
@@ -594,5 +626,10 @@ def _complete_attachment_template_paths(context: CompletionContext) -> list[Comp
             candidates.append(CompletionCandidate(label=name, insert_text=name, is_value=True))
 
     if candidates:
-        candidates.sort(key=lambda c: (0 if c.label.lower().startswith(partial_value.lower()) else 1, c.label))
+        candidates.sort(
+            key=lambda c: (
+                0 if c.label.lower().startswith(partial_value.lower()) else 1,
+                c.label,
+            )
+        )
     return candidates if candidates else None

@@ -41,7 +41,9 @@ def test_analyze_text_allows_signature_only_top_level_keys_with_signature() -> N
     assert "E301" not in {diagnostic.code for diagnostic in diagnostics}
 
 
-def test_analyze_text_supports_jinja_include_from_source_directory(tmp_path: Path) -> None:
+def test_analyze_text_supports_jinja_include_from_source_directory(
+    tmp_path: Path,
+) -> None:
     included = tmp_path / "included.yml"
     included.write_text("question: Included question\n", encoding="utf-8")
 

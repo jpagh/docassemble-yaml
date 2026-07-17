@@ -15,9 +15,15 @@ def validate_list_collect_mako_labels(
     input_file: str,
 ) -> list[YAMLError]:
     """Check that ``list collect`` blocks don't have Mako in field labels."""
-    from docassemble_lsp.core.line_helpers import _is_internal_metadata_key, _lc_key_line
+    from docassemble_lsp.core.line_helpers import (
+        _is_internal_metadata_key,
+        _lc_key_line,
+    )
     from docassemble_lsp.core.messages import MessageCode
-    from docassemble_lsp.core.validation.blocks import _absolute_document_line, _yaml_error
+    from docassemble_lsp.core.validation.blocks import (
+        _absolute_document_line,
+        _yaml_error,
+    )
     from docassemble_lsp.core.validation.fields import _contains_mako_syntax
 
     errors: list[YAMLError] = []

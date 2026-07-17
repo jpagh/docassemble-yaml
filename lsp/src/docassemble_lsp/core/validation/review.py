@@ -60,7 +60,10 @@ class ReviewBlockDirective:
                 for sub_idx, sub_item in enumerate(show_if_val):
                     if not isinstance(sub_item, str):
                         self.errors.append(
-                            _validator_error(MessageCode.REVIEW_SHOW_IF_TYPE, _seq_item_line(show_if_val, sub_idx))
+                            _validator_error(
+                                MessageCode.REVIEW_SHOW_IF_TYPE,
+                                _seq_item_line(show_if_val, sub_idx),
+                            )
                         )
 
         if "help" in item and not isinstance(item["help"], str):

@@ -60,7 +60,6 @@
     exclude          = '^build/|^src/docassemble_lsp/data/'
     pretty           = true
     python_version   = "3.12"
-    show_error_codes = true
 
 [tool.pytest.ini_options]
     pythonpath = [
@@ -71,7 +70,6 @@
     line-length = 120
 
 [tool.setuptools]
-    package-dir = { "" = "src" }
 
     [tool.setuptools.packages.find]
         include = [

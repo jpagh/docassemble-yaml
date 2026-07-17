@@ -64,14 +64,24 @@ _SCOPE_KEY_REGRESSION_CASES: list[tuple[str, str, int, int]] = [
     ("metadata_block", "metadata:\n  \n", 1, 2),
     ("metadata_author_item", "metadata:\n  authors:\n    - \n", 2, 6),
     ("metadata_social_block", "metadata:\n  social:\n    \n", 2, 4),
-    ("metadata_social_twitter_block", "metadata:\n  social:\n    twitter:\n      \n", 3, 6),
+    (
+        "metadata_social_twitter_block",
+        "metadata:\n  social:\n    twitter:\n      \n",
+        3,
+        6,
+    ),
     ("metadata_social_og_block", "metadata:\n  social:\n    og:\n      \n", 3, 6),
     ("attachment_metadata_block", "attachments:\n  - metadata:\n      \n", 2, 6),
     ("sections_item", "sections:\n  - \n", 1, 4),
     ("table_column_item", "table: fruit_table\nrows: fruit\ncolumns:\n  - \n", 3, 4),
     ("features_block", "features:\n  \n", 1, 2),
     ("default_screen_parts_block", "default screen parts:\n  \n", 1, 2),
-    ("list_collect_block", "question: Hi\nfields:\n  - field: user.name\nlist collect:\n  \n", 4, 2),
+    (
+        "list_collect_block",
+        "question: Hi\nfields:\n  - field: user.name\nlist collect:\n  \n",
+        4,
+        2,
+    ),
     ("image_set_block", "image sets:\n  freepik:\n    \n", 2, 4),
     (
         "validation_messages_block",
@@ -80,13 +90,23 @@ _SCOPE_KEY_REGRESSION_CASES: list[tuple[str, str, int, int]] = [
         6,
     ),
     ("review_item", "question: Review\nreview:\n  - \n", 2, 4),
-    ("review_field_item", "question: Review\nreview:\n  - label: Name\n    field:\n      - \n", 4, 8),
+    (
+        "review_field_item",
+        "question: Review\nreview:\n  - label: Name\n    field:\n      - \n",
+        4,
+        8,
+    ),
     ("attachment_item", "attachment:\n  - \n", 1, 4),
     ("attachment_options_block", "attachment options:\n  \n", 1, 2),
     ("segment_block", "segment:\n  \n", 1, 2),
     ("help_block", "help:\n  \n", 1, 2),
     ("interview_help_block", "interview help:\n  \n", 1, 2),
-    ("grid_block", "question: Hi\nfields:\n  - field: user.name\n    label: Name\n    grid:\n      \n", 5, 6),
+    (
+        "grid_block",
+        "question: Hi\nfields:\n  - field: user.name\n    label: Name\n    grid:\n      \n",
+        5,
+        6,
+    ),
     (
         "item_grid_block",
         "question: Hi\nfields:\n  - field: user.name\n    label: Name\n    item grid:\n      \n",
@@ -103,7 +123,12 @@ _SCOPE_KEY_REGRESSION_CASES: list[tuple[str, str, int, int]] = [
     ("action_button_item", "question: Hi\nfield: ready\naction buttons:\n  - \n", 3, 4),
     ("need_item", "need:\n  \n", 1, 2),
     ("terms_item", "terms:\n  - \n", 1, 4),
-    ("show_if_modifier", "question: Hi\nfields:\n  - field: user.name\n    show if:\n      \n", 4, 6),
+    (
+        "show_if_modifier",
+        "question: Hi\nfields:\n  - field: user.name\n    show if:\n      \n",
+        4,
+        6,
+    ),
 ]
 
 
@@ -560,7 +585,16 @@ def test_fields_item_shows_object_labeler_for_object_checkboxes() -> None:
 
 
 def test_fields_item_filters_choices_for_each_boolean_datatype() -> None:
-    boolean_dts = ["yesno", "yesnowide", "yesnoradio", "noyes", "noyeswide", "noyesradio", "yesnomaybe", "noyesmaybe"]
+    boolean_dts = [
+        "yesno",
+        "yesnowide",
+        "yesnoradio",
+        "noyes",
+        "noyeswide",
+        "noyesradio",
+        "yesnomaybe",
+        "noyesmaybe",
+    ]
     for dt in boolean_dts:
         source = f"question: Hi\nfields:\n  - label: Ex\n    datatype: {dt}\n    \n"
         labels = {item.label for item in get_completions(source, 4, 4)}
@@ -1235,7 +1269,12 @@ def test_fields_item_completions_after_grid_sibling() -> None:
 def test_c102_suppresses_shorthand_in_fields_item() -> None:
     source = "question: Hi\nfields:\n  - \n"
 
-    completions = get_completions(source, 2, 4, runtime_options=RuntimeOptions(enabled_conventions=frozenset({"C102"})))
+    completions = get_completions(
+        source,
+        2,
+        4,
+        runtime_options=RuntimeOptions(enabled_conventions=frozenset({"C102"})),
+    )
     labels = {c.label for c in completions}
     assert "label: value" not in labels
 
@@ -1243,7 +1282,12 @@ def test_c102_suppresses_shorthand_in_fields_item() -> None:
 def test_c102_does_not_affect_property_completions() -> None:
     source = "question: Hi\nfields:\n  - \n"
 
-    completions = get_completions(source, 2, 4, runtime_options=RuntimeOptions(enabled_conventions=frozenset({"C102"})))
+    completions = get_completions(
+        source,
+        2,
+        4,
+        runtime_options=RuntimeOptions(enabled_conventions=frozenset({"C102"})),
+    )
     labels = {c.label for c in completions}
     assert "field" in labels
     assert "label" in labels
@@ -1745,7 +1789,10 @@ def test_modules_item_relative_prefix_matches_workspace_stems(tmp_path) -> None:
     # Check text_edit_range and insert_text on workspace module items
     func_item = next(item for item in items if item.label == ".functions")
     assert func_item.insert_text == ".functions"
-    assert func_item.text_edit_range == (4, 6)  # from col 4 (after "- ") to cursor at col 6
+    assert func_item.text_edit_range == (
+        4,
+        6,
+    )  # from col 4 (after "- ") to cursor at col 6
 
 
 def test_modules_item_relative_prefix_excludes_vendored_modules(tmp_path) -> None:
@@ -1793,7 +1840,10 @@ def test_modules_item_non_relative_prefix_shows_workspace_modules(tmp_path) -> N
     # Workspace module gets text_edit_range and dotted insert_text
     ws_item = next(item for item in items if item.label == ".utils")
     assert ws_item.insert_text == ".utils"
-    assert ws_item.text_edit_range == (4, 6)  # cursor at col 6 replaces from value start
+    assert ws_item.text_edit_range == (
+        4,
+        6,
+    )  # cursor at col 6 replaces from value start
 
 
 def test_modules_item_relative_prefix_snippets_without_workspace(tmp_path) -> None:
@@ -2505,7 +2555,9 @@ def test_get_completions_in_objects_value_after_colon_insert_space() -> None:
     assert address.insert_text == " Address"
 
 
-def test_get_completions_in_objects_value_include_vendored_docassemble_base_classes(monkeypatch) -> None:
+def test_get_completions_in_objects_value_include_vendored_docassemble_base_classes(
+    monkeypatch,
+) -> None:
     source = "objects:\n  - physical_address: Ad\n"
 
     monkeypatch.setattr(python_modules.importlib.util, "find_spec", lambda _name: None)
@@ -2588,7 +2640,9 @@ def test_get_completions_respect_module_all_exports(tmp_path) -> None:
     assert "hidden_helper" not in code_labels
 
 
-def test_get_completions_in_code_block_include_vendored_docassemble_base_functions(monkeypatch) -> None:
+def test_get_completions_in_code_block_include_vendored_docassemble_base_functions(
+    monkeypatch,
+) -> None:
     source = "code: |\n  act\n"
 
     monkeypatch.setattr(python_modules.importlib.util, "find_spec", lambda _name: None)
@@ -2607,7 +2661,9 @@ def test_get_completions_in_code_block_include_vendored_docassemble_base_functio
     assert "a_preposition_b_default" not in labels
 
 
-def test_get_completions_in_code_block_exclude_non_exported_vendored_helpers(monkeypatch) -> None:
+def test_get_completions_in_code_block_exclude_non_exported_vendored_helpers(
+    monkeypatch,
+) -> None:
     source = "code: |\n  c\n"
 
     monkeypatch.setattr(python_modules.importlib.util, "find_spec", lambda _name: None)
@@ -2626,7 +2682,9 @@ def test_get_completions_in_code_block_exclude_non_exported_vendored_helpers(mon
     assert "complex_delattr" not in labels
 
 
-def test_get_completions_in_objects_value_include_imported_class_aliases(tmp_path) -> None:
+def test_get_completions_in_objects_value_include_imported_class_aliases(
+    tmp_path,
+) -> None:
     package_dir = tmp_path / "docassemble" / "demo"
     questions_dir = package_dir / "data" / "questions"
     questions_dir.mkdir(parents=True)
@@ -2748,7 +2806,9 @@ def test_get_completions_in_require_list_item_include_python_aliases(tmp_path) -
     assert "eligible" in labels
 
 
-def test_get_completions_in_list_collect_enable_include_python_aliases(tmp_path) -> None:
+def test_get_completions_in_list_collect_enable_include_python_aliases(
+    tmp_path,
+) -> None:
     package_dir = tmp_path / "docassemble" / "demo"
     questions_dir = package_dir / "data" / "questions"
     questions_dir.mkdir(parents=True)
@@ -2770,7 +2830,9 @@ def test_get_completions_in_list_collect_enable_include_python_aliases(tmp_path)
     assert "eligible" in labels
 
 
-def test_get_completions_in_field_validate_value_include_python_aliases(tmp_path) -> None:
+def test_get_completions_in_field_validate_value_include_python_aliases(
+    tmp_path,
+) -> None:
     package_dir = tmp_path / "docassemble" / "demo"
     questions_dir = package_dir / "data" / "questions"
     questions_dir.mkdir(parents=True)
@@ -2792,7 +2854,9 @@ def test_get_completions_in_field_validate_value_include_python_aliases(tmp_path
     assert "eligible" in labels
 
 
-def test_get_completions_in_field_show_if_code_value_include_python_aliases(tmp_path) -> None:
+def test_get_completions_in_field_show_if_code_value_include_python_aliases(
+    tmp_path,
+) -> None:
     package_dir = tmp_path / "docassemble" / "demo"
     questions_dir = package_dir / "data" / "questions"
     questions_dir.mkdir(parents=True)
@@ -2836,7 +2900,9 @@ def test_get_completions_in_field_grid_width_include_python_aliases(tmp_path) ->
     assert "eligible" in labels
 
 
-def test_get_completions_in_attachment_redact_value_include_python_aliases(tmp_path) -> None:
+def test_get_completions_in_attachment_redact_value_include_python_aliases(
+    tmp_path,
+) -> None:
     package_dir = tmp_path / "docassemble" / "demo"
     questions_dir = package_dir / "data" / "questions"
     template_dir = package_dir / "data" / "templates"
@@ -2870,7 +2936,9 @@ def test_get_completions_in_attachment_redact_value_include_python_aliases(tmp_p
     assert "eligible" in labels
 
 
-def test_get_completions_in_docx_template_file_value_includes_template_filenames(tmp_path) -> None:
+def test_get_completions_in_docx_template_file_value_includes_template_filenames(
+    tmp_path,
+) -> None:
     """Completing value of 'docx template file:' suggests filenames from data/templates/."""
     package_dir = tmp_path / "docassemble" / "demo"
     questions_dir = package_dir / "data" / "questions"
@@ -2904,7 +2972,9 @@ def test_get_completions_in_docx_template_file_value_includes_template_filenames
     assert "form.pdf" not in labels
 
 
-def test_get_completions_attachment_template_paths_filters_hidden_and_wrong_extension(tmp_path) -> None:
+def test_get_completions_attachment_template_paths_filters_hidden_and_wrong_extension(
+    tmp_path,
+) -> None:
     """Template filename completions exclude hidden files, Office temps, and wrong extensions."""
     package_dir = tmp_path / "docassemble" / "demo"
     questions_dir = package_dir / "data" / "questions"
@@ -2938,7 +3008,9 @@ def test_get_completions_attachment_template_paths_filters_hidden_and_wrong_exte
     assert "form.pdf" not in labels
 
 
-def test_get_completions_in_attachment_field_code_value_include_python_aliases(tmp_path) -> None:
+def test_get_completions_in_attachment_field_code_value_include_python_aliases(
+    tmp_path,
+) -> None:
     package_dir = tmp_path / "docassemble" / "demo"
     questions_dir = package_dir / "data" / "questions"
     template_dir = package_dir / "data" / "templates"
@@ -2973,7 +3045,9 @@ def test_get_completions_in_attachment_field_code_value_include_python_aliases(t
     assert "eligible" in labels
 
 
-def test_get_completions_in_need_post_list_item_include_python_aliases(tmp_path) -> None:
+def test_get_completions_in_need_post_list_item_include_python_aliases(
+    tmp_path,
+) -> None:
     package_dir = tmp_path / "docassemble" / "demo"
     questions_dir = package_dir / "data" / "questions"
     questions_dir.mkdir(parents=True)
@@ -3301,7 +3375,10 @@ def test_list_collect_scope_provides_correct_keys_in_regression_case() -> None:
 
 def test_language_and_default_language_use_separate_constants() -> None:
     """The `language` and `default language` keys should use separate constants."""
-    from docassemble_lsp.core.completion_rules import _BLOCK_LANGUAGE_CODES, _INTERVIEW_LANGUAGE_CODES
+    from docassemble_lsp.core.completion_rules import (
+        _BLOCK_LANGUAGE_CODES,
+        _INTERVIEW_LANGUAGE_CODES,
+    )
 
     assert _BLOCK_LANGUAGE_CODES is not None
     assert _INTERVIEW_LANGUAGE_CODES is not None

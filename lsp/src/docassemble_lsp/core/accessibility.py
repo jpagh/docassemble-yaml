@@ -230,7 +230,11 @@ def _check_multifield_no_label_usage(doc: dict[str, Any], document_start_line: i
 
 
 def _check_tagged_pdf_for_docx(
-    doc: dict[str, Any], source_code: str, document_start_line: int, *, options: AccessibilityLintOptions | None = None
+    doc: dict[str, Any],
+    source_code: str,
+    document_start_line: int,
+    *,
+    options: AccessibilityLintOptions | None = None,
 ) -> list[AccessibilityFinding]:
     attachments = doc.get("attachments")
     if isinstance(attachments, dict):

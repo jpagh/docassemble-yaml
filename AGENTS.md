@@ -4,7 +4,7 @@ See `lsp/docs/` for architecture, feature patterns, and subagent handoffs.
 
 ## Commands
 
-- **Lint/type/test** — `just check`
+- **Lint/type/test** — `mise run check`
 - **Validate YAML** — `uv run docassemble-lsp check path/to/file.yml`
 
 ## Key pointers
@@ -15,4 +15,4 @@ See `lsp/docs/` for architecture, feature patterns, and subagent handoffs.
 - **macOS**: prefix `docassemble.base.*` imports with `DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib`
 - **Parser**: cross-check `docassemble.base.parse` before changing parser-backed rules
 - **Read** `lsp/docs/SUBAGENT_GUIDE.md` before making changes
-- **Versioning**: CalVer (`YY.MM.patch`), `just bump` updates `lsp/` + `vscode/` + tags
+- **Versioning**: CalVer (`YY.MM.patch`), `mise run bump` updates `lsp/` + `vscode/` + tags

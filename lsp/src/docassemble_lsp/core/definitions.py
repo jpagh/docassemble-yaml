@@ -282,7 +282,13 @@ def _discover_cross_package_modules(
 
 def _build_flat_caches(
     module_paths: frozenset[Path],
-) -> tuple[frozenset[str], frozenset[str], frozenset[str], dict[str, frozenset[DefinitionTarget]], dict[str, str]]:
+) -> tuple[
+    frozenset[str],
+    frozenset[str],
+    frozenset[str],
+    dict[str, frozenset[DefinitionTarget]],
+    dict[str, str],
+]:
     """Build flat caches of class names, non-exception class names, custom datatype names,
     a symbol registry, and a docstring map.
 
@@ -422,12 +428,22 @@ def build_workspace_index(
                 if kf.name == "event" and value:
                     event_decls.setdefault(
                         value,
-                        DefinitionTarget(path=source.path, line=kf.line, start_character=0, end_character=0),
+                        DefinitionTarget(
+                            path=source.path,
+                            line=kf.line,
+                            start_character=0,
+                            end_character=0,
+                        ),
                     )
                 elif kf.name == "def" and value:
                     def_decls.setdefault(
                         value,
-                        DefinitionTarget(path=source.path, line=kf.line, start_character=0, end_character=0),
+                        DefinitionTarget(
+                            path=source.path,
+                            line=kf.line,
+                            start_character=0,
+                            end_character=0,
+                        ),
                     )
     all_event_names = frozenset(event_decls.keys())
     all_def_names = frozenset(def_decls.keys())
@@ -606,7 +622,13 @@ def _event_helper_occurrences(text: str) -> list[EventHelperOccurrence]:
             )
         )
 
-    occurrences.sort(key=lambda occurrence: (occurrence.line, occurrence.start_character, occurrence.end_character))
+    occurrences.sort(
+        key=lambda occurrence: (
+            occurrence.line,
+            occurrence.start_character,
+            occurrence.end_character,
+        )
+    )
     return occurrences
 
 
@@ -827,7 +849,11 @@ def _symbol_request(source: str, line: int, character: int, current_path: Path |
                 return ReferenceRequest(kind="file", name=name, target_path=None)
             if current_path is None:
                 return None
-            return ReferenceRequest(kind="file", name=value, target_path=(current_path.parent / value).resolve())
+            return ReferenceRequest(
+                kind="file",
+                name=value,
+                target_path=(current_path.parent / value).resolve(),
+            )
         if parent == "fields" and (key_or_parent == "field" or key_or_parent not in FIELD_ITEM_KNOWN_KEYS):
             if value and ":" not in value:
                 return ReferenceRequest(kind="field_var", name=value)
@@ -845,11 +871,15 @@ def _symbol_request(source: str, line: int, character: int, current_path: Path |
     return None
 
 
-def _workspace_navigation_service(workspace_index: WorkspaceIndex) -> WorkspaceNavigationService:
+def _workspace_navigation_service(
+    workspace_index: WorkspaceIndex,
+) -> WorkspaceNavigationService:
     return WorkspaceNavigationService(workspace_index, _iter_event_helper_occurrences)
 
 
-def _python_navigation_service(workspace_index: WorkspaceIndex) -> PythonNavigationService:
+def _python_navigation_service(
+    workspace_index: WorkspaceIndex,
+) -> PythonNavigationService:
     return PythonNavigationService(workspace_index)
 
 

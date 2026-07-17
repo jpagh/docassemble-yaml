@@ -747,7 +747,10 @@ def _filter_property_candidates(
             continue
 
         # --- Boolean datatypes: choices/code are silently ignored at runtime ---
-        if declared_datatype in BOOLEAN_DATATYPES and candidate.label in ("choices", "code"):
+        if declared_datatype in BOOLEAN_DATATYPES and candidate.label in (
+            "choices",
+            "code",
+        ):
             continue
 
         # --- trigger at is only meaningful with ajax input type ---
@@ -821,7 +824,11 @@ def completion_scope(source: str, line: int, character: int) -> CompletionScope:
         return "metadata_author_item"
     if nearest == "metadata" and parent is None:
         return "metadata_block"
-    if nearest == "metadata" and parent in {"attachment", "attachments", "attachment options"}:
+    if nearest == "metadata" and parent in {
+        "attachment",
+        "attachments",
+        "attachment options",
+    }:
         return "attachment_metadata_block"
     if nearest == "fields" and any(key in {"attachment", "attachments"} for key in ancestors[1:]):
         return "attachment_fields_block"
@@ -853,7 +860,12 @@ def completion_scope(source: str, line: int, character: int) -> CompletionScope:
         return "table_column_item"
     if nearest in {"terms", "auto terms"} and _is_list_item_context(source, line):
         return "terms_item"
-    if nearest in {"show if", "hide if", "enable if", "disable if"} and not _is_at_fields_item_key_level(source, line):
+    if nearest in {
+        "show if",
+        "hide if",
+        "enable if",
+        "disable if",
+    } and not _is_at_fields_item_key_level(source, line):
         return "show_if_modifier"
     if nearest == "features":
         return "features_block"
@@ -861,9 +873,10 @@ def completion_scope(source: str, line: int, character: int) -> CompletionScope:
         return "default_screen_parts_block"
     if nearest == "list collect":
         return "list_collect_block"
-    if nearest in {"default validation messages", "validation messages"} and not _is_at_fields_item_key_level(
-        source, line
-    ):
+    if nearest in {
+        "default validation messages",
+        "validation messages",
+    } and not _is_at_fields_item_key_level(source, line):
         return "validation_messages_block"
     if nearest in {"field", "fields"} and "review" in ancestors[1:] and _is_list_item_context(source, line):
         return "review_field_item"

@@ -36,7 +36,10 @@ def validate_table_block_in_doc(
     Called from ``find_errors_from_string`` in ``orchestrator.py``.
     Returns a list of errors (may be empty).
     """
-    from docassemble_lsp.core.validation.blocks import _absolute_document_line, _yaml_error
+    from docassemble_lsp.core.validation.blocks import (
+        _absolute_document_line,
+        _yaml_error,
+    )
 
     errors: list[YAMLError] = []
 

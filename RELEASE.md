@@ -6,17 +6,17 @@ Internal-facing — for longer docs see `lsp/docs/`.
 ## How to Release
 
 ```bash
-just bump              # default: patch (YY.MM.patch). Use `just bump minor` for month bump
-just vscode test       # extension tests (mock server)
-DOCASSEMBLE_LSP_ENABLE_REAL_TEST=1 just vscode test  # full real-server extension tests
+mise run bump    # bump version (patch)
+mise run //vscode:test       # extension tests (mock server)
+DOCASSEMBLE_LSP_ENABLE_REAL_TEST=1 mise run //vscode:test:real-lsp  # full real-server extension tests
 ```
 
-`just bump` updates `lsp/pyproject.toml`, `vscode/package.json`,
+`mise run bump` updates `lsp/pyproject.toml`, `vscode/package.json`,
 `CHANGELOG.md`, then commits and tags (`v{new_version}`).
 
 Build the VSIX from `vscode/`:
 ```bash
-cd vscode && npm run build && npx vsce package
+mise run //vscode:package
 ```
 
 ## Pre-release Gate
@@ -24,7 +24,7 @@ cd vscode && npm run build && npx vsce package
 The automated gate must be green:
 
 ```bash
-ruff check --fix && just lsp type && just lsp test
+mise run //lsp:check
 ```
 
 This runs ruff, mypy, and the full pytest suite across all supported
@@ -65,8 +65,8 @@ test coverage.
 
 Run before each release. Current gate:
 
-- `just vscode test` — runs all 13 tests against mock server
-- `DOCASSEMBLE_LSP_ENABLE_REAL_TEST=1 just vscode test` — runs real-server tests
+- `mise run //vscode:test` — runs all 13 tests against mock server
+- `DOCASSEMBLE_LSP_ENABLE_REAL_TEST=1 mise run //vscode:test:real-lsp` — runs real-server tests
 
 A full extension gate (matching the aspirational assertion list in the
 v0 RELEASE_GATE) remains future work. See the gaps above.

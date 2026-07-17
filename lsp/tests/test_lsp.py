@@ -1089,7 +1089,9 @@ def test_completion_list_in_need_list_item_includes_python_symbols(tmp_path) -> 
     assert "eligible" in labels
 
 
-def test_completion_list_in_list_collect_enable_includes_python_symbols(tmp_path) -> None:
+def test_completion_list_in_list_collect_enable_includes_python_symbols(
+    tmp_path,
+) -> None:
     package_dir = tmp_path / "docassemble" / "demo"
     questions_dir = package_dir / "data" / "questions"
     questions_dir.mkdir(parents=True)
@@ -1109,7 +1111,9 @@ def test_completion_list_in_list_collect_enable_includes_python_symbols(tmp_path
     assert "eligible" in labels
 
 
-def test_completion_list_in_field_validate_value_includes_python_symbols(tmp_path) -> None:
+def test_completion_list_in_field_validate_value_includes_python_symbols(
+    tmp_path,
+) -> None:
     package_dir = tmp_path / "docassemble" / "demo"
     questions_dir = package_dir / "data" / "questions"
     questions_dir.mkdir(parents=True)
@@ -1129,7 +1133,9 @@ def test_completion_list_in_field_validate_value_includes_python_symbols(tmp_pat
     assert "eligible" in labels
 
 
-def test_completion_list_in_field_show_if_code_value_includes_python_symbols(tmp_path) -> None:
+def test_completion_list_in_field_show_if_code_value_includes_python_symbols(
+    tmp_path,
+) -> None:
     package_dir = tmp_path / "docassemble" / "demo"
     questions_dir = package_dir / "data" / "questions"
     questions_dir.mkdir(parents=True)
@@ -1149,7 +1155,9 @@ def test_completion_list_in_field_show_if_code_value_includes_python_symbols(tmp
     assert "eligible" in labels
 
 
-def test_completion_list_in_attachment_field_code_value_includes_python_symbols(tmp_path) -> None:
+def test_completion_list_in_attachment_field_code_value_includes_python_symbols(
+    tmp_path,
+) -> None:
     package_dir = tmp_path / "docassemble" / "demo"
     questions_dir = package_dir / "data" / "questions"
     template_dir = package_dir / "data" / "templates"
@@ -1385,7 +1393,13 @@ def test_document_links_resolve_local_file_references(tmp_path) -> None:
     links = build_document_links(uri, source)
 
     assert [
-        (link.target, link.range.start.line, link.range.start.character, link.range.end.character) for link in links
+        (
+            link.target,
+            link.range.start.line,
+            link.range.start.character,
+            link.range.end.character,
+        )
+        for link in links
     ] == [
         (
             included.resolve().as_uri(),
@@ -1422,7 +1436,9 @@ def test_document_links_resolve_package_qualified_include(tmp_path) -> None:
     assert links[0].range.end.character == line_text.index(pkg_ref) + len(pkg_ref)
 
 
-def test_document_links_resolve_quoted_package_qualified_include_from_package_root(tmp_path) -> None:
+def test_document_links_resolve_quoted_package_qualified_include_from_package_root(
+    tmp_path,
+) -> None:
     pkg_root = tmp_path / "docassemble" / "demo"
     questions = pkg_root / "data" / "questions"
     questions.mkdir(parents=True)
@@ -1481,7 +1497,9 @@ def test_document_links_resolve_package_qualified_include_shorthand(tmp_path) ->
     assert links[0].target == shared.resolve().as_uri()
 
 
-def test_document_links_resolve_package_qualified_include_fully_qualified(tmp_path) -> None:
+def test_document_links_resolve_package_qualified_include_fully_qualified(
+    tmp_path,
+) -> None:
     """Fully-qualified include like docassemble.demo:data/questions/shared.yml still works."""
     pkg_root = tmp_path / "docassemble" / "demo"
     questions = pkg_root / "data" / "questions"
@@ -1499,7 +1517,9 @@ def test_document_links_resolve_package_qualified_include_fully_qualified(tmp_pa
     assert links[0].target == shared.resolve().as_uri()
 
 
-def test_document_links_resolve_package_qualified_module_not_normalized(tmp_path) -> None:
+def test_document_links_resolve_package_qualified_module_not_normalized(
+    tmp_path,
+) -> None:
     """Package-qualified module refs like docassemble.demo:external.py are NOT normalized."""
     pkg_root = tmp_path / "docassemble" / "demo"
     questions = pkg_root / "data" / "questions"
@@ -1517,7 +1537,9 @@ def test_document_links_resolve_package_qualified_module_not_normalized(tmp_path
     assert links[0].target == module_path.resolve().as_uri()
 
 
-def test_document_links_resolve_template_from_package_templates_dir_fallback_lazy(tmp_path) -> None:
+def test_document_links_resolve_template_from_package_templates_dir_fallback_lazy(
+    tmp_path,
+) -> None:
     """Template in data/templates/ resolves via lazy templates_dir_for_path when no workspace_index."""
     pkg_root = tmp_path / "docassemble" / "demo"
     questions = pkg_root / "data" / "questions"
@@ -1695,12 +1717,15 @@ def test_definition_locations_resolve_error_action_to_event(tmp_path) -> None:
     assert locations[0].target_range.start.line == 3
 
 
-def test_definition_locations_resolve_action_to_event_across_workspace(tmp_path) -> None:
+def test_definition_locations_resolve_action_to_event_across_workspace(
+    tmp_path,
+) -> None:
     package_dir = tmp_path / "docassemble" / "demo" / "data" / "questions"
     package_dir.mkdir(parents=True)
     main = package_dir / "main.yml"
     main.write_text(
-        "include:\n  - library.yml\naction buttons:\n  - label: Run\n    action: library_event\n", encoding="utf-8"
+        "include:\n  - library.yml\naction buttons:\n  - label: Run\n    action: library_event\n",
+        encoding="utf-8",
     )
     library = package_dir / "library.yml"
     library.write_text("event: library_event\nquestion: From library\n", encoding="utf-8")
@@ -1743,12 +1768,15 @@ def test_reference_locations_resolve_event_references(tmp_path) -> None:
     ]
 
 
-def test_reference_locations_resolve_event_references_across_workspace(tmp_path) -> None:
+def test_reference_locations_resolve_event_references_across_workspace(
+    tmp_path,
+) -> None:
     package_dir = tmp_path / "docassemble" / "demo" / "data" / "questions"
     package_dir.mkdir(parents=True)
     main = package_dir / "main.yml"
     main.write_text(
-        "include:\n  - library.yml\naction buttons:\n  - label: Run\n    action: library_event\n", encoding="utf-8"
+        "include:\n  - library.yml\naction buttons:\n  - label: Run\n    action: library_event\n",
+        encoding="utf-8",
     )
     library = package_dir / "library.yml"
     library.write_text("event: library_event\nquestion: From library\n", encoding="utf-8")
@@ -1767,7 +1795,9 @@ def test_reference_locations_resolve_event_references_across_workspace(tmp_path)
     ]
 
 
-def test_reference_locations_resolve_include_references_across_workspace(tmp_path) -> None:
+def test_reference_locations_resolve_include_references_across_workspace(
+    tmp_path,
+) -> None:
     package_dir = tmp_path / "docassemble" / "demo" / "data" / "questions"
     package_dir.mkdir(parents=True)
     target = package_dir / "shared.yml"
@@ -1792,7 +1822,9 @@ def test_reference_locations_resolve_include_references_across_workspace(tmp_pat
     ]
 
 
-def test_definition_locations_resolve_modules_symbol_to_python_function(tmp_path) -> None:
+def test_definition_locations_resolve_modules_symbol_to_python_function(
+    tmp_path,
+) -> None:
     package_dir = tmp_path / "docassemble" / "demo"
     questions_dir = package_dir / "data" / "questions"
     questions_dir.mkdir(parents=True)
@@ -1816,7 +1848,9 @@ def test_definition_locations_resolve_modules_symbol_to_python_function(tmp_path
     ]
 
 
-def test_reference_locations_resolve_python_symbol_across_yaml_namespaces(tmp_path) -> None:
+def test_reference_locations_resolve_python_symbol_across_yaml_namespaces(
+    tmp_path,
+) -> None:
     package_dir = tmp_path / "docassemble" / "demo"
     questions_dir = package_dir / "data" / "questions"
     questions_dir.mkdir(parents=True)
@@ -1825,7 +1859,8 @@ def test_reference_locations_resolve_python_symbol_across_yaml_namespaces(tmp_pa
     source_path = questions_dir / "main.yml"
     source = "modules:\n  - .helpers\n---\nquestion: |\n  Result: ${ plus_one(3) }\n"
     (questions_dir / "second.yml").write_text(
-        "modules:\n  - .helpers\n---\ncode: |\n  value = plus_one(4)\n", encoding="utf-8"
+        "modules:\n  - .helpers\n---\ncode: |\n  value = plus_one(4)\n",
+        encoding="utf-8",
     )
     third_path = questions_dir / "third.yml"
     third_path.write_text(
@@ -1848,7 +1883,9 @@ def test_reference_locations_resolve_python_symbol_across_yaml_namespaces(tmp_pa
     assert locations == []
 
 
-def test_reference_locations_from_python_function_scan_yaml_namespaces(tmp_path) -> None:
+def test_reference_locations_from_python_function_scan_yaml_namespaces(
+    tmp_path,
+) -> None:
     package_dir = tmp_path / "docassemble" / "demo"
     questions_dir = package_dir / "data" / "questions"
     questions_dir.mkdir(parents=True)
@@ -1856,10 +1893,14 @@ def test_reference_locations_from_python_function_scan_yaml_namespaces(tmp_path)
     helper_source = "def plus_one(value):\n    return value + 1\n"
     helper_path.write_text(helper_source, encoding="utf-8")
     main_path = questions_dir / "main.yml"
-    main_path.write_text("modules:\n  - .helpers\n---\nquestion: |\n  Result: ${ plus_one(3) }\n", encoding="utf-8")
+    main_path.write_text(
+        "modules:\n  - .helpers\n---\nquestion: |\n  Result: ${ plus_one(3) }\n",
+        encoding="utf-8",
+    )
     second_path = questions_dir / "second.yml"
     second_path.write_text(
-        "imports:\n  - docassemble.demo.helpers\n---\ncode: |\n  value = helpers.plus_one(4)\n", encoding="utf-8"
+        "imports:\n  - docassemble.demo.helpers\n---\ncode: |\n  value = helpers.plus_one(4)\n",
+        encoding="utf-8",
     )
 
     locations = build_reference_locations(
@@ -1877,7 +1918,9 @@ def test_reference_locations_from_python_function_scan_yaml_namespaces(tmp_path)
     assert locations == []
 
 
-def test_definition_locations_resolve_import_alias_symbol_to_python_function(tmp_path) -> None:
+def test_definition_locations_resolve_import_alias_symbol_to_python_function(
+    tmp_path,
+) -> None:
     package_dir = tmp_path / "docassemble" / "demo"
     questions_dir = package_dir / "data" / "questions"
     questions_dir.mkdir(parents=True)
@@ -1931,7 +1974,9 @@ def test_reference_locations_from_python_function_scan_import_aliases(tmp_path) 
     assert locations == []
 
 
-def test_definition_locations_resolve_imported_class_alias_to_python_method(tmp_path) -> None:
+def test_definition_locations_resolve_imported_class_alias_to_python_method(
+    tmp_path,
+) -> None:
     package_dir = tmp_path / "docassemble" / "demo"
     questions_dir = package_dir / "data" / "questions"
     questions_dir.mkdir(parents=True)
@@ -1960,7 +2005,9 @@ def test_definition_locations_resolve_imported_class_alias_to_python_method(tmp_
     assert locations == []
 
 
-def test_definition_locations_resolve_modules_symbol_through_include_bindings(tmp_path) -> None:
+def test_definition_locations_resolve_modules_symbol_through_include_bindings(
+    tmp_path,
+) -> None:
     package_dir = tmp_path / "docassemble" / "demo"
     questions_dir = package_dir / "data" / "questions"
     questions_dir.mkdir(parents=True)
@@ -1985,7 +2032,9 @@ def test_definition_locations_resolve_modules_symbol_through_include_bindings(tm
     ]
 
 
-def test_definition_locations_resolve_import_symbol_through_include_bindings(tmp_path) -> None:
+def test_definition_locations_resolve_import_symbol_through_include_bindings(
+    tmp_path,
+) -> None:
     package_dir = tmp_path / "docassemble" / "demo"
     questions_dir = package_dir / "data" / "questions"
     questions_dir.mkdir(parents=True)
@@ -2010,7 +2059,9 @@ def test_definition_locations_resolve_import_symbol_through_include_bindings(tmp
     ]
 
 
-def test_definition_locations_resolve_child_yaml_symbol_through_parent_import_bindings(tmp_path) -> None:
+def test_definition_locations_resolve_child_yaml_symbol_through_parent_import_bindings(
+    tmp_path,
+) -> None:
     package_dir = tmp_path / "docassemble" / "demo"
     questions_dir = package_dir / "data" / "questions"
     questions_dir.mkdir(parents=True)

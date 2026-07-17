@@ -550,7 +550,9 @@ def find_errors_from_string(
 
         all_errors.extend(validate_data_block(doc_keys_lower, doc, line_number, input_file))
 
-        from docassemble_lsp.core.validation.list_collect import validate_list_collect_mako_labels
+        from docassemble_lsp.core.validation.list_collect import (
+            validate_list_collect_mako_labels,
+        )
 
         all_errors.extend(validate_list_collect_mako_labels(doc_keys_lower, doc, line_number, input_file))
 
@@ -595,7 +597,9 @@ def find_errors_from_string(
 
         all_errors.extend(validate_nesting_depth(doc, line_number, input_file))
 
-        from docassemble_lsp.core.validation.visibility import collect_conditional_fields
+        from docassemble_lsp.core.validation.visibility import (
+            collect_conditional_fields,
+        )
 
         prior_conditional_fields.extend(collect_conditional_fields(doc, line_number))
 

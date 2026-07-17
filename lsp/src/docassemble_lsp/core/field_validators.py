@@ -78,7 +78,10 @@ class FieldDatatypeValidator:
 
         if input_type_normalized == "hidden" and datatype_normalized in FILE_LIKE_DATATYPES:
             self.errors.append(
-                _validator_error(MessageCode.HIDDEN_FIELD_INVALID_DATATYPE, _lc_key_line(field_item, "datatype"))
+                _validator_error(
+                    MessageCode.HIDDEN_FIELD_INVALID_DATATYPE,
+                    _lc_key_line(field_item, "datatype"),
+                )
             )
 
         if "object labeler" in field_item and not (
@@ -86,19 +89,24 @@ class FieldDatatypeValidator:
         ):
             self.errors.append(
                 _validator_error(
-                    MessageCode.OBJECT_LABELER_REQUIRES_OBJECT_DATATYPE, _lc_key_line(field_item, "object labeler")
+                    MessageCode.OBJECT_LABELER_REQUIRES_OBJECT_DATATYPE,
+                    _lc_key_line(field_item, "object labeler"),
                 )
             )
 
         if input_type_normalized == "ajax":
             if "action" not in field_item:
                 self.errors.append(
-                    _validator_error(MessageCode.AJAX_FIELD_MISSING_ACTION, _lc_key_line(field_item, "input type"))
+                    _validator_error(
+                        MessageCode.AJAX_FIELD_MISSING_ACTION,
+                        _lc_key_line(field_item, "input type"),
+                    )
                 )
             elif "choices" in field_item or "code" in field_item:
                 self.errors.append(
                     _validator_error(
-                        MessageCode.AJAX_FIELD_CANNOT_DECLARE_CHOICES, _lc_key_line(field_item, "input type")
+                        MessageCode.AJAX_FIELD_CANNOT_DECLARE_CHOICES,
+                        _lc_key_line(field_item, "input type"),
                     )
                 )
 
@@ -109,7 +117,8 @@ class FieldDatatypeValidator:
             anchor_key = "datatype" if datatype_normalized in MULTIPLE_CHOICE_DATATYPES else "input type"
             self.errors.append(
                 _validator_error(
-                    MessageCode.MULTIPLE_CHOICE_FIELD_MISSING_CHOICES, _lc_key_line(field_item, anchor_key)
+                    MessageCode.MULTIPLE_CHOICE_FIELD_MISSING_CHOICES,
+                    _lc_key_line(field_item, anchor_key),
                 )
             )
 
@@ -125,7 +134,10 @@ class FieldDatatypeValidator:
 
         if datatype_normalized == "range" and not ("min" in field_item and "max" in field_item):
             self.errors.append(
-                _validator_error(MessageCode.RANGE_MISSING_MIN_MAX, _lc_key_line(field_item, "datatype"))
+                _validator_error(
+                    MessageCode.RANGE_MISSING_MIN_MAX,
+                    _lc_key_line(field_item, "datatype"),
+                )
             )
 
         if datatype_normalized is not None and datatype_normalized not in FILE_LIKE_DATATYPES:
@@ -251,7 +263,10 @@ class FieldChoiceValidator:
 
         # all of the above requires checkboxes/object_checkboxes
         if "all of the above" in field_item:
-            if datatype_normalized is not None and datatype_normalized not in {"checkboxes", "object_checkboxes"}:
+            if datatype_normalized is not None and datatype_normalized not in {
+                "checkboxes",
+                "object_checkboxes",
+            }:
                 self.errors.append(
                     _validator_error(
                         MessageCode.ALL_OF_THE_ABOVE_INCOMPATIBLE_DATATYPE,
@@ -315,7 +330,8 @@ class FieldConditionValidator:
             if not isinstance(vm_value, Mapping):
                 self.errors.append(
                     _validator_error(
-                        MessageCode.VALIDATION_MESSAGES_TYPE, _lc_key_line(field_item, "validation messages")
+                        MessageCode.VALIDATION_MESSAGES_TYPE,
+                        _lc_key_line(field_item, "validation messages"),
                     )
                 )
             else:
@@ -324,7 +340,10 @@ class FieldConditionValidator:
                         continue
                     if not (isinstance(vm_key, str) and isinstance(vm_val, str)):
                         self.errors.append(
-                            _validator_error(MessageCode.VALIDATION_MESSAGES_ENTRY_TYPE, _lc_key_line(vm_value, vm_key))
+                            _validator_error(
+                                MessageCode.VALIDATION_MESSAGES_ENTRY_TYPE,
+                                _lc_key_line(vm_value, vm_key),
+                            )
                         )
 
         if "trigger at" in field_item:
@@ -332,7 +351,9 @@ class FieldConditionValidator:
             if not isinstance(ta_value, int) or ta_value < 2:
                 self.errors.append(
                     _validator_error(
-                        MessageCode.TRIGGER_AT_TYPE, _lc_key_line(field_item, "trigger at"), value_repr=repr(ta_value)
+                        MessageCode.TRIGGER_AT_TYPE,
+                        _lc_key_line(field_item, "trigger at"),
+                        value_repr=repr(ta_value),
                     )
                 )
 
@@ -385,7 +406,10 @@ class FieldConditionValidator:
         if "using" in field_item:
             using_value = field_item["using"]
             datatype = field_item.get("datatype")
-            if isinstance(datatype, str) and datatype.strip().lower() in ("ml", "mlarea"):
+            if isinstance(datatype, str) and datatype.strip().lower() in (
+                "ml",
+                "mlarea",
+            ):
                 if not isinstance(using_value, str):
                     self.errors.append(
                         _validator_error(
@@ -398,7 +422,10 @@ class FieldConditionValidator:
         if "keep for training" in field_item:
             kft_value = field_item["keep for training"]
             datatype = field_item.get("datatype")
-            if isinstance(datatype, str) and datatype.strip().lower() in ("ml", "mlarea"):
+            if isinstance(datatype, str) and datatype.strip().lower() in (
+                "ml",
+                "mlarea",
+            ):
                 if not isinstance(kft_value, (bool, str)):
                     self.errors.append(
                         _validator_error(

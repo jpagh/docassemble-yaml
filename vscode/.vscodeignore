@@ -11,9 +11,6 @@ dist/test/**
 test-fixtures/**
 
 .bumpversion.toml
-.taplo.toml
-justfile
-prek.toml
 
 demo.png
 

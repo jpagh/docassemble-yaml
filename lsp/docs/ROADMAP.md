@@ -36,7 +36,7 @@ file tracks the remaining release-readiness work.
 The current in-repo gate is:
 
 ```bash
-ruff check --fix && just test type
+mise run //lsp:check
 ```
 
 That gate runs the full pytest suite and mypy. It should stay green
@@ -77,7 +77,7 @@ the release boundary:
   channel
 - confirm `README.md` matches the supported feature set
 - confirm `RELEASE_GATE.md` describes only current release blockers
-- run `ruff check --fix && just test type` from a clean checkout or
+- run `mise run //lsp:check` from a clean checkout or
   equivalent clean environment
 
 ### 4. Optional Hardening Backlog

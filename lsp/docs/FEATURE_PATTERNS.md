@@ -239,7 +239,7 @@ For any nontrivial feature family change:
 
 ```bash
 uv run pytest tests/test_<family>.py -q
-ruff check --fix && just test type
+mise run //lsp:check
 ```
 
 Use the narrowest discriminating test family first, then graduate to
