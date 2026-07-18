@@ -13,13 +13,21 @@ monorepo_root = true
 [monorepo]
     config_roots = ["lsp", "vscode"]
 
+[tasks."format:toml"]
+    description = "Format TOML files with tombi (uses root .tombi.toml)"
+    run         = "tombi format"
+
+[tasks."lint:toml"]
+    description = "Lint TOML files with tombi"
+    run         = "tombi lint"
+
 [tasks.check]
     description = "Format, lint, type, and test the whole monorepo"
-    depends     = ["//lsp:check", "//vscode:check"]
+    depends     = ["//:format:toml", "//lsp:check", "//vscode:check"]
 
 [tasks.gate]
     description = "Full pre-release gate for the whole monorepo"
-    depends     = ["//lsp:gate", "//vscode:gate"]
+    depends     = ["//:format:toml", "//lsp:gate", "//vscode:gate"]
 
 [tasks.bump]
     description = "Bump the patch digit (CalVer YY.MM.patch → YY.MM.patch+1) and push"

@@ -1,14 +1,17 @@
-[build-system]
-    build-backend = "setuptools.build_meta"
-    requires = [
-        "setuptools>=77.0.3",
-    ]
-
 [project]
-    authors = [
+    name            = "docassemble-lsp"
+    version         = "26.7.0"
+    description     = "Docassemble language server with shared core APIs for CLI and editors"
+    readme          = "README.md"
+    requires-python = ">=3.10"
+    license         = "Apache-2.0"
+    license-files   = [
+        "LICENSE",
+    ]
+    authors         = [
         { name = "Jack Adamson" },
     ]
-    dependencies = [
+    dependencies    = [
         "black>=26.1.0",
         "esprima2>=6.0.0",
         "jinja2>=3.1.6",
@@ -18,30 +21,21 @@
         "ruamel-yaml>=0.18.17",
         "tomli>=2.0.0; python_version < '3.11'",
     ]
-    description = "Docassemble language server with shared core APIs for CLI and editors"
-    license = "Apache-2.0"
-    license-files = [
-        "LICENSE",
-    ]
-    name = "docassemble-lsp"
-    readme = "README.md"
-    requires-python = ">=3.10"
-    version = "26.7.0"
-
-    [project.scripts]
-        docassemble-lsp = "docassemble_lsp.cli:main"
 
     [project.urls]
         Repository = "https://github.com/jpagh/docassemble-yaml"
 
+    [project.scripts]
+        docassemble-lsp = "docassemble_lsp.cli:main"
+
 [dependency-groups]
-    dev = [
+    dev  = [
         "docassemble-base>=1.9.12",
         "docassemble-webapp>=1.9.12",
         "mypy>=2.1.0",
+        "pytest>=9.0.3",
         "pytest-cov>=7.1.0",
         "pytest-xdist>=3.8.0",
-        "pytest>=9.0.3",
     ]
     test = [
         "black>=26.1.0",
@@ -50,16 +44,22 @@
         "lsprotocol>=2025.0.0",
         "mako>=1.3.11",
         "pygls>=2.1.1",
-        "pytest-xdist>=3.8.0",
         "pytest>=9.0.3",
+        "pytest-xdist>=3.8.0",
         "ruamel-yaml>=0.18.17",
         "tomli>=2.0.0; python_version < '3.11'",
     ]
 
+[build-system]
+    requires      = [
+        "setuptools>=77.0.3",
+    ]
+    build-backend = "setuptools.build_meta"
+
 [tool.mypy]
-    exclude          = '^build/|^src/docassemble_lsp/data/'
-    pretty           = true
-    python_version   = "3.12"
+    exclude        = "^build/|^src/docassemble_lsp/data/"
+    pretty         = true
+    python_version = "3.12"
 
 [tool.pytest.ini_options]
     pythonpath = [
@@ -70,12 +70,11 @@
     line-length = 120
 
 [tool.setuptools]
-
     [tool.setuptools.packages.find]
         include = [
             "docassemble_lsp*",
         ]
-        where = [
+        where   = [
             "src",
         ]
 

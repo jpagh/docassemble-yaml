@@ -6,14 +6,18 @@
     description = "Install/sync LSP dev dependencies"
     run         = "uv sync"
 
+[tasks.lsp]
+    description = "Run the docassemble-lsp language server (speaks LSP over stdio)"
+    run         = "uv run docassemble-lsp lsp"
+
 [tasks.format]
-    description = "ruff format"
-    depends     = ["sync"]
+    description = "ruff format (and //:format:toml)"
+    depends     = ["sync", "//:format:toml"]
     run         = "uv run ruff format"
 
 [tasks.lint]
-    description = "ruff check --fix"
-    depends     = ["sync"]
+    description = "ruff check --fix (and //:lint:toml)"
+    depends     = ["sync", "//:lint:toml"]
     run         = "uv run ruff check --fix"
 
 [tasks.type]

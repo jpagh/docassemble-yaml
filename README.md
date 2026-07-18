@@ -28,5 +28,22 @@ mise run check   # lint, type, and test the whole monorepo
 mise run bump    # bump version (patch)
 ```
 
+## Development
+
+### Running the LSP from a dev checkout
+
+The `lsp:lsp` mise task runs the language server from the working tree
+against `lsp/.venv`.
+
+For VS Code integration, set `docassemble-lsp.command` to point at the
+task from the monorepo root (the `--cd` flag works from any cwd):
+
+```json
+"docassemble-lsp.command": "mise run --cd /path/to/docassemble-yaml //lsp:lsp"
+```
+
+The `//lsp:lsp` monorepo-task reference resolves to the `lsp` task in
+`lsp/.mise.toml`.
+
 See `AGENTS.md` for agent guidance, `lsp/README.md` and
 `vscode/README.md` for per-project documentation.
