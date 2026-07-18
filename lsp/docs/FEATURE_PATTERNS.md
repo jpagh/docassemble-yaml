@@ -22,6 +22,16 @@ This document explains how to add each major feature family in
 - `tests/test_schema.py`
 - `tests/test_lsp.py`
 
+### Block scalar (`|`) value completion
+
+- For any property whose `value_types` includes `"string"` and
+  `insert_kind == "scalar"`, `value_completion_provider` emits a `|`
+  candidate with `insert_text = "|\n  $0"` and `is_snippet=True`.
+- For `fields_item` scope, the candidate is gated by
+  `FIELD_KEY_COMPATIBLE_DATATYPES` against `context.current_field_datatype`.
+- This is the canonical pattern for offering block-scalar bodies — prefer it
+  over adding a per-key allow-list.
+
 ### Use This Pattern When
 
 - adding a new completion scope

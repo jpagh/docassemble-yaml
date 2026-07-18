@@ -12,6 +12,7 @@ from docassemble_lsp.core.completion_rules import (
     SchemaMetadata,
 )
 from docassemble_lsp.core.definition_models import PythonCompletionTarget
+from docassemble_lsp.core import field_keys
 from docassemble_lsp.core.field_keys import BOOLEAN_DATATYPES
 from docassemble_lsp.core.python_modules import VENDORED_MODULE_NAMES
 from docassemble_lsp.core.python_navigation import resolve_python_completion_targets
@@ -25,21 +26,6 @@ from docassemble_lsp.core.validation_config import RuntimeOptions
 from docassemble_lsp.core.workspace import WorkspaceIndex
 from docassemble_lsp.core.yaml_shared import _ATTACHMENT_FILE_KEYS, _LIST_ITEM_VALUE_RE
 
-_BLOCK_SCALAR_FRIENDLY_KEYS = {
-    "question",
-    "subquestion",
-    "under",
-    "pre",
-    "post",
-    "right",
-    "content",
-    "heading",
-    "footer",
-    "submit",
-    "note",
-    "html",
-    "raw html",
-}
 _VALUE_RE = re.compile(r"^(\s*)(?:-\s*)?([\w/-][\w /-]*?)\s*:\s*([^\s#]*)$")
 
 ShowIfVariableCandidates = Callable[[str, int, str], list[CompletionCandidate]]
@@ -138,25 +124,6 @@ def format_property_insert_text(prop_name: str, rule: PropertyRule, *, indent: s
     if not indent:
         return text
     return "\n".join(f"{indent}{line}" for line in text.split("\n"))
-
-
-def block_scalar_variant_candidate(prop_name: str, rule: PropertyRule) -> CompletionCandidate | None:
-    if prop_name not in _BLOCK_SCALAR_FRIENDLY_KEYS:
-        return None
-    if "string" not in rule.value_types:
-        return None
-    if rule.insert_kind != "scalar":
-        return None
-    if rule.insert_kind == "block_scalar":
-        return None
-
-    return CompletionCandidate(
-        label=f"{prop_name} (block)",
-        insert_text=f"{prop_name}: |\n  $0",
-        documentation=property_documentation(prop_name, rule),
-        is_snippet=True,
-        display_kind="property",
-    )
 
 
 _KEYWORD_SPACE_SUFFIX = frozenset(
@@ -259,6 +226,23 @@ def _keyword_insert_text(target: PythonCompletionTarget) -> str | None:
     return None
 
 
+def _value_supports_block_scalar(context: CompletionContext, key: str) -> bool:
+    if context.scope != "fields_item":
+        return True
+    compatible = field_keys.FIELD_KEY_COMPATIBLE_DATATYPES.get(key)
+    if compatible is None:
+        return True
+    return context.current_field_datatype in compatible
+
+
+def _should_offer_block_scalar_pipe(prop: PropertyRule, partial_value: str) -> bool:
+    return (
+        "string" in prop.value_types
+        and prop.insert_kind == "scalar"
+        and (partial_value == "" or partial_value.startswith("|"))
+    )
+
+
 def value_completion_provider(
     context: CompletionContext,
 ) -> list[CompletionCandidate] | None:
@@ -286,8 +270,21 @@ def value_completion_provider(
                 for value in values
                 if partial_value.lower() in value.lower()
             ]
+
+            if _should_offer_block_scalar_pipe(prop, partial_value) and _value_supports_block_scalar(context, key):
+                candidates.append(
+                    CompletionCandidate(
+                        label="|",
+                        insert_text="|\n  $0",
+                        is_snippet=True,
+                        is_value=True,
+                        detail="Block scalar (multi-line string)",
+                    )
+                )
+
             candidates.sort(
                 key=lambda c: (
+                    0 if c.label == "|" else 1,
                     0 if c.label.lower().startswith(partial_value.lower()) else 1,
                     c.label,
                 )
@@ -363,7 +360,7 @@ def property_completion_provider(
             insert_text=property_insert_text(name, prop),
             documentation=property_documentation(name, prop),
             uses_snippet_text=True,
-            trigger_suggest=bool(prop.enum_values),
+            trigger_suggest=(bool(prop.enum_values) or ("string" in prop.value_types and prop.insert_kind == "scalar")),
         )
         for name, prop in sorted(scope_properties.items())
     ]
@@ -374,15 +371,6 @@ def property_completion_provider(
         context.scope,
     )
 
-    property_labels = {candidate.label for candidate in property_candidates}
-    block_scalar_candidates = [
-        variant
-        for name, prop in sorted(scope_properties.items())
-        if name in property_labels
-        for variant in [block_scalar_variant_candidate(name, prop)]
-        if variant is not None
-    ]
-
     shorthand_candidates: list[CompletionCandidate] = []
     suppress_shorthand = context.should_suppress_shorthand(context.source, context.line, context.scope)
     if not suppress_shorthand and (
@@ -390,18 +378,10 @@ def property_completion_provider(
     ):
         shorthand_candidates = build_shorthand_candidates(context.scope, context.source, context.line)
 
-    # For fields_item, put property keys before block scalar variants so that
-    # promoted keys (field, label, action with ajax) appear near the top.
-    if context.scope == "fields_item":
-        result = contextualize_completion_candidates(
-            shorthand_candidates + property_candidates + block_scalar_candidates,
-            indent_unit=context.indent,
-        )
-    else:
-        result = contextualize_completion_candidates(
-            shorthand_candidates + block_scalar_candidates + property_candidates,
-            indent_unit=context.indent,
-        )
+    result = contextualize_completion_candidates(
+        shorthand_candidates + property_candidates,
+        indent_unit=context.indent,
+    )
     return result
 
 

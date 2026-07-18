@@ -412,27 +412,36 @@ def test_completion_list_marks_property_insert_text_as_snippet() -> None:
     assert fields.insert_text_format == InsertTextFormat.Snippet
 
 
-def test_completion_list_offers_block_scalar_variant_for_question() -> None:
+def test_completion_list_no_block_scalar_variant_for_question() -> None:
     completions = build_completion_list("", 0, 0)
 
-    question = next(item for item in completions.items if item.label == "question")
-    question_block = next(item for item in completions.items if item.label == "question (block)")
+    labels = {item.label for item in completions.items}
+    assert "question (block)" not in labels
 
-    assert question.insert_text == "question: $0"
-    assert question_block.kind == CompletionItemKind.Property
-    assert question_block.insert_text == "question: |\n  $0"
-    assert question_block.insert_text_format == InsertTextFormat.Snippet
+
+def test_completion_list_no_block_scalar_variant_for_none_of_the_above() -> None:
+    source = "question: Hi\nfields:\n  - label: Pick\n    datatype: checkboxes\n    none of the above: True\n    "
+    completions = build_completion_list(source, 5, 4)
+    labels = {item.label for item in completions.items}
+    assert "none of the above (block)" not in labels
 
 
 def test_enum_property_completion_triggers_suggest_after_insert() -> None:
     completions = build_completion_list("question: Hi\nfields:\n  - \n", 2, 4)
 
     datatype = next(item for item in completions.items if item.label == "datatype")
-    question = next(item for item in build_completion_list("", 0, 0).items if item.label == "question")
 
     assert datatype.command is not None
     assert datatype.command.command == "editor.action.triggerSuggest"
-    assert question.command is None
+
+
+def test_string_property_completion_triggers_suggest_after_insert() -> None:
+    completions = build_completion_list("", 0, 0)
+
+    question = next(item for item in completions.items if item.label == "question")
+
+    assert question.command is not None
+    assert question.command.command == "editor.action.triggerSuggest"
 
 
 def test_completion_list_matches_type_prefix_to_datatype_and_input_type() -> None:

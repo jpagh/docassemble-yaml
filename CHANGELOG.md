@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Added
+
+- [LSP] Add `|` value completion for string-typed keys; remove `key (block)` property completions.
+
 ## [26.7.0] - 2026-07-09
 
 ### Added

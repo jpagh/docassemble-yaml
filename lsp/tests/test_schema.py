@@ -1208,6 +1208,52 @@ def test_fields_item_none_of_the_above_value_completion() -> None:
     assert "False" in labels
 
 
+def test_fields_item_none_of_the_above_pipe_value_completion() -> None:
+    source = "question: Hi\nfields:\n  - label: Pick\n    datatype: checkboxes\n    none of the above: |"
+    completions = get_completions(source, 4, 23)
+    pipe = next((c for c in completions if c.label == "|"), None)
+    assert pipe is not None
+    assert pipe.insert_text == "|\n  $0"
+    assert pipe.is_snippet is True
+
+
+def test_fields_item_question_pipe_value_completion() -> None:
+    source = "question: |"
+    completions = get_completions(source, 0, 11)
+    pipe = next((c for c in completions if c.label == "|"), None)
+    assert pipe is not None
+    assert pipe.insert_text == "|\n  $0"
+    assert pipe.is_snippet is True
+
+
+def test_fields_item_none_of_the_above_pipe_completion_respects_datatype() -> None:
+    source_text = "question: Hi\nfields:\n  - label: Pick\n    datatype: text\n    none of the above: |"
+    completions_text = get_completions(source_text, 4, 23)
+    assert not any(c.label == "|" for c in completions_text)
+
+    source_checkboxes = "question: Hi\nfields:\n  - label: Pick\n    datatype: checkboxes\n    none of the above: |"
+    completions_checkboxes = get_completions(source_checkboxes, 4, 23)
+    assert any(c.label == "|" for c in completions_checkboxes)
+
+
+def test_fields_item_none_of_the_above_pipe_sorts_first() -> None:
+    source = "question: Hi\nfields:\n  - label: Pick\n    datatype: checkboxes\n    none of the above: \n"
+
+    completions = get_completions(source, 4, 24)
+    assert len(completions) >= 3
+    assert completions[0].label == "|"
+    assert completions[1].label == "False"
+    assert completions[2].label == "True"
+
+
+def test_question_value_completion_offers_pipe_when_empty() -> None:
+    source = "question: "
+
+    completions = get_completions(source, 0, 10)
+    assert len(completions) == 1
+    assert completions[0].label == "|"
+
+
 # ---------------------------------------------------------------------------
 # Scope detection: visibility modifier at field-item key level
 # ---------------------------------------------------------------------------
