@@ -4,11 +4,8 @@ monorepo_root = true
     DYLD_FALLBACK_LIBRARY_PATH = "/opt/homebrew/lib"
 
 [tools]
-    tombi = "latest"
-
-[settings]
-    experimental        = true
-    python.uv_venv_auto = "create|source"
+    tombi                  = "latest"
+    "pipx:bump-my-version" = "latest"
 
 [monorepo]
     config_roots = ["lsp", "vscode"]
@@ -17,23 +14,38 @@ monorepo_root = true
     description = "Format TOML files with tombi (uses root .tombi.toml)"
     run         = "tombi format"
 
+[tasks."format:toml:check"]
+    description = "Check TOML formatting with tombi"
+    run         = "tombi format --check"
+
 [tasks."lint:toml"]
     description = "Lint TOML files with tombi"
     run         = "tombi lint"
 
 [tasks.check]
-    description = "Format, lint, type, and test the whole monorepo"
-    depends     = ["//:format:toml", "//lsp:check", "//vscode:check"]
+    description = "Check formatting, lint, type, and test the whole monorepo"
+    depends     = ["//:format:toml:check", "//lsp:check", "//vscode:check"]
 
 [tasks.gate]
     description = "Full pre-release gate for the whole monorepo"
-    depends     = ["//:format:toml", "//lsp:gate", "//vscode:gate"]
+    depends     = ["//:format:toml:check", "//lsp:gate", "//vscode:gate"]
 
 [tasks.bump]
     description = "Bump the patch digit (CalVer YY.MM.patch → YY.MM.patch+1) and push"
+    tools       = { node = "latest", uv = "latest" }
     run         = "bump-my-version bump patch && git push --follow-tags"
 
 [tasks.publish]
     description = "Full release: gate, bump patch, package VSIX, publish to marketplace"
-    depends     = ["gate", "bump", "//vscode:package"]
-    run         = "vsce publish"
+    run         = [
+        { task = "gate" },
+        { task = "bump" },
+        { task = "//vscode:publish" },
+    ]
+
+[tasks.pre-commit]
+    description = "Format and check the whole monorepo"
+    run         = [
+        { tasks = ["//lsp:format", "//vscode:format"] },
+        { task = "check" },
+    ]

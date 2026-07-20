@@ -56,9 +56,14 @@
     depends     = ["build"]
     run         = "vsce package"
 
+[tasks.publish]
+    description = "Publish the VSIX to the marketplace"
+    depends     = ["package"]
+    run         = "vsce publish"
+
 [tasks.check]
-    description = "Format, lint, build, and test (mock)"
-    depends     = ["format", "lint", "build", "test"]
+    description = "Check formatting, lint, build, and test (mock)"
+    depends     = ["format:check", "lint", "build", "test"]
 
 [tasks.watch]
     description = "Watch TypeScript"

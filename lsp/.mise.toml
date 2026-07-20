@@ -1,6 +1,10 @@
 [tools]
-    python = "3.14"
-    uv     = "latest"
+    "pipx:ruff" = "latest"
+    python      = "3.14"
+    uv          = "latest"
+
+[settings]
+    python.uv_venv_auto = "create|source"
 
 [tasks.sync]
     description = "Install/sync LSP dev dependencies"
@@ -11,12 +15,22 @@
     run         = "uv run docassemble-lsp lsp"
 
 [tasks.format]
-    description = "ruff format (and //:format:toml)"
+    description = "Format Python and TOML files"
     depends     = ["sync", "//:format:toml"]
     run         = "uv run ruff format"
 
+[tasks."format:check"]
+    description = "Check Python and TOML formatting"
+    depends     = ["sync", "//:format:toml:check"]
+    run         = "uv run ruff format --check"
+
 [tasks.lint]
-    description = "ruff check --fix (and //:lint:toml)"
+    description = "Check Python lint"
+    depends     = ["sync", "//:lint:toml"]
+    run         = "uv run ruff check"
+
+[tasks."lint:fix"]
+    description = "Fix Python lint"
     depends     = ["sync", "//:lint:toml"]
     run         = "uv run ruff check --fix"
 
@@ -37,10 +51,7 @@
 
 [tasks."test:all-pythons"]
     description = "Run tests against all supported Python versions"
-    run         = [
-        "for v in 3.10 3.11 3.12 3.13 3.14; do echo \"=== Python $v ===\"; UV_PROJECT_ENVIRONMENT=.venv-$v DYLD_FALLBACK_LIBRARY_PATH={{ env.DYLD_FALLBACK_LIBRARY_PATH | quote }} uv run --python $v --only-group test pytest -n auto || exit 1; done",
-        "rm -rf .venv-3.10 .venv-3.11 .venv-3.12 .venv-3.13 .venv-3.14",
-    ]
+    run         = "trap 'rm -rf .venv-3.10 .venv-3.11 .venv-3.12 .venv-3.13 .venv-3.14' EXIT; for v in 3.10 3.11 3.12 3.13 3.14; do echo \"=== Python $v ===\"; UV_PROJECT_ENVIRONMENT=.venv-$v DYLD_FALLBACK_LIBRARY_PATH={{ env.DYLD_FALLBACK_LIBRARY_PATH | quote }} uv run --python $v --only-group test pytest -n auto || exit 1; done"
 
 [tasks."vendor:stubs"]
     description = "Regenerate vendored docassemble stubs"
@@ -48,9 +59,9 @@
     run         = "uv run python scripts/update_vendored_docassemble_base_util.py"
 
 [tasks.check]
-    description = "Format, lint, type, and test"
-    depends     = ["format", "lint", "type", "test"]
+    description = "Check formatting, lint, type, and test"
+    depends     = ["format:check", "lint", "type", "test"]
 
 [tasks.gate]
     description = "Full pre-release gate for LSP"
-    depends     = ["format", "lint", "type", "test:all-pythons"]
+    depends     = ["format:check", "lint", "type", "test:all-pythons"]
