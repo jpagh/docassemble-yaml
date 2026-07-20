@@ -16,6 +16,8 @@ from docassemble_lsp.core import (
 from docassemble_lsp.core import (
     resolve_workspace_symbol_targets as core_resolve_workspace_symbol_targets,
 )
+from docassemble_lsp.core.definitions import _build_flat_caches
+from docassemble_lsp.core.python_navigation import resolve_python_completion_targets
 from docassemble_lsp.core.python_paths import (
     path_from_uri_or_path,
     resolve_package_qualified_path,
@@ -154,6 +156,59 @@ def test_resolve_python_module_source_falls_back_to_vendored_functions(
     assert resolution.source_kind == "vendored"
     assert resolution.path is not None
     assert resolution.path.name == "vendored_docassemble_base_functions.pyi"
+
+
+def test_resolve_python_completion_targets_resolves_workspace_import(
+    tmp_path: Path,
+) -> None:
+    package_dir = tmp_path / "docassemble" / "demo"
+    questions_dir = package_dir / "data" / "questions"
+    questions_dir.mkdir(parents=True)
+    (package_dir / "__init__.py").write_text("", encoding="utf-8")
+    (tmp_path / "pyproject.toml").write_text(
+        "[project]\nname = 'demo'\n", encoding="utf-8"
+    )
+    helper_path = package_dir / "utils.py"
+    helper_path.write_text(
+        "class Foo:\n    def bar(self) -> int: return 1\n", encoding="utf-8"
+    )
+    source_path = questions_dir / "main.yml"
+    source = (
+        "imports:\n"
+        "  - from docassemble.demo.utils import Foo\n"
+        "---\n"
+        "code: |\n"
+        "  result = Foo.\n"
+    )
+    line = 4
+    character = len("  result = Foo.")
+
+    targets = resolve_python_completion_targets(
+        source,
+        line,
+        character,
+        uri_or_path=source_path,
+        workspace_index=build_workspace_index([tmp_path]),
+    )
+
+    labels = {t.label for t in targets}
+    assert "bar" in labels
+
+
+def test_build_flat_caches_uses_workspace_index(tmp_path: Path) -> None:
+    pkg = tmp_path / "docassemble" / "demo"
+    pkg.mkdir(parents=True)
+    (pkg / "__init__.py").write_text("")
+    (pkg / "utils.py").write_text("FOO = 1\n")
+    (pkg / "main.py").write_text("from .utils import FOO\n")
+    idx = build_workspace_index([tmp_path])
+    (_, _, _, registry, _) = _build_flat_caches(
+        frozenset([pkg / "main.py"]), workspace_index=idx
+    )
+    assert "FOO" in registry
+    assert any(
+        target.path == (pkg / "utils.py").resolve() for target in registry["FOO"]
+    )
 
 
 def test_python_module_symbol_details_respect_all_and_imported_exports(

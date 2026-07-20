@@ -1,21 +1,6 @@
 import * as path from "node:path";
 import * as vscode from "vscode";
-
-export type ServerState = "idle" | "disabled" | "missing" | "running" | "error" | "stopped";
-
-export type ServerStateSnapshot = {
-  state: ServerState;
-  resolvedCommand?: string;
-  lastError?: string;
-  crashRestartCount: number;
-};
-
-export type DocassembleExtensionApi = {
-  restart(): Promise<void>;
-  showOutput(): void;
-  showSetupHelp(): Promise<void>;
-  getServerState(): ServerStateSnapshot;
-};
+import type { DocassembleExtensionApi, ServerState, ServerStateSnapshot } from "../../extension";
 
 export const EXTENSION_ID = "jackadamson.vscode-docassemble";
 

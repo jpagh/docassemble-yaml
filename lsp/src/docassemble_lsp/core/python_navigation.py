@@ -645,10 +645,16 @@ def _keywords_for_context(source: str, line: int, character: int) -> frozenset |
     return None
 
 
-def _imported_symbol_completion_detail(binding: PythonNamespaceBinding) -> str:
+def _imported_symbol_completion_detail(
+    binding: PythonNamespaceBinding, *, workspace_index: WorkspaceIndex
+) -> str:
     if binding.module_path is None or binding.imported_name is None:
         return "symbol"
-    return python_module_symbol_detail(binding.module_path, binding.imported_name)
+    return python_module_symbol_detail(
+        binding.module_path,
+        binding.imported_name,
+        workspace_index=workspace_index,
+    )
 
 
 def _is_objects_value_completion_position(
@@ -842,6 +848,7 @@ def _python_completion_candidates_from_bindings(
     base_chain: tuple[str, ...],
     partial: str,
     *,
+    workspace_index: WorkspaceIndex,
     keywords: frozenset | None = None,
     builtins: frozenset | None = None,
 ) -> list[PythonCompletionTarget]:
@@ -851,7 +858,8 @@ def _python_completion_candidates_from_bindings(
         for binding in bindings:
             if binding.kind == "module_star":
                 for label, detail in python_module_symbol_details(
-                    binding.module_path
+                    binding.module_path,
+                    workspace_index=workspace_index,
                 ).items():
                     _add_python_completion_entry(entries, label, detail, partial)
                 continue
@@ -860,7 +868,9 @@ def _python_completion_candidates_from_bindings(
             detail = (
                 "module"
                 if binding.kind == "module_namespace"
-                else _imported_symbol_completion_detail(binding)
+                else _imported_symbol_completion_detail(
+                    binding, workspace_index=workspace_index
+                )
             )
             _add_python_completion_entry(entries, binding.alias, detail, partial)
         if keywords is not None:
@@ -875,13 +885,21 @@ def _python_completion_candidates_from_bindings(
         if binding.kind == "module_namespace":
             if binding.alias != base_chain[0]:
                 continue
-            members = module_completion_members(binding.module_path, base_chain[1:])
+            members = module_completion_members(
+                binding.module_path,
+                base_chain[1:],
+                workspace_index=workspace_index,
+            )
             for label, detail in members.items():
                 _add_python_completion_entry(entries, label, detail, partial)
             continue
 
         if binding.kind == "module_star":
-            members = module_completion_members(binding.module_path, base_chain)
+            members = module_completion_members(
+                binding.module_path,
+                base_chain,
+                workspace_index=workspace_index,
+            )
             for label, detail in members.items():
                 _add_python_completion_entry(entries, label, detail, partial)
             continue
@@ -889,7 +907,9 @@ def _python_completion_candidates_from_bindings(
         if binding.alias != base_chain[0] or binding.imported_name is None:
             continue
         members = module_completion_members(
-            binding.module_path, (binding.imported_name, *base_chain[1:])
+            binding.module_path,
+            (binding.imported_name, *base_chain[1:]),
+            workspace_index=workspace_index,
         )
         for label, detail in members.items():
             _add_python_completion_entry(entries, label, detail, partial)
@@ -971,6 +991,7 @@ class PythonNavigationService:
             bindings,
             base_chain,
             partial,
+            workspace_index=self.workspace_index,
             keywords=keywords,
             builtins=builtins,
         )

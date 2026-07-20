@@ -67,3 +67,47 @@ def test_build_document_facts_nested_keys_at_top_level_only() -> None:
     assert len(facts[0].keys) == 2
     key_names = [k.name for k in facts[0].keys]
     assert "inner" not in key_names
+
+
+def test_build_document_facts_empty_source_returns_empty_list() -> None:
+    assert build_document_facts("") == []
+
+
+def test_build_document_facts_only_document_separators_returns_empty_list() -> None:
+    assert build_document_facts("---\n---\n") == []
+
+
+def test_build_document_facts_empty_preferred_key_falls_back_to_key_name() -> None:
+    facts = build_document_facts("question:\n")
+    assert len(facts) == 1
+    assert facts[0].name == "question"
+
+
+def test_build_document_facts_id_wins_over_other_preferred_keys() -> None:
+    facts = build_document_facts("id: foo\nquestion: Hello\n")
+    assert len(facts) == 1
+    assert facts[0].name == "foo"
+
+
+def test_build_document_facts_block_scalar_question_falls_back_to_question() -> None:
+    facts = build_document_facts("question: |\n  hello\n")
+    assert len(facts) == 1
+    assert facts[0].name == "question"
+
+
+def test_build_document_facts_event_key_used_for_name() -> None:
+    facts = build_document_facts("event: done\n")
+    assert len(facts) == 1
+    assert facts[0].name == "done"
+
+
+def test_build_document_facts_blank_lines_and_comments_skipped() -> None:
+    facts = build_document_facts("\n# comment\nid: intro\n\nquestion: Hello\n")
+    assert len(facts) == 1
+    assert [key.name for key in facts[0].keys] == ["id", "question"]
+
+
+def test_build_document_facts_code_key_without_value() -> None:
+    facts = build_document_facts("code: |\n")
+    assert len(facts) == 1
+    assert facts[0].name == "code"

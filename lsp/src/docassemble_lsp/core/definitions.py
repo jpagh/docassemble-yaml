@@ -292,6 +292,8 @@ def _discover_cross_package_modules(
 
 def _build_flat_caches(
     module_paths: frozenset[Path],
+    *,
+    workspace_index: WorkspaceIndex | None = None,
 ) -> tuple[
     frozenset[str],
     frozenset[str],
@@ -308,13 +310,47 @@ def _build_flat_caches(
     re-load individual module indexes.
     """
     logger.debug("Building flat caches from %d module paths", len(module_paths))
+    workspace_index = workspace_index or WorkspaceIndex.empty()
     classes: set[str] = set()
     non_exception_classes: set[str] = set()
     datatypes: set[str] = set()
     registry: dict[str, set[DefinitionTarget]] = {}
     docstrings: dict[str, str] = {}
+
+    def _resolve_imported_symbol(
+        module_path: Path,
+        name: str,
+        seen: set[tuple[Path, str]],
+    ) -> tuple[DefinitionTarget | None, str | None]:
+        try:
+            resolved = module_path.resolve()
+        except OSError:
+            return (None, None)
+        key = (resolved, name)
+        if key in seen:
+            return (None, None)
+        seen.add(key)
+        imported_index = load_python_module_index(
+            module_path, workspace_index=workspace_index
+        )
+        imported_sym = imported_index.symbols.get(name)
+        if imported_sym is None:
+            return (None, None)
+        if imported_sym.target is not None:
+            return (imported_sym.target, imported_sym.docstring)
+        if (
+            imported_sym.imported_name is not None
+            and imported_sym.imported_module_path is not None
+        ):
+            return _resolve_imported_symbol(
+                imported_sym.imported_module_path,
+                imported_sym.imported_name,
+                seen,
+            )
+        return (None, imported_sym.docstring)
+
     for mod_path in module_paths:
-        index = load_python_module_index(mod_path)
+        index = load_python_module_index(mod_path, workspace_index=workspace_index)
         classes.update(collect_class_names(index))
         non_exception_classes.update(collect_non_exception_class_names(index))
         datatypes.update(index.custom_datatype_names)
@@ -323,6 +359,16 @@ def _build_flat_caches(
                 registry.setdefault(name, set()).add(sym.target)
             if sym.docstring is not None and name not in docstrings:
                 docstrings[name] = sym.docstring
+            if sym.imported_name is not None and sym.imported_module_path is not None:
+                target, docstring = _resolve_imported_symbol(
+                    sym.imported_module_path,
+                    sym.imported_name,
+                    set(),
+                )
+                if target is not None:
+                    registry.setdefault(name, set()).add(target)
+                if docstring is not None and name not in docstrings:
+                    docstrings[name] = docstring
     return (
         frozenset(classes),
         frozenset(non_exception_classes),
@@ -524,7 +570,7 @@ def build_workspace_index(
             workspace_custom_dt,
             workspace_registry,
             workspace_docstrings,
-        ) = _build_flat_caches(workspace_module_paths)
+        ) = _build_flat_caches(workspace_module_paths, workspace_index=index)
 
     vendored = _load_vendored_stubs()
 

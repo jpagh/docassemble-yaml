@@ -15,6 +15,7 @@ from docassemble_lsp.core.python_modules import (
     python_module_symbol_detail,
     resolve_python_symbol_chain,
 )
+from docassemble_lsp.core import build_workspace_index
 from docassemble_lsp.core.workspace import WorkspaceIndex
 
 
@@ -95,7 +96,7 @@ def test_imported_module_uses_workspace_index(tmp_path: Path) -> None:
     (pkg / "__init__.py").write_text("")
     (pkg / "utils.py").write_text("FOO = 1\n")
     (pkg / "helpers.py").write_text("from . import utils\n")
-    idx = WorkspaceIndex.empty_for_roots((tmp_path.resolve(),))
+    idx = build_workspace_index([tmp_path])
     helpers_index = load_python_module_index(pkg / "helpers.py", workspace_index=idx)
     assert "utils" in helpers_index.symbols
     sym = helpers_index.symbols["utils"]
@@ -110,7 +111,7 @@ def test_resolve_python_symbol_chain_cross_module(tmp_path: Path) -> None:
     (pkg / "__init__.py").write_text("")
     (pkg / "utils.py").write_text("FOO = 1\n")
     (pkg / "helpers.py").write_text("from .utils import FOO\n")
-    idx = WorkspaceIndex.empty_for_roots((tmp_path.resolve(),))
+    idx = build_workspace_index([tmp_path])
     result = resolve_python_symbol_chain(
         pkg / "helpers.py", ("FOO",), workspace_index=idx
     )
@@ -123,7 +124,7 @@ def test_compute_da_object_subclasses_with_workspace(tmp_path: Path) -> None:
     pkg.mkdir(parents=True)
     (pkg / "__init__.py").write_text("")
     (pkg / "mymodel.py").write_text("class MyThing(DAObject):\n    pass\n")
-    idx = WorkspaceIndex.empty_for_roots((tmp_path.resolve(),))
+    idx = build_workspace_index([tmp_path])
     result = compute_da_object_subclasses(
         [pkg / "mymodel.py"],
         workspace_index=idx,
@@ -199,7 +200,7 @@ def test_compute_da_object_subclasses_multi_level(tmp_path: Path) -> None:
     (pkg / "mymodel.py").write_text(
         "class A(DAObject): pass\nclass B(A): pass\nclass C(B): pass\n"
     )
-    idx = WorkspaceIndex.empty_for_roots((tmp_path.resolve(),))
+    idx = build_workspace_index([tmp_path])
     result = compute_da_object_subclasses([pkg / "mymodel.py"], workspace_index=idx)
     assert result == {"DAObject", "A", "B", "C", "DAEmpty"}
 
@@ -256,6 +257,19 @@ def test_python_module_symbol_detail_reexport(tmp_path: Path) -> None:
     assert result == "symbol"
 
 
+def test_python_module_symbol_detail_resolves_workspace_import(tmp_path: Path) -> None:
+    pkg = tmp_path / "docassemble" / "demo"
+    pkg.mkdir(parents=True)
+    (pkg / "__init__.py").write_text("")
+    (pkg / "utils.py").write_text("class Foo: pass\n")
+    (pkg / "main.py").write_text("from .utils import Foo\n")
+    idx = build_workspace_index([tmp_path])
+    assert (
+        python_module_symbol_detail(pkg / "main.py", "Foo", workspace_index=idx)
+        == "class"
+    )
+
+
 def test_python_module_symbol_detail_reexport_cycle(tmp_path: Path) -> None:
     pkg = tmp_path / "docassemble" / "demo"
     pkg.mkdir(parents=True)
@@ -287,6 +301,17 @@ def test_module_completion_members_class_methods(tmp_path: Path) -> None:
     )
     result = module_completion_members(mod_path, ("MyClass",))
     assert result == {"pub": "method", "_priv": "method"}
+
+
+def test_module_completion_members_resolves_workspace_import(tmp_path: Path) -> None:
+    pkg = tmp_path / "docassemble" / "demo"
+    pkg.mkdir(parents=True)
+    (pkg / "__init__.py").write_text("")
+    (pkg / "utils.py").write_text("class Foo:\n    def bar(self) -> int: return 1\n")
+    (pkg / "main.py").write_text("from .utils import Foo\n")
+    idx = build_workspace_index([tmp_path])
+    members = module_completion_members(pkg / "main.py", ("Foo",), workspace_index=idx)
+    assert members == {"bar": "method"}
 
 
 def test_clear_module_index_cache_directory_evicts_children(tmp_path: Path) -> None:

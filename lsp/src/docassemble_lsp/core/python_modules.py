@@ -337,11 +337,13 @@ def python_module_symbol_detail(
     name: str,
     *,
     _seen: set[tuple[Path, str]] | None = None,
+    workspace_index: WorkspaceIndex | None = None,
 ) -> str:
     if module_path is None:
         return "symbol"
 
-    symbol = load_python_module_index(module_path).symbols.get(name)
+    wi = workspace_index if workspace_index is not None else WorkspaceIndex.empty()
+    symbol = load_python_module_index(module_path, workspace_index=wi).symbols.get(name)
     if symbol is None:
         return "symbol"
     if symbol.kind != "symbol":
@@ -355,7 +357,10 @@ def python_module_symbol_detail(
         return "symbol"
     seen.add(key)
     return python_module_symbol_detail(
-        symbol.imported_module_path, symbol.imported_name, _seen=seen
+        symbol.imported_module_path,
+        symbol.imported_name,
+        _seen=seen,
+        workspace_index=wi,
     )
 
 
@@ -576,26 +581,35 @@ def compute_da_object_subclasses(
     return frozenset(subclasses | {"DAEmpty"})
 
 
-def python_module_symbol_details(module_path: Path | None) -> dict[str, str]:
-    if module_path is None:
-        return {}
-
-    index = load_python_module_index(module_path)
-    details: dict[str, str] = {}
-    for name in _python_module_public_names(index):
-        details[name] = python_module_symbol_detail(module_path, name)
-    return details
-
-
-def module_completion_members(
-    module_path: Path | None, chain: tuple[str, ...]
+def python_module_symbol_details(
+    module_path: Path | None, *, workspace_index: WorkspaceIndex | None = None
 ) -> dict[str, str]:
     if module_path is None:
         return {}
 
-    index = load_python_module_index(module_path)
+    index = load_python_module_index(module_path, workspace_index=workspace_index)
+    details: dict[str, str] = {}
+    for name in _python_module_public_names(index):
+        details[name] = python_module_symbol_detail(
+            module_path, name, workspace_index=workspace_index
+        )
+    return details
+
+
+def module_completion_members(
+    module_path: Path | None,
+    chain: tuple[str, ...],
+    *,
+    workspace_index: WorkspaceIndex | None = None,
+) -> dict[str, str]:
+    if module_path is None:
+        return {}
+
+    index = load_python_module_index(module_path, workspace_index=workspace_index)
     if not chain:
-        return python_module_symbol_details(module_path)
+        return python_module_symbol_details(
+            module_path, workspace_index=workspace_index
+        )
 
     symbol = index.symbols.get(chain[0])
     if symbol is None:
@@ -605,7 +619,11 @@ def module_completion_members(
         delegated_chain = (
             (symbol.imported_name,) if symbol.imported_name is not None else ()
         ) + chain[1:]
-        return module_completion_members(symbol.imported_module_path, delegated_chain)
+        return module_completion_members(
+            symbol.imported_module_path,
+            delegated_chain,
+            workspace_index=workspace_index,
+        )
 
     if len(chain) == 1:
         return {name: "method" for name in symbol.methods}
