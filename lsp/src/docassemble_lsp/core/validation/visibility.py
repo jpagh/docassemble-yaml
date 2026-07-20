@@ -33,7 +33,9 @@ def validate_nesting_depth(
         errors.append(
             _yaml_error(
                 code=MessageCode.NESTED_VISIBILITY_LOGIC,
-                line_number=_absolute_document_line(line_number, nesting_line or _lc_line(doc)),
+                line_number=_absolute_document_line(
+                    line_number, nesting_line or _lc_line(doc)
+                ),
                 file_name=input_file,
                 depth=nesting_depth,
             )

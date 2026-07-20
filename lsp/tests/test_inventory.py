@@ -83,7 +83,9 @@ def test_field_item_known_keys_equals_subgroup_union() -> None:
     extra_in_composite = FIELD_ITEM_KNOWN_KEYS - union
     missing_from_composite = union - FIELD_ITEM_KNOWN_KEYS
 
-    assert not extra_in_composite, f"Keys in FIELD_ITEM_KNOWN_KEYS but in no sub-group: {sorted(extra_in_composite)}"
+    assert not extra_in_composite, (
+        f"Keys in FIELD_ITEM_KNOWN_KEYS but in no sub-group: {sorted(extra_in_composite)}"
+    )
     assert not missing_from_composite, (
         f"Keys in a sub-group but missing from FIELD_ITEM_KNOWN_KEYS: {sorted(missing_from_composite)}"
     )
@@ -95,7 +97,9 @@ def test_field_item_subgroups_have_no_duplicates() -> None:
     for group in _FIELD_ITEM_SUBGROUPS:
         for key in group:
             if key in seen:
-                raise AssertionError(f"Key {key!r} appears in multiple sub-groups (also seen in {seen[key]!r})")
+                raise AssertionError(
+                    f"Key {key!r} appears in multiple sub-groups (also seen in {seen[key]!r})"
+                )
             seen[key] = repr(group[:3])  # first few keys as identification
 
 
@@ -128,7 +132,9 @@ def test_top_level_completion_keys_are_valid_by_validation() -> None:
     completion suggestion.
     """
     schema = load_schema()
-    allowed_lower = {k.lower() for k in all_dict_keys} | {k.lower() for k in _SIGNATURE_ONLY_TOP_LEVEL_KEYS}
+    allowed_lower = {k.lower() for k in all_dict_keys} | {
+        k.lower() for k in _SIGNATURE_ONLY_TOP_LEVEL_KEYS
+    }
 
     gaps = {key for key in schema.top_level if key.lower() not in allowed_lower}
 
@@ -176,7 +182,9 @@ def test_all_dict_keys_baseline_coverage() -> None:
     all_keys_lower = {k.lower() for k in all_dict_keys}
     missing = baseline - all_keys_lower
 
-    assert not missing, f"Baseline top-level keys were removed from all_dict_keys: {sorted(missing)}"
+    assert not missing, (
+        f"Baseline top-level keys were removed from all_dict_keys: {sorted(missing)}"
+    )
 
 
 def test_all_dict_keys_have_completions_or_are_explicitly_excluded() -> None:

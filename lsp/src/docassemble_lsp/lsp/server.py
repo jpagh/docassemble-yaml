@@ -144,7 +144,10 @@ logger = logging.getLogger(__name__)
 
 def _configure_pygls_logging() -> None:
     pygls_logger = logging.getLogger(_PYGLS_JSON_RPC_LOGGER)
-    if any(isinstance(existing_filter, _IgnoreUnknownCancelFilter) for existing_filter in pygls_logger.filters):
+    if any(
+        isinstance(existing_filter, _IgnoreUnknownCancelFilter)
+        for existing_filter in pygls_logger.filters
+    ):
         return
     pygls_logger.addFilter(_IgnoreUnknownCancelFilter())
 
@@ -156,7 +159,9 @@ _OBJECTS_KEY_RE = re.compile(r"^(\s*)objects:\s*$")
 _OBJECTS_ITEM_RE = re.compile(r"^(\s*)-\s+([^:#][^:]*?)\s*:\s*(.*?)\s*$")
 _SIMPLE_LIST_ITEM_RE = re.compile(r"^(\s*)-\s+(.*)$")
 _SIMPLE_LIST_BLOCK_KEYS = frozenset({"include", "modules"})
-_BLOCK_SCALAR_KEY_RE = re.compile(r"^(\s*)(-\s*)?([^:#][^:]*?)\s*:\s*(\||>|\|-|>-|\|\+|>\+)\s*$")
+_BLOCK_SCALAR_KEY_RE = re.compile(
+    r"^(\s*)(-\s*)?([^:#][^:]*?)\s*:\s*(\||>|\|-|>-|\|\+|>\+)\s*$"
+)
 _BLOCK_SCALAR_MARKERS = {"|", ">", "|-", ">-", "|+", ">+"}
 _PYTHON_BLOCK_KEYS = frozenset({"code", "validation code"})
 _DOCASSEMBLE_FIX_ALL_KIND = "source.fixAll.docassemble-lsp"
@@ -260,17 +265,23 @@ def build_completion_list(
                 kind=kind,
                 detail=candidate.detail,
                 documentation=(
-                    MarkupContent(kind=MarkupKind.Markdown, value=candidate.documentation)
+                    MarkupContent(
+                        kind=MarkupKind.Markdown, value=candidate.documentation
+                    )
                     if candidate.documentation
                     else None
                 ),
                 insert_text=candidate.insert_text,
                 insert_text_format=(
-                    InsertTextFormat.Snippet if candidate.is_snippet or candidate.uses_snippet_text else None
+                    InsertTextFormat.Snippet
+                    if candidate.is_snippet or candidate.uses_snippet_text
+                    else None
                 ),
                 text_edit=text_edit,
                 command=(
-                    Command(title="Trigger Suggest", command="editor.action.triggerSuggest")
+                    Command(
+                        title="Trigger Suggest", command="editor.action.triggerSuggest"
+                    )
                     if candidate.trigger_suggest
                     else None
                 ),
@@ -296,14 +307,22 @@ def build_hover(
         uri_or_path=uri_or_path,
     )
     if hover is not None:
-        return LspHover(contents=MarkupContent(kind=MarkupKind.Markdown, value=hover.contents))
+        return LspHover(
+            contents=MarkupContent(kind=MarkupKind.Markdown, value=hover.contents)
+        )
 
     if workspace_index is not None and workspace_index.symbol_registry:
         from docassemble_lsp.core.definitions import resolve_python_hover
 
-        python_hover = resolve_python_hover(source, line, character, workspace_index=workspace_index)
+        python_hover = resolve_python_hover(
+            source, line, character, workspace_index=workspace_index
+        )
         if python_hover is not None:
-            return LspHover(contents=MarkupContent(kind=MarkupKind.Markdown, value=python_hover.contents))
+            return LspHover(
+                contents=MarkupContent(
+                    kind=MarkupKind.Markdown, value=python_hover.contents
+                )
+            )
 
     return None
 
@@ -404,7 +423,9 @@ def _simple_list_on_type_prefix(source: str, line: int) -> str | None:
     return None
 
 
-def _simple_list_empty_or_block_scalar_prefix(source: str, line: int, item_match: re.Match[str]) -> str | None:
+def _simple_list_empty_or_block_scalar_prefix(
+    source: str, line: int, item_match: re.Match[str]
+) -> str | None:
     item_indent = item_match.group(1)
     indent_unit = infer_indent_unit(source, line - 1, fallback="  ")
 
@@ -434,7 +455,9 @@ def _default_indent_unit(*, insert_spaces: bool, tab_size: int) -> str:
     return " " * max(tab_size, 1) if insert_spaces else "\t"
 
 
-def _block_scalar_on_type_prefix(source: str, line: int, *, insert_spaces: bool, tab_size: int) -> str | None:
+def _block_scalar_on_type_prefix(
+    source: str, line: int, *, insert_spaces: bool, tab_size: int
+) -> str | None:
     if line <= 0:
         return None
 
@@ -458,7 +481,9 @@ def _block_scalar_on_type_prefix(source: str, line: int, *, insert_spaces: bool,
     return f"{mapping_indent}{indent_unit}"
 
 
-def _python_block_on_type_prefix(source: str, line: int, *, insert_spaces: bool, tab_size: int) -> str | None:
+def _python_block_on_type_prefix(
+    source: str, line: int, *, insert_spaces: bool, tab_size: int
+) -> str | None:
     if line <= 0:
         return None
 
@@ -489,7 +514,9 @@ def _python_block_on_type_prefix(source: str, line: int, *, insert_spaces: bool,
     return indent_unit
 
 
-def _fields_on_type_prefix(source: str, line: int, *, insert_spaces: bool, tab_size: int) -> str | None:
+def _fields_on_type_prefix(
+    source: str, line: int, *, insert_spaces: bool, tab_size: int
+) -> str | None:
     if line <= 0:
         return None
 
@@ -526,7 +553,9 @@ def _fields_on_type_prefix(source: str, line: int, *, insert_spaces: bool, tab_s
         indent_unit = indent_unit_between(
             match.group(1),
             item_indent,
-            fallback=_default_indent_unit(insert_spaces=insert_spaces, tab_size=tab_size),
+            fallback=_default_indent_unit(
+                insert_spaces=insert_spaces, tab_size=tab_size
+            ),
         )
         return f"{item_indent}{indent_unit}"
 
@@ -765,7 +794,8 @@ def build_code_actions(
     requested_kinds = set(only_kinds or [])
     wants_quick_fix = not requested_kinds or CodeActionKind.QuickFix in requested_kinds
     wants_fix_all = not requested_kinds or bool(
-        requested_kinds & {CodeActionKind.SourceFixAll, "source.fixAll", _DOCASSEMBLE_FIX_ALL_KIND}
+        requested_kinds
+        & {CodeActionKind.SourceFixAll, "source.fixAll", _DOCASSEMBLE_FIX_ALL_KIND}
     )
 
     core_diagnostics = [_diagnostic_from_lsp(diagnostic) for diagnostic in diagnostics]
@@ -780,7 +810,9 @@ def build_code_actions(
                     kind=CodeActionKind.QuickFix,
                     diagnostics=diagnostics,
                     is_preferred=True,
-                    edit=WorkspaceEdit(changes={uri: [_text_edit_from_source_edit(fix.edit)]}),
+                    edit=WorkspaceEdit(
+                        changes={uri: [_text_edit_from_source_edit(fix.edit)]}
+                    ),
                 )
             )
 
@@ -798,7 +830,14 @@ def build_code_actions(
                     title="Fix all auto-fixable docassemble-lsp issues",
                     kind=_DOCASSEMBLE_FIX_ALL_KIND,
                     diagnostics=diagnostics,
-                    edit=WorkspaceEdit(changes={uri: [_text_edit_from_source_edit(fix.edit) for fix in fix_all_fixes]}),
+                    edit=WorkspaceEdit(
+                        changes={
+                            uri: [
+                                _text_edit_from_source_edit(fix.edit)
+                                for fix in fix_all_fixes
+                            ]
+                        }
+                    ),
                 )
             )
 
@@ -814,7 +853,9 @@ def _origin_range(source: str, line: int, character: int) -> Range | None:
     """
     from docassemble_lsp.core.definitions import _match_value_context_with_range
 
-    _key_or_parent, _value, start_char, end_char = _match_value_context_with_range(source, line, character)
+    _key_or_parent, _value, start_char, end_char = _match_value_context_with_range(
+        source, line, character
+    )
     if start_char == 0 and end_char == 0:
         return None
     return Range(
@@ -900,7 +941,9 @@ def build_document_links(
         try:
             target_uri = target.target_path.as_uri()
         except Exception as exc:
-            logger.warning("Skipping document link target %s: %s", target.target_path, exc)
+            logger.warning(
+                "Skipping document link target %s: %s", target.target_path, exc
+            )
             continue
         if target.start_character == target.end_character:
             continue
@@ -952,15 +995,23 @@ class _WorkspaceIndexStore:
         return (uri, len(source), hash(source))
 
     def cached_document_links(self, uri: str, source: str) -> list[DocumentLink] | None:
-        cached = self._cached_document_links.get(self._document_link_cache_key(uri, source))
+        cached = self._cached_document_links.get(
+            self._document_link_cache_key(uri, source)
+        )
         return list(cached) if cached is not None else None
 
-    def store_document_links(self, uri: str, source: str, links: list[DocumentLink]) -> None:
-        self._cached_document_links[self._document_link_cache_key(uri, source)] = list(links)
+    def store_document_links(
+        self, uri: str, source: str, links: list[DocumentLink]
+    ) -> None:
+        self._cached_document_links[self._document_link_cache_key(uri, source)] = list(
+            links
+        )
 
     def _evict_document_link_cache(self, uri: str) -> None:
         """Remove cached document links for *uri* only — other documents are unaffected."""
-        self._cached_document_links = {k: v for k, v in self._cached_document_links.items() if k[0] != uri}
+        self._cached_document_links = {
+            k: v for k, v in self._cached_document_links.items() if k[0] != uri
+        }
 
     def update_source(self, uri: str, source: str) -> None:
         path = path_from_uri_or_path(uri)
@@ -1012,13 +1063,21 @@ class _WorkspaceIndexStore:
         base = self._base_for_roots(root_path)
         source_cache = base.as_source_dict()
         for path in self._pending_signature_paths:
-            base_signature = python_discovery_signature(source_cache[path]) if path in source_cache else frozenset()
+            base_signature = (
+                python_discovery_signature(source_cache[path])
+                if path in source_cache
+                else frozenset()
+            )
             if self._open_signatures.get(path, frozenset()) != base_signature:
                 self._needs_python_refresh = True
                 break
         if not self._needs_python_refresh:
             for path, signature in self._removed_signatures.items():
-                base_signature = python_discovery_signature(source_cache[path]) if path in source_cache else frozenset()
+                base_signature = (
+                    python_discovery_signature(source_cache[path])
+                    if path in source_cache
+                    else frozenset()
+                )
                 if signature != base_signature:
                     self._needs_python_refresh = True
                     break
@@ -1044,18 +1103,32 @@ class _WorkspaceIndexStore:
                 and self._cached_full[1] == self._generation
             ):
                 return self._cached_full[2]
-            base = checked_base if checked_base is not None else self._base_for_roots(root_path)
-            index = overlay_workspace_documents(base, self._open_sources, refresh_python=False)
+            base = (
+                checked_base
+                if checked_base is not None
+                else self._base_for_roots(root_path)
+            )
+            index = overlay_workspace_documents(
+                base, self._open_sources, refresh_python=False
+            )
             self._cached_full = (roots, self._generation, index)
             return index
 
-        base = checked_base if checked_base is not None else self._base_for_roots(root_path)
-        index = overlay_workspace_documents(base, self._open_sources, refresh_python=True)
+        base = (
+            checked_base
+            if checked_base is not None
+            else self._base_for_roots(root_path)
+        )
+        index = overlay_workspace_documents(
+            base, self._open_sources, refresh_python=True
+        )
         self._needs_python_refresh = False
         self._cached_full = (roots, self._generation, index)
         return index
 
-    def for_document(self, root_path: str | None, uri: str, source: str) -> WorkspaceIndex:
+    def for_document(
+        self, root_path: str | None, uri: str, source: str
+    ) -> WorkspaceIndex:
         self.update_source(uri, source)
         return self.for_workspace(root_path)
 
@@ -1088,7 +1161,9 @@ def create_server(
         _ls: LanguageServer,
         params: DidOpenTextDocumentParams,
     ) -> None:
-        workspace_indexes.update_source(params.text_document.uri, params.text_document.text)
+        workspace_indexes.update_source(
+            params.text_document.uri, params.text_document.text
+        )
         publish(params.text_document.uri)
 
     @server.feature(TEXT_DOCUMENT_DID_CHANGE)
@@ -1144,10 +1219,16 @@ def create_server(
         ls: LanguageServer,
         params: DidChangeWatchedFilesParams,
     ) -> None:
-        relevant = any(change.uri.endswith((".py", ".yml", ".yaml")) for change in params.changes)
+        relevant = any(
+            change.uri.endswith((".py", ".yml", ".yaml")) for change in params.changes
+        )
         if relevant:
             workspace_indexes.clear()
-            changed_paths = [p for change in params.changes if (p := path_from_uri_or_path(change.uri)) is not None]
+            changed_paths = [
+                p
+                for change in params.changes
+                if (p := path_from_uri_or_path(change.uri)) is not None
+            ]
             if changed_paths:
                 clear_detect_package_cache(changed_paths)
             workspace_indexes.for_workspace(ls.workspace.root_path)
@@ -1246,7 +1327,9 @@ def create_server(
             document.source,
             params.range.start.line,
             list(params.context.diagnostics),
-            only_kinds=list(params.context.only) if params.context.only is not None else None,
+            only_kinds=list(params.context.only)
+            if params.context.only is not None
+            else None,
             runtime_options=runtime_options,
             workspace_index=workspace_indexes.for_document(
                 ls.workspace.root_path,
@@ -1263,15 +1346,21 @@ def create_server(
         document = ls.workspace.get_text_document(params.text_document.uri)
         return build_document_symbols(document.source)
 
-    @server.feature(TEXT_DOCUMENT_DOCUMENT_LINK, DocumentLinkOptions(resolve_provider=False))
-    def document_link(ls: LanguageServer, params: DocumentLinkParams) -> list[DocumentLink]:
+    @server.feature(
+        TEXT_DOCUMENT_DOCUMENT_LINK, DocumentLinkOptions(resolve_provider=False)
+    )
+    def document_link(
+        ls: LanguageServer, params: DocumentLinkParams
+    ) -> list[DocumentLink]:
         document = ls.workspace.get_text_document(params.text_document.uri)
         index = workspace_indexes.for_document(
             ls.workspace.root_path,
             params.text_document.uri,
             document.source,
         )
-        cached_links = workspace_indexes.cached_document_links(params.text_document.uri, document.source)
+        cached_links = workspace_indexes.cached_document_links(
+            params.text_document.uri, document.source
+        )
         if cached_links is not None:
             logger.debug(
                 "LSP document link cache hit for %s: count=%d",
@@ -1284,11 +1373,15 @@ def create_server(
             document.source,
             workspace_index=index,
         )
-        workspace_indexes.store_document_links(params.text_document.uri, document.source, links)
+        workspace_indexes.store_document_links(
+            params.text_document.uri, document.source, links
+        )
         return links
 
     @server.feature(WORKSPACE_SYMBOL)
-    def workspace_symbol(ls: LanguageServer, params: WorkspaceSymbolParams) -> list[WorkspaceSymbol]:
+    def workspace_symbol(
+        ls: LanguageServer, params: WorkspaceSymbolParams
+    ) -> list[WorkspaceSymbol]:
         return build_workspace_symbols(
             params.query,
             workspace_index=workspace_indexes.for_workspace(ls.workspace.root_path),
@@ -1321,7 +1414,9 @@ def create_server(
                 "insert_spaces",
                 getattr(params.options, "insertSpaces", True),
             ),
-            tab_size=getattr(params.options, "tab_size", getattr(params.options, "tabSize", 2)),
+            tab_size=getattr(
+                params.options, "tab_size", getattr(params.options, "tabSize", 2)
+            ),
         )
 
     @server.feature(
@@ -1331,8 +1426,12 @@ def create_server(
             token_modifiers=SEMANTIC_TOKEN_MODIFIERS,
         ),
     )
-    def semantic_tokens_full(ls: LanguageServer, params: SemanticTokensParams) -> SemanticTokens:
-        logger.debug("Semantic tokens: disabled — TextMate grammar provides fine-grained highlighting")
+    def semantic_tokens_full(
+        ls: LanguageServer, params: SemanticTokensParams
+    ) -> SemanticTokens:
+        logger.debug(
+            "Semantic tokens: disabled — TextMate grammar provides fine-grained highlighting"
+        )
         document = ls.workspace.get_text_document(params.text_document.uri)
         return build_semantic_tokens(document.source)
 
@@ -1370,13 +1469,19 @@ def run_server(
             logger.debug("No docassemble-lsp config found in %s", Path.cwd())
 
     for module_name in ("docassemble.base.util", "docassemble.base.functions"):
-        resolution = resolve_python_module_source(module_name, workspace_index=WorkspaceIndex.empty())
-        path_text = str(resolution.path) if resolution.path is not None else "<unresolved>"
+        resolution = resolve_python_module_source(
+            module_name, workspace_index=WorkspaceIndex.empty()
+        )
+        path_text = (
+            str(resolution.path) if resolution.path is not None else "<unresolved>"
+        )
         logger.info(
             "Using %s from %s: %s",
             resolution.module_name,
             resolution.source_kind,
             path_text,
         )
-    create_server(runtime_options=runtime_options, formatter_config=formatter_config).start_io()
+    create_server(
+        runtime_options=runtime_options, formatter_config=formatter_config
+    ).start_io()
     return 0

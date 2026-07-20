@@ -868,7 +868,9 @@ def background_action(*pargs: Any, **kwargs: Any) -> Any:
 
 us: Any
 
-def set_live_help_status(availability: Any = ..., mode: Any = ..., partner_roles: Any = ...) -> Any:
+def set_live_help_status(
+    availability: Any = ..., mode: Any = ..., partner_roles: Any = ...
+) -> Any:
     """
     Configure the live help (chat) feature for the current interview session.
 
@@ -1557,7 +1559,9 @@ def get_user_secret(username: Any, password: Any) -> Any:
     """
     ...
 
-def create_user(email: Any, password: Any, privileges: Any = ..., info: Any = ...) -> Any:
+def create_user(
+    email: Any, password: Any, privileges: Any = ..., info: Any = ...
+) -> Any:
     """
     Create a new user account on the server.
 
@@ -1614,7 +1618,9 @@ def create_session(yaml_filename: Any, secret: Any = ..., url_args: Any = ...) -
     """
     ...
 
-def get_session_variables(yaml_filename: Any, session_id: Any, secret: Any = ..., simplify: Any = ...) -> Any:
+def get_session_variables(
+    yaml_filename: Any, session_id: Any, secret: Any = ..., simplify: Any = ...
+) -> Any:
     """
     Return the interview dictionary for the specified session.
 

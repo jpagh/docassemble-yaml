@@ -111,11 +111,17 @@ def _normalize_validator_error(err: object) -> ValidatorError:
         )
     err_msg, err_line, err_code = err
     if not isinstance(err_msg, str):
-        raise TypeError(f"Validator error message must be a string; got {type(err_msg).__name__}: {err!r}")
+        raise TypeError(
+            f"Validator error message must be a string; got {type(err_msg).__name__}: {err!r}"
+        )
     if not isinstance(err_line, int):
-        raise TypeError(f"Validator error line number must be an int; got {type(err_line).__name__}: {err!r}")
+        raise TypeError(
+            f"Validator error line number must be an int; got {type(err_line).__name__}: {err!r}"
+        )
     if not isinstance(err_code, str):
-        raise TypeError(f"Validator error code must be a string; got {type(err_code).__name__}: {err!r}")
+        raise TypeError(
+            f"Validator error code must be a string; got {type(err_code).__name__}: {err!r}"
+        )
     return (err_msg, err_line, err_code)
 
 
@@ -230,7 +236,11 @@ _DOCASSEMBLE_RESERVED_NAMES: frozenset[str] = frozenset(
 
 
 def _is_docassemble_reserved_name(varname: str) -> bool:
-    return "." not in varname and "[" not in varname and varname in _DOCASSEMBLE_RESERVED_NAMES
+    return (
+        "." not in varname
+        and "[" not in varname
+        and varname in _DOCASSEMBLE_RESERVED_NAMES
+    )
 
 
 def _invalid_field_variable_name(varname: Any) -> bool:
@@ -280,7 +290,9 @@ class MakoText:
             self.errors = [_validator_error(MessageCode.YAML_STRING_TYPE, value=x)]
             return
         try:
-            self.template = MakoTemplate(x, strict_undefined=True, input_encoding="utf-8")
+            self.template = MakoTemplate(
+                x, strict_undefined=True, input_encoding="utf-8"
+            )
         except SyntaxException as ex:
             self.errors = [
                 _validator_error(
@@ -326,7 +338,9 @@ class PythonText:
         except SyntaxError as ex:
             lineno = ex.lineno or 1
             msg = ex.msg or str(ex)
-            self.errors = [_validator_error(MessageCode.PYTHON_SYNTAX_ERROR, lineno, message=msg)]
+            self.errors = [
+                _validator_error(MessageCode.PYTHON_SYNTAX_ERROR, lineno, message=msg)
+            ]
 
 
 # ---------------------------------------------------------------------------
@@ -366,7 +380,9 @@ class AcceptFieldValue:
                 )
             ]
             return
-        if not (isinstance(tree.body, ast.Constant) and isinstance(tree.body.value, str)):
+        if not (
+            isinstance(tree.body, ast.Constant) and isinstance(tree.body.value, str)
+        ):
             self.errors = [
                 (
                     f"{self._HINT}. Got a {type(tree.body).__name__} expression instead of a string literal.",
@@ -395,16 +411,30 @@ class ValidationCode(PythonText):
                     calls_validation_error = True
                     break
         if not calls_validation_error:
-            has_assignment = any(isinstance(n, (ast.Assign, ast.AugAssign, ast.AnnAssign)) for n in ast.walk(tree))
-            has_define_call = any(
-                isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id == "define"
+            has_assignment = any(
+                isinstance(n, (ast.Assign, ast.AugAssign, ast.AnnAssign))
                 for n in ast.walk(tree)
             )
-            has_expr_call = any(isinstance(n, ast.Expr) and isinstance(n.value, ast.Call) for n in ast.walk(tree))
-            has_raise_or_assert = any(isinstance(n, (ast.Raise, ast.Assert)) for n in ast.walk(tree))
-            if (has_assignment or has_define_call or has_expr_call) and not has_raise_or_assert:
+            has_define_call = any(
+                isinstance(n, ast.Call)
+                and isinstance(n.func, ast.Name)
+                and n.func.id == "define"
+                for n in ast.walk(tree)
+            )
+            has_expr_call = any(
+                isinstance(n, ast.Expr) and isinstance(n.value, ast.Call)
+                for n in ast.walk(tree)
+            )
+            has_raise_or_assert = any(
+                isinstance(n, (ast.Raise, ast.Assert)) for n in ast.walk(tree)
+            )
+            if (
+                has_assignment or has_define_call or has_expr_call
+            ) and not has_raise_or_assert:
                 return
-            self.errors.append(_validator_error(MessageCode.VALIDATION_CODE_MISSING_VALIDATION_ERROR))
+            self.errors.append(
+                _validator_error(MessageCode.VALIDATION_CODE_MISSING_VALIDATION_ERROR)
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -484,7 +514,11 @@ class JSShowIf:
             if isinstance(node, dict):
                 if node.get("type") == "CallExpression":
                     callee = node.get("callee")
-                    if isinstance(callee, dict) and callee.get("type") == "Identifier" and callee.get("name") == "val":
+                    if (
+                        isinstance(callee, dict)
+                        and callee.get("type") == "Identifier"
+                        and callee.get("name") == "val"
+                    ):
                         val_calls.append(node)
                 stack.extend(v for v in node.values() if isinstance(v, (dict, list)))
             elif isinstance(node, list):
@@ -508,7 +542,9 @@ class JSShowIf:
             )
             if valid_arg:
                 var_name = args[0].get("value")
-                if self.screen_variables and not self._references_screen_variable(var_name):
+                if self.screen_variables and not self._references_screen_variable(
+                    var_name
+                ):
                     caveat = (
                         " (unable to fully validate screen variables because this screen uses fields: code)"
                         if self._has_dynamic_fields
@@ -527,7 +563,11 @@ class JSShowIf:
             bad_arg = "<missing>"
             if args:
                 first_arg = args[0]
-                bad_arg = first_arg.get("raw") or first_arg.get("name") or first_arg.get("type", "<unknown>")
+                bad_arg = (
+                    first_arg.get("raw")
+                    or first_arg.get("name")
+                    or first_arg.get("type", "<unknown>")
+                )
             self.errors.append(
                 _validator_error(
                     MessageCode.JS_VAL_ARG_NOT_QUOTED,
@@ -556,7 +596,9 @@ class ShowIf:
             if ":" not in x and " " not in x:
                 pass
             elif x.startswith("variable:") or x.startswith("code:"):
-                self.errors.append(_validator_error(MessageCode.SHOW_IF_MALFORMED, value=x))
+                self.errors.append(
+                    _validator_error(MessageCode.SHOW_IF_MALFORMED, value=x)
+                )
         elif isinstance(x, dict):
             if "variable" in x:
                 pass
@@ -601,7 +643,9 @@ class DAFields:
         self.has_dynamic_fields_code = False
         self.runtime_options = runtime_options or RuntimeOptions()
         if isinstance(x, dict):
-            content_keys = {key for key in x.keys() if not _is_internal_metadata_key(key)}
+            content_keys = {
+                key for key in x.keys() if not _is_internal_metadata_key(key)
+            }
             if content_keys == {"code"}:
                 if not isinstance(x.get("code"), str):
                     self.errors = [
@@ -644,15 +688,17 @@ class DAFields:
         return [
             key
             for key in field_item
-            if isinstance(key, str) and not _is_internal_metadata_key(key) and key not in self._reserved_field_keys
+            if isinstance(key, str)
+            and not _is_internal_metadata_key(key)
+            and key not in self._reserved_field_keys
         ]
 
     def _is_shorthand_label_key(self, field_item, field_key):
         if not isinstance(field_item, dict):
             return False
-        if (isinstance(field_key, str) and field_key in self._reserved_field_keys) or _is_internal_metadata_key(
-            field_key
-        ):
+        if (
+            isinstance(field_key, str) and field_key in self._reserved_field_keys
+        ) or _is_internal_metadata_key(field_key):
             return False
         if "field" in field_item or "label" in field_item:
             return False
@@ -703,7 +749,9 @@ class DAFields:
 
     def _validate_field_item_structure(self, field_item):
         shorthand_keys = self._shorthand_label_keys(field_item)
-        presentation_keys = [key for key in _FIELD_PRESENTATION_KEYS if key in field_item]
+        presentation_keys = [
+            key for key in _FIELD_PRESENTATION_KEYS if key in field_item
+        ]
         if len(presentation_keys) > 1:
             self.errors.append(
                 _validator_error(
@@ -721,7 +769,11 @@ class DAFields:
             )
 
         input_type = field_item.get("input type")
-        if "field" in field_item and "label" not in field_item and input_type != "hidden":
+        if (
+            "field" in field_item
+            and "label" not in field_item
+            and input_type != "hidden"
+        ):
             self.errors.append(
                 _validator_error(
                     MessageCode.FIELD_ITEM_MISSING_LABEL,
@@ -764,7 +816,9 @@ class DAFields:
         if "field" in field_item:
             self._validate_field_target(field_item, "field")
         elif shorthand_keys:
-            self._validate_field_target(field_item, shorthand_keys[0], label_key=shorthand_keys[0])
+            self._validate_field_target(
+                field_item, shorthand_keys[0], label_key=shorthand_keys[0]
+            )
 
     def _validate_field_item_configuration(self, field_item):
         dt_validator = FieldDatatypeValidator(field_item)
@@ -775,7 +829,9 @@ class DAFields:
             self.errors.append(err)
 
         datatype = field_item.get("datatype")
-        datatype_normalized = datatype.strip().lower() if isinstance(datatype, str) else None
+        datatype_normalized = (
+            datatype.strip().lower() if isinstance(datatype, str) else None
+        )
 
         if "exclude" in field_item and isinstance(field_item["exclude"], Mapping):
             self.errors.append(
@@ -786,7 +842,8 @@ class DAFields:
             )
 
         if (
-            datatype_normalized in {"object", "object_radio", "object_multiselect", "object_checkboxes"}
+            datatype_normalized
+            in {"object", "object_radio", "object_multiselect", "object_checkboxes"}
             and "default" in field_item
             and not isinstance(field_item["default"], (list, str))
         ):
@@ -797,7 +854,9 @@ class DAFields:
                 )
             )
 
-    def _validate_python_modifier(self, modifier_key, modifier_value, field_item, screen_variables):
+    def _validate_python_modifier(
+        self, modifier_key, modifier_value, field_item, screen_variables
+    ):
         def references_screen_variable(var_expr):
             if not isinstance(var_expr, str):
                 return False
@@ -806,12 +865,14 @@ class DAFields:
                 return True
             for candidate in candidates:
                 if candidate.startswith("x.") and any(
-                    screen_var.endswith("." + candidate.split(".", 1)[1]) for screen_var in screen_variables
+                    screen_var.endswith("." + candidate.split(".", 1)[1])
+                    for screen_var in screen_variables
                 ):
                     return True
             for screen_var in screen_variables:
                 if screen_var.startswith("x.") and any(
-                    candidate.endswith("." + screen_var.split(".", 1)[1]) for candidate in candidates
+                    candidate.endswith("." + screen_var.split(".", 1)[1])
+                    for candidate in candidates
                 ):
                     return True
             return False
@@ -850,8 +911,14 @@ class DAFields:
                             error=err_msg.lower(),
                         )
                     )
-                if modifier_key == "show if" and isinstance(code_text, str) and not validator.errors:
-                    same_screen_refs = self._find_screen_variable_references_in_code(code_text, screen_variables)
+                if (
+                    modifier_key == "show if"
+                    and isinstance(code_text, str)
+                    and not validator.errors
+                ):
+                    same_screen_refs = self._find_screen_variable_references_in_code(
+                        code_text, screen_variables
+                    )
                     if same_screen_refs:
                         refs = ", ".join(sorted(same_screen_refs))
                         self.errors.append(
@@ -898,22 +965,25 @@ class DAFields:
                 matches.add(screen_var)
         return matches
 
-    def _validate_condition_and_validation_keys(self, field_item: dict[str, Any]) -> None:
+    def _validate_condition_and_validation_keys(
+        self, field_item: dict[str, Any]
+    ) -> None:
         cond_validator = FieldConditionValidator(field_item)
         for err in cond_validator.errors:
             self.errors.append(err)
 
     def _validate_object_field_choices(self, field_item):
         datatype = field_item.get("datatype")
-        is_object_style_field = (isinstance(datatype, str) and datatype.lower().startswith("object")) or any(
-            key in field_item for key in self.object_field_keys
-        )
+        is_object_style_field = (
+            isinstance(datatype, str) and datatype.lower().startswith("object")
+        ) or any(key in field_item for key in self.object_field_keys)
         if not is_object_style_field:
             return
 
         choices_value = field_item.get("choices")
         if isinstance(choices_value, Mapping) and (
-            {key for key in choices_value.keys() if not _is_internal_metadata_key(key)} == {"code"}
+            {key for key in choices_value.keys() if not _is_internal_metadata_key(key)}
+            == {"code"}
         ):
             self.errors.append(
                 _validator_error(
@@ -923,7 +993,11 @@ class DAFields:
             )
 
     def _field_item_has_content_target(self, field_item: dict[str, Any]) -> bool:
-        content_keys = {key for key in field_item.keys() if isinstance(key, str) and not _is_internal_metadata_key(key)}
+        content_keys = {
+            key
+            for key in field_item.keys()
+            if isinstance(key, str) and not _is_internal_metadata_key(key)
+        }
         if content_keys == {"code"}:
             return True
         if content_keys & {"note", "html", "raw html"}:
@@ -934,7 +1008,14 @@ class DAFields:
         self.has_dynamic_fields_code = any(
             isinstance(field_item, dict)
             and "code" in field_item
-            and len({key for key in field_item.keys() if key != "code" and not _is_internal_metadata_key(key)}) == 0
+            and len(
+                {
+                    key
+                    for key in field_item.keys()
+                    if key != "code" and not _is_internal_metadata_key(key)
+                }
+            )
+            == 0
             for field_item in fields_list
         )
         screen_variables = set()
@@ -942,7 +1023,9 @@ class DAFields:
             if not isinstance(field_item, dict):
                 continue
             field_var_name = self._extract_field_name(field_item)
-            if field_var_name and not _invalid_field_variable_name(field_var_name.strip()):
+            if field_var_name and not _invalid_field_variable_name(
+                field_var_name.strip()
+            ):
                 screen_variables.add(field_var_name)
 
         for index, field_item in enumerate(fields_list):
@@ -1023,7 +1106,9 @@ class DAFields:
     def _validate_field_py_modifiers(self, field_item, screen_variables):
         for py_key in self.py_modifier_keys:
             if py_key in field_item:
-                self._validate_python_modifier(py_key, field_item[py_key], field_item, screen_variables)
+                self._validate_python_modifier(
+                    py_key, field_item[py_key], field_item, screen_variables
+                )
 
     def _validate_field_js_modifiers(self, field_item, screen_variables):
         for js_key in self.js_modifier_keys:

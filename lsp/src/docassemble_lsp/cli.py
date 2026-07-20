@@ -37,7 +37,10 @@ def _is_code_list_token(token: str, *, allow_all: bool) -> bool:
     parts = [part.strip() for part in token.split(",") if part.strip()]
     if not parts:
         return False
-    return all((allow_all and part.lower() == "all") or _CODE_TOKEN_RE.fullmatch(part) for part in parts)
+    return all(
+        (allow_all and part.lower() == "all") or _CODE_TOKEN_RE.fullmatch(part)
+        for part in parts
+    )
 
 
 def _normalize_multi_value_code_options(argv: Sequence[str] | None) -> list[str] | None:
@@ -81,10 +84,14 @@ def _materialize_args(args: Iterable[str] | None) -> list[str] | None:
 
 class _CliArgumentParser(argparse.ArgumentParser):
     @overload
-    def parse_args(self, args: Iterable[str] | None = None, namespace: None = None) -> argparse.Namespace: ...
+    def parse_args(
+        self, args: Iterable[str] | None = None, namespace: None = None
+    ) -> argparse.Namespace: ...
 
     @overload
-    def parse_args(self, args: Iterable[str] | None, namespace: _NamespaceT) -> _NamespaceT: ...
+    def parse_args(
+        self, args: Iterable[str] | None, namespace: _NamespaceT
+    ) -> _NamespaceT: ...
 
     @overload
     def parse_args(self, *, namespace: _NamespaceT) -> _NamespaceT: ...
@@ -101,10 +108,14 @@ class _CliArgumentParser(argparse.ArgumentParser):
     ) -> tuple[argparse.Namespace, list[str]]: ...
 
     @overload
-    def parse_known_args(self, args: Iterable[str] | None, namespace: _NamespaceT) -> tuple[_NamespaceT, list[str]]: ...
+    def parse_known_args(
+        self, args: Iterable[str] | None, namespace: _NamespaceT
+    ) -> tuple[_NamespaceT, list[str]]: ...
 
     @overload
-    def parse_known_args(self, *, namespace: _NamespaceT) -> tuple[_NamespaceT, list[str]]: ...
+    def parse_known_args(
+        self, *, namespace: _NamespaceT
+    ) -> tuple[_NamespaceT, list[str]]: ...
 
     def parse_known_args(
         self, args: Iterable[str] | None = None, namespace: _NamespaceT | None = None
@@ -159,7 +170,9 @@ def _config_cli_args_for_argv(argv: Sequence[str]) -> tuple[str, ...]:
     return tuple(cli_args)
 
 
-def _merge_config_args(raw_argv: Sequence[str], config_args: Sequence[str]) -> list[str]:
+def _merge_config_args(
+    raw_argv: Sequence[str], config_args: Sequence[str]
+) -> list[str]:
     if not raw_argv or not config_args:
         return list(raw_argv)
     return [raw_argv[0], *config_args, *raw_argv[1:]]
@@ -183,7 +196,9 @@ def _parsed_code_args(values: Sequence[str] | None) -> frozenset[str]:
 
 def _runtime_options_from_args(args: argparse.Namespace) -> RuntimeOptions:
     accessibility_widgets = frozenset(
-        widget.strip().lower() for widget in getattr(args, "accessibility_error_on_widgets", []) if widget.strip()
+        widget.strip().lower()
+        for widget in getattr(args, "accessibility_error_on_widgets", [])
+        if widget.strip()
     )
     return RuntimeOptions(
         accessibility_error_on_widgets=accessibility_widgets,
@@ -211,7 +226,10 @@ def _message_severity(code: str) -> str:
 
 
 def _codes_command(_args: argparse.Namespace) -> int:
-    rows = [(code, _message_severity(code), MESSAGE_DEFINITIONS[code].summary) for code in sorted(MESSAGE_DEFINITIONS)]
+    rows = [
+        (code, _message_severity(code), MESSAGE_DEFINITIONS[code].summary)
+        for code in sorted(MESSAGE_DEFINITIONS)
+    ]
     code_width = max(len(code) for code, _, _ in rows)
     severity_width = max(len(severity) for _, severity, _ in rows)
 
@@ -244,10 +262,14 @@ def _check_command(args: argparse.Namespace) -> int:
 
         working = original
         if args.fix:
-            fix_result = fix_text(working, path=str(path), runtime_options=runtime_options)
+            fix_result = fix_text(
+                working, path=str(path), runtime_options=runtime_options
+            )
             working = fix_result.text
 
-        diagnostics = analyze_text(working, path=str(path), runtime_options=runtime_options)
+        diagnostics = analyze_text(
+            working, path=str(path), runtime_options=runtime_options
+        )
         error_findings = [d for d in diagnostics if d.severity == "error"]
 
         should_format = (args.format_on_success and not error_findings) or args.check
@@ -270,7 +292,9 @@ def _check_command(args: argparse.Namespace) -> int:
             entry = diagnostic_to_dict(diagnostic)
             entry["path"] = str(path)
             results.append(entry)
-            if diagnostic.severity == "error" or (args.strict and diagnostic.severity in {"warning", "convention"}):
+            if diagnostic.severity == "error" or (
+                args.strict and diagnostic.severity in {"warning", "convention"}
+            ):
                 has_failure = True
             if not args.quiet and not args.json:
                 _print_diagnostic(path, diagnostic)
@@ -315,18 +339,28 @@ def build_parser() -> argparse.ArgumentParser:
     parser = _CliArgumentParser(prog="docassemble-lsp")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    codes_parser = subparsers.add_parser("codes", help="List diagnostic codes, severities, and summaries")
+    codes_parser = subparsers.add_parser(
+        "codes", help="List diagnostic codes, severities, and summaries"
+    )
     codes_parser.set_defaults(func=_codes_command)
 
-    check_parser = subparsers.add_parser("check", help="Validate Docassemble YAML files")
-    check_parser.add_argument("paths", nargs="*", help="Files or directories to validate")
-    check_parser.add_argument("--json", action="store_true", help="Emit diagnostics as JSON")
+    check_parser = subparsers.add_parser(
+        "check", help="Validate Docassemble YAML files"
+    )
+    check_parser.add_argument(
+        "paths", nargs="*", help="Files or directories to validate"
+    )
+    check_parser.add_argument(
+        "--json", action="store_true", help="Emit diagnostics as JSON"
+    )
     check_parser.add_argument(
         "--no-warnings",
         action="store_true",
         help="Suppress warning diagnostics; only show errors",
     )
-    check_parser.add_argument("-q", "--quiet", action="store_true", help="Suppress text output")
+    check_parser.add_argument(
+        "-q", "--quiet", action="store_true", help="Suppress text output"
+    )
     check_parser.add_argument(
         "--strict",
         action="store_true",
@@ -389,14 +423,20 @@ def build_parser() -> argparse.ArgumentParser:
     )
     check_parser.set_defaults(func=_check_command)
 
-    format_parser = subparsers.add_parser("format", help="Format embedded Python blocks")
-    format_parser.add_argument("paths", nargs="*", help="Files or directories to format")
+    format_parser = subparsers.add_parser(
+        "format", help="Format embedded Python blocks"
+    )
+    format_parser.add_argument(
+        "paths", nargs="*", help="Files or directories to format"
+    )
     format_parser.add_argument(
         "--check",
         action="store_true",
         help="Exit non-zero if files would change without writing edits",
     )
-    format_parser.add_argument("--quiet", action="store_true", help="Suppress text output")
+    format_parser.add_argument(
+        "--quiet", action="store_true", help="Suppress text output"
+    )
     format_parser.add_argument(
         "--check-all",
         action="store_true",
@@ -473,5 +513,7 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: Sequence[str] | None = None) -> int:
     raw_argv = list(argv) if argv is not None else sys.argv[1:]
     parser = build_parser()
-    args = parser.parse_args(_merge_config_args(raw_argv, _config_cli_args_for_argv(raw_argv)))
+    args = parser.parse_args(
+        _merge_config_args(raw_argv, _config_cli_args_for_argv(raw_argv))
+    )
     return int(args.func(args))

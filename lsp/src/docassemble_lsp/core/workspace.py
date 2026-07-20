@@ -80,12 +80,18 @@ class WorkspaceYamlSources:
     def as_candidate_pairs(self) -> list[tuple[Path, str]]:
         return [(source.path, source.text) for source in self.sources]
 
-    def with_current_document(self, current_path: Path, current_source: str) -> WorkspaceYamlSources:
+    def with_current_document(
+        self, current_path: Path, current_source: str
+    ) -> WorkspaceYamlSources:
         resolved_current_path = current_path.resolve()
         return WorkspaceYamlSources(
             (
                 YamlSource(resolved_current_path, current_source),
-                *(source for source in self.sources if source.path != resolved_current_path),
+                *(
+                    source
+                    for source in self.sources
+                    if source.path != resolved_current_path
+                ),
             )
         )
 
@@ -108,7 +114,9 @@ class WorkspaceIndex:
     all_non_exception_class_names: frozenset[str] = frozenset()
     all_da_object_subclass_names: frozenset[str] = frozenset()
     all_module_paths: frozenset[Path] = frozenset()
-    symbol_registry: dict[str, frozenset[DefinitionTarget]] = field(default_factory=dict)
+    symbol_registry: dict[str, frozenset[DefinitionTarget]] = field(
+        default_factory=dict
+    )
     docstring_registry: dict[str, str] = field(default_factory=dict)
     all_event_names: frozenset[str] = frozenset()
     all_def_names: frozenset[str] = frozenset()
@@ -122,7 +130,9 @@ class WorkspaceIndex:
 
     @classmethod
     def empty(cls) -> WorkspaceIndex:
-        return cls(yaml_sources=WorkspaceYamlSources(()), facts_by_path={}, search_roots=())
+        return cls(
+            yaml_sources=WorkspaceYamlSources(()), facts_by_path={}, search_roots=()
+        )
 
     @classmethod
     def empty_for_roots(cls, search_roots: tuple[Path, ...] = ()) -> WorkspaceIndex:
@@ -148,10 +158,17 @@ class WorkspaceIndex:
             current_source=current_source,
             overlays=overlays,
         )
-        package_root = detect_docassemble_package(resolved_search_roots[0]) if resolved_search_roots else None
+        package_root = (
+            detect_docassemble_package(resolved_search_roots[0])
+            if resolved_search_roots
+            else None
+        )
         return cls(
             yaml_sources=yaml_sources,
-            facts_by_path={source.path: tuple(build_document_facts(source.text)) for source in yaml_sources.sources},
+            facts_by_path={
+                source.path: tuple(build_document_facts(source.text))
+                for source in yaml_sources.sources
+            },
             search_roots=resolved_search_roots,
             package_root=package_root,
         )
@@ -189,7 +206,10 @@ class WorkspaceIndex:
     def as_document_fact_entries(
         self,
     ) -> list[tuple[Path, str, tuple[DocumentFact, ...]]]:
-        return [(source.path, source.text, self.document_facts(source.path)) for source in self.yaml_sources.sources]
+        return [
+            (source.path, source.text, self.document_facts(source.path))
+            for source in self.yaml_sources.sources
+        ]
 
     def templates_dir_for(self, path: Path) -> Path | None:
         resolved = path.resolve()
@@ -206,10 +226,15 @@ class WorkspaceIndex:
         current_path: Path,
         current_source: str,
     ) -> WorkspaceIndex:
-        yaml_sources = self.yaml_sources.with_current_document(current_path, current_source)
+        yaml_sources = self.yaml_sources.with_current_document(
+            current_path, current_source
+        )
         return WorkspaceIndex(
             yaml_sources=yaml_sources,
-            facts_by_path={source.path: tuple(build_document_facts(source.text)) for source in yaml_sources.sources},
+            facts_by_path={
+                source.path: tuple(build_document_facts(source.text))
+                for source in yaml_sources.sources
+            },
             search_roots=self.search_roots,
             package_root=self.package_root,
             all_custom_datatype_names=self.all_custom_datatype_names,

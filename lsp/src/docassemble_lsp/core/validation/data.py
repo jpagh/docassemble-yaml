@@ -29,7 +29,9 @@ def validate_data_block(
             errors.append(
                 _yaml_error(
                     code=MessageCode.DATA_TYPE,
-                    line_number=_absolute_document_line(line_number, _lc_key_line(doc, data_key)),
+                    line_number=_absolute_document_line(
+                        line_number, _lc_key_line(doc, data_key)
+                    ),
                     file_name=input_file,
                 )
             )
@@ -39,7 +41,9 @@ def validate_data_block(
             errors.append(
                 _yaml_error(
                     code=MessageCode.DATA_VARIABLE_NAME_TYPE,
-                    line_number=_absolute_document_line(line_number, _lc_key_line(doc, var_name_key)),
+                    line_number=_absolute_document_line(
+                        line_number, _lc_key_line(doc, var_name_key)
+                    ),
                     file_name=input_file,
                 )
             )
@@ -50,7 +54,9 @@ def validate_data_block(
                 errors.append(
                     _yaml_error(
                         code=MessageCode.DATA_USE_OBJECTS_TYPE,
-                        line_number=_absolute_document_line(line_number, _lc_key_line(doc, uo_key)),
+                        line_number=_absolute_document_line(
+                            line_number, _lc_key_line(doc, uo_key)
+                        ),
                         file_name=input_file,
                     )
                 )

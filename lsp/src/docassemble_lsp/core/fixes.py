@@ -17,7 +17,9 @@ from docassemble_lsp.core.yaml_shared import _BLOCK_SCALAR_MARKERS
 _YAML_KEY_RE = re.compile(r"^(\s*)(?:-\s*)?([^:#][^:]*?)\s*:")
 _FIELD_LABEL_SHORTHAND_RE = re.compile(r"^(\s*)-\s*([^:]+?)\s*:\s*(.*?)\s*(#.*)?$")
 _INPUT_TYPE_DATATYPE_RE = re.compile(
-    r"^(\s*)datatype(\s*:\s*)(" + "|".join(sorted(INPUT_TYPE_DATATYPES)) + r")(\s*(?:#.*)?)$",
+    r"^(\s*)datatype(\s*:\s*)("
+    + "|".join(sorted(INPUT_TYPE_DATATYPES))
+    + r")(\s*(?:#.*)?)$",
     re.IGNORECASE,
 )
 
@@ -74,7 +76,9 @@ def _suggest_known_key_replacement(key_name: str) -> str | None:
     return matches[0]
 
 
-def _field_label_shorthand_fixes(source: str, diagnostic: Diagnostic, preferred_line: int | None) -> list[ResolvedFix]:
+def _field_label_shorthand_fixes(
+    source: str, diagnostic: Diagnostic, preferred_line: int | None
+) -> list[ResolvedFix]:
     del preferred_line
     if diagnostic.code != "C102":
         return []
@@ -110,11 +114,15 @@ def _field_label_shorthand_fixes(source: str, diagnostic: Diagnostic, preferred_
     ]
 
 
-def _unknown_key_fixes(source: str, diagnostic: Diagnostic, preferred_line: int | None) -> list[ResolvedFix]:
+def _unknown_key_fixes(
+    source: str, diagnostic: Diagnostic, preferred_line: int | None
+) -> list[ResolvedFix]:
     if diagnostic.code != "E301":
         return []
 
-    line_index = preferred_line if preferred_line is not None else max(diagnostic.line - 1, 0)
+    line_index = (
+        preferred_line if preferred_line is not None else max(diagnostic.line - 1, 0)
+    )
     key_range = _line_key_range(source, line_index)
     if key_range is None:
         return []
@@ -141,7 +149,9 @@ def _unknown_key_fixes(source: str, diagnostic: Diagnostic, preferred_line: int 
     ]
 
 
-def _input_type_datatype_fixes(source: str, diagnostic: Diagnostic, preferred_line: int | None) -> list[ResolvedFix]:
+def _input_type_datatype_fixes(
+    source: str, diagnostic: Diagnostic, preferred_line: int | None
+) -> list[ResolvedFix]:
     del preferred_line
     if diagnostic.code != "C103":
         return []
@@ -279,7 +289,9 @@ def _field_target_without_label_fixes(
 _TABLE_REQUIRED_KEYS = frozenset({"table", "rows", "columns"})
 
 
-def _table_missing_keys_fixes(source: str, diagnostic: Diagnostic, preferred_line: int | None) -> list[ResolvedFix]:
+def _table_missing_keys_fixes(
+    source: str, diagnostic: Diagnostic, preferred_line: int | None
+) -> list[ResolvedFix]:
     """E921: table block missing one or more of table/rows/columns."""
     del preferred_line
     if diagnostic.code != "E921":
@@ -335,7 +347,9 @@ class _FieldItemBoundary:
     content_indent: str
 
 
-def _find_field_item_bounds(source: str, diagnostic_line: int) -> _FieldItemBoundary | None:
+def _find_field_item_bounds(
+    source: str, diagnostic_line: int
+) -> _FieldItemBoundary | None:
     """Find the last content line and indent for the field item containing *diagnostic_line* (1-indexed)."""
     lines = _document_lines(source)
     line_index = min(max(diagnostic_line - 1, 0), len(lines) - 1)
@@ -372,7 +386,9 @@ def _find_field_item_bounds(source: str, diagnostic_line: int) -> _FieldItemBoun
     )
 
 
-def _missing_choices_fixes(source: str, diagnostic: Diagnostic, preferred_line: int | None) -> list[ResolvedFix]:
+def _missing_choices_fixes(
+    source: str, diagnostic: Diagnostic, preferred_line: int | None
+) -> list[ResolvedFix]:
     del preferred_line
     if diagnostic.code != "E419":
         return []
@@ -385,8 +401,12 @@ def _missing_choices_fixes(source: str, diagnostic: Diagnostic, preferred_line: 
     code_rule = get_property_rule("fields_item", "code")
     if choices_rule is None or code_rule is None:
         return []
-    choices_insert = format_property_insert_text("choices", choices_rule, indent=bounds.content_indent)
-    code_insert = format_property_insert_text("code", code_rule, indent=bounds.content_indent)
+    choices_insert = format_property_insert_text(
+        "choices", choices_rule, indent=bounds.content_indent
+    )
+    code_insert = format_property_insert_text(
+        "code", code_rule, indent=bounds.content_indent
+    )
 
     return [
         ResolvedFix(
@@ -418,7 +438,9 @@ def _missing_choices_fixes(source: str, diagnostic: Diagnostic, preferred_line: 
     ]
 
 
-def _ajax_missing_action_fixes(source: str, diagnostic: Diagnostic, preferred_line: int | None) -> list[ResolvedFix]:
+def _ajax_missing_action_fixes(
+    source: str, diagnostic: Diagnostic, preferred_line: int | None
+) -> list[ResolvedFix]:
     del preferred_line
     if diagnostic.code != "E420":
         return []
@@ -430,7 +452,9 @@ def _ajax_missing_action_fixes(source: str, diagnostic: Diagnostic, preferred_li
     action_rule = get_property_rule("fields_item", "action")
     if action_rule is None:
         return []
-    action_insert = format_property_insert_text("action", action_rule, indent=bounds.content_indent)
+    action_insert = format_property_insert_text(
+        "action", action_rule, indent=bounds.content_indent
+    )
 
     return [
         ResolvedFix(
@@ -449,7 +473,9 @@ def _ajax_missing_action_fixes(source: str, diagnostic: Diagnostic, preferred_li
     ]
 
 
-def _def_mako_missing_fixes(source: str, diagnostic: Diagnostic, preferred_line: int | None) -> list[ResolvedFix]:
+def _def_mako_missing_fixes(
+    source: str, diagnostic: Diagnostic, preferred_line: int | None
+) -> list[ResolvedFix]:
     """E934: def/mako block missing one of the paired keys."""
     del preferred_line
     if diagnostic.code != "E934":
@@ -515,7 +541,9 @@ def _def_mako_missing_fixes(source: str, diagnostic: Diagnostic, preferred_line:
     return fixes
 
 
-def _cross_doc_missing_file_fixes(source: str, diagnostic: Diagnostic, preferred_line: int | None) -> list[ResolvedFix]:
+def _cross_doc_missing_file_fixes(
+    source: str, diagnostic: Diagnostic, preferred_line: int | None
+) -> list[ResolvedFix]:
     del preferred_line
     if diagnostic.code != "W604":
         return []
@@ -593,8 +621,14 @@ def resolve_diagnostic_fixes(
     return deduped
 
 
-def resolve_fix_all_fixes(source: str, diagnostics: list[Diagnostic]) -> list[ResolvedFix]:
-    return [fix for fix in resolve_diagnostic_fixes(source, diagnostics) if fix.supports_fix_all]
+def resolve_fix_all_fixes(
+    source: str, diagnostics: list[Diagnostic]
+) -> list[ResolvedFix]:
+    return [
+        fix
+        for fix in resolve_diagnostic_fixes(source, diagnostics)
+        if fix.supports_fix_all
+    ]
 
 
 def _line_start_offsets(source: str) -> list[int]:
@@ -622,8 +656,12 @@ def apply_resolved_fixes(source: str, fixes: list[ResolvedFix]) -> FixResult:
 
     edits_with_offsets = []
     for fix in fixes:
-        start_offset = _position_to_offset(source, fix.edit.start_line, fix.edit.start_character)
-        end_offset = _position_to_offset(source, fix.edit.end_line, fix.edit.end_character)
+        start_offset = _position_to_offset(
+            source, fix.edit.start_line, fix.edit.start_character
+        )
+        end_offset = _position_to_offset(
+            source, fix.edit.end_line, fix.edit.end_character
+        )
         edits_with_offsets.append((start_offset, end_offset, fix))
 
     edits_with_offsets.sort(key=lambda item: (item[0], item[1]))
@@ -649,7 +687,11 @@ def fix_text(
     runtime_options: RuntimeOptions | None = None,
 ) -> FixResult:
     diagnostics = analyze_text(source, path=path, runtime_options=runtime_options)
-    cli_fixes = [fix for fix in resolve_diagnostic_fixes(source, diagnostics) if fix.supports_cli_fix]
+    cli_fixes = [
+        fix
+        for fix in resolve_diagnostic_fixes(source, diagnostics)
+        if fix.supports_cli_fix
+    ]
     return apply_resolved_fixes(source, cli_fixes)
 
 

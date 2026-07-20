@@ -56,7 +56,9 @@ class _SilentUndefined(jinja2.Undefined):
         return _SilentUndefined()
 
 
-def preprocess_jinja(content: str, *, input_file: str | None = None) -> tuple[str, list[JinjaError]]:
+def preprocess_jinja(
+    content: str, *, input_file: str | None = None
+) -> tuple[str, list[JinjaError]]:
     loader = None
     if input_file and input_file != "<string input>":
         parent = Path(input_file).expanduser().resolve().parent

@@ -11,7 +11,14 @@ from docassemble_lsp.core.validation_config import RuntimeOptions
 
 FIXTURES_DIR = Path(__file__).resolve().parent / "fixtures" / "regressions"
 PACKAGE_FIXTURES_DIR = Path(__file__).resolve().parent / "fixtures"
-DEMO_QUESTIONS_DIR = PACKAGE_FIXTURES_DIR / "demo_package" / "docassemble" / "demo" / "data" / "questions"
+DEMO_QUESTIONS_DIR = (
+    PACKAGE_FIXTURES_DIR
+    / "demo_package"
+    / "docassemble"
+    / "demo"
+    / "data"
+    / "questions"
+)
 
 
 def test_check_command_reports_errors_as_json(tmp_path: Path, capsys) -> None:
@@ -87,7 +94,9 @@ validation code: |
         encoding="utf-8",
     )
 
-    exit_code = main(["check", "--quiet", "--strict", "--conventions", "C101", str(source)])
+    exit_code = main(
+        ["check", "--quiet", "--strict", "--conventions", "C101", str(source)]
+    )
 
     assert exit_code == 1
 
@@ -113,7 +122,9 @@ def test_check_command_specific_convention_fails_in_strict_mode(tmp_path: Path) 
         encoding="utf-8",
     )
 
-    exit_code = main(["check", "--quiet", "--strict", "--conventions", "C102", str(source)])
+    exit_code = main(
+        ["check", "--quiet", "--strict", "--conventions", "C102", str(source)]
+    )
 
     assert exit_code == 1
 
@@ -152,7 +163,9 @@ def test_check_command_fix_rewrites_radio_datatype_with_choices_file(
         encoding="utf-8",
     )
 
-    exit_code = main(["check", "--quiet", "--strict", "--fix", "--conventions", "C103", str(source)])
+    exit_code = main(
+        ["check", "--quiet", "--strict", "--fix", "--conventions", "C103", str(source)]
+    )
 
     assert exit_code == 0
     assert source.read_text(encoding="utf-8") == (
@@ -222,7 +235,9 @@ def test_check_command_accepts_indent_arg(tmp_path: Path) -> None:
 
 def test_check_command_with_indent_in_config_does_not_error(tmp_path: Path) -> None:
     pyproject = tmp_path / "pyproject.toml"
-    pyproject.write_text('[tool.docassemble-lsp]\nargs = ["--indent", "4"]\n', encoding="utf-8")
+    pyproject.write_text(
+        '[tool.docassemble-lsp]\nargs = ["--indent", "4"]\n', encoding="utf-8"
+    )
     source = tmp_path / "test.yml"
     source.write_text("question: Hi\n", encoding="utf-8")
     exit_code = main(["check", "--quiet", str(source)])
@@ -304,7 +319,9 @@ def test_check_command_merges_conventions_from_args_and_pyproject(
         encoding="utf-8",
     )
 
-    exit_code = main(["check", "--quiet", "--strict", "--conventions", "C103", str(source)])
+    exit_code = main(
+        ["check", "--quiet", "--strict", "--conventions", "C103", str(source)]
+    )
 
     assert exit_code == 1
 
@@ -316,7 +333,9 @@ def test_check_command_accepts_multiple_codes_after_single_flag(tmp_path: Path) 
         encoding="utf-8",
     )
 
-    exit_code = main(["check", "--quiet", "--strict", "--conventions", "C102", "C103", str(source)])
+    exit_code = main(
+        ["check", "--quiet", "--strict", "--conventions", "C102", "C103", str(source)]
+    )
 
     assert exit_code == 1
 
@@ -327,7 +346,9 @@ def test_check_command_accepts_multiple_ignore_codes_after_single_flag(
     source = tmp_path / "ignored.yml"
     source.write_text("---\nfoo: bar\n", encoding="utf-8")
 
-    exit_code = main(["check", "--quiet", "--ignore-codes", "E301", "E306", str(source)])
+    exit_code = main(
+        ["check", "--quiet", "--ignore-codes", "E301", "E306", str(source)]
+    )
 
     assert exit_code == 0
 
@@ -345,7 +366,9 @@ def test_check_command_accepts_multiple_ignore_codes_after_single_flag(
         "package_fixture_directory_passes",
     ],
 )
-def test_check_command_regression_fixture_exit_codes(argv: list[str], expected_exit_code: int) -> None:
+def test_check_command_regression_fixture_exit_codes(
+    argv: list[str], expected_exit_code: int
+) -> None:
     assert main(argv) == expected_exit_code
 
 
@@ -374,7 +397,10 @@ def test_codes_command_lists_code_summaries(capsys) -> None:
     output_lines = capsys.readouterr().out.splitlines()
     assert exit_code == 0
     assert "E101  error       Duplicate YAML key" in output_lines
-    assert "C101  convention  Prefer validation_error() over raise/assert in validation code" in output_lines
+    assert (
+        "C101  convention  Prefer validation_error() over raise/assert in validation code"
+        in output_lines
+    )
 
 
 def test_check_command_jinja_regression_fixtures_fail(tmp_path: Path) -> None:
@@ -461,21 +487,28 @@ def test_lsp_command_accepts_conventions_and_ignore_codes(
 ) -> None:
     parser = build_parser()
 
-    parsed = parser.parse_args(["lsp", "--conventions", "C102", "C103", "--ignore-codes", "E301", "W603"])
+    parsed = parser.parse_args(
+        ["lsp", "--conventions", "C102", "C103", "--ignore-codes", "E301", "W603"]
+    )
 
     assert parsed.conventions == ["C102,C103"]
     assert parsed.ignore_codes == ["E301,W603"]
 
     captured: dict[str, object] = {}
 
-    def fake_run_server(*, runtime_options=None, formatter_config=None, log_level="WARNING"):
+    def fake_run_server(
+        *, runtime_options=None, formatter_config=None, log_level="WARNING"
+    ):
         captured["runtime_options"] = runtime_options
         captured["formatter_config"] = formatter_config
         return 23
 
     monkeypatch.setattr(cli, "run_server", fake_run_server)
 
-    assert main(["lsp", "--conventions", "C102", "C103", "--ignore-codes", "E301", "W603"]) == 23
+    assert (
+        main(["lsp", "--conventions", "C102", "C103", "--ignore-codes", "E301", "W603"])
+        == 23
+    )
     runtime_options = captured.get("runtime_options")
     assert isinstance(runtime_options, RuntimeOptions)
     assert runtime_options.enabled_conventions == frozenset({"C102", "C103"})
@@ -496,7 +529,9 @@ def test_lsp_command_accepts_convert_tabs_to_spaces(
 
     captured: dict[str, object] = {}
 
-    def fake_run_server(*, runtime_options=None, formatter_config=None, log_level="WARNING"):
+    def fake_run_server(
+        *, runtime_options=None, formatter_config=None, log_level="WARNING"
+    ):
         captured["runtime_options"] = runtime_options
         captured["formatter_config"] = formatter_config
         return 31
@@ -509,7 +544,9 @@ def test_lsp_command_accepts_convert_tabs_to_spaces(
     assert formatter_config.convert_tabs_to_spaces is True
 
 
-def test_lsp_command_reads_runtime_options_from_pyproject(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_lsp_command_reads_runtime_options_from_pyproject(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     pyproject = tmp_path / "pyproject.toml"
     pyproject.write_text(
         '[tool.docassemble-lsp]\nconventions = ["C102", "C103"]\nignore-codes = ["E301"]\n',
@@ -519,7 +556,9 @@ def test_lsp_command_reads_runtime_options_from_pyproject(monkeypatch: pytest.Mo
 
     captured: dict[str, object] = {}
 
-    def fake_run_server(*, runtime_options=None, formatter_config=None, log_level="WARNING"):
+    def fake_run_server(
+        *, runtime_options=None, formatter_config=None, log_level="WARNING"
+    ):
         captured["runtime_options"] = runtime_options
         captured["formatter_config"] = formatter_config
         return 29
@@ -548,7 +587,9 @@ def test_lsp_command_reads_convert_tabs_to_spaces_from_shared_args(
 
     captured: dict[str, object] = {}
 
-    def fake_run_server(*, runtime_options=None, formatter_config=None, log_level="WARNING"):
+    def fake_run_server(
+        *, runtime_options=None, formatter_config=None, log_level="WARNING"
+    ):
         captured["runtime_options"] = runtime_options
         captured["formatter_config"] = formatter_config
         return 37
@@ -578,7 +619,9 @@ def test_lsp_command_log_level_passed_to_run_server(
 ) -> None:
     captured: dict[str, object] = {}
 
-    def fake_run_server(*, runtime_options=None, formatter_config=None, log_level="WARNING"):
+    def fake_run_server(
+        *, runtime_options=None, formatter_config=None, log_level="WARNING"
+    ):
         captured["log_level"] = log_level
         return 0
 
@@ -605,7 +648,9 @@ def test_check_command_missing_file_returns_nonzero(tmp_path: Path) -> None:
     assert exit_code == 1
 
 
-def test_check_command_missing_file_reports_error_to_stderr(tmp_path: Path, capsys) -> None:
+def test_check_command_missing_file_reports_error_to_stderr(
+    tmp_path: Path, capsys
+) -> None:
     missing = str(tmp_path / "no_such_file.yml")
     exit_code = main(["check", missing])
     assert exit_code == 1
@@ -645,7 +690,9 @@ def test_format_command_malformed_file_returns_one(tmp_path: Path, capsys) -> No
     assert exit_code == 1
 
 
-def test_format_command_malformed_file_reports_error_to_stderr(tmp_path: Path, capsys) -> None:
+def test_format_command_malformed_file_reports_error_to_stderr(
+    tmp_path: Path, capsys
+) -> None:
     source = tmp_path / "bad.yml"
     source.write_text("---\nkey: [unclosed list\n", encoding="utf-8")
 
@@ -787,7 +834,9 @@ def test_check_command_check_dry_run_clean_file_is_zero(tmp_path: Path) -> None:
     assert exit_code == 0
 
 
-def test_check_command_fix_and_format_on_success_reads_file_once(tmp_path: Path, monkeypatch) -> None:
+def test_check_command_fix_and_format_on_success_reads_file_once(
+    tmp_path: Path, monkeypatch
+) -> None:
     source = tmp_path / "read_count.yml"
     source.write_text("---\ncode: |\n  x={'a':1}\n", encoding="utf-8")
 

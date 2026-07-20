@@ -42,7 +42,9 @@ def _resolved_local_target(current_path: Path, value: str) -> Path | None:
         target = (current_path.parent / value).resolve()
         return target if target.exists() else None
     except OSError as exc:
-        logger.warning("Local link resolution failed for %r from %s: %s", value, current_path, exc)
+        logger.warning(
+            "Local link resolution failed for %r from %s: %s", value, current_path, exc
+        )
         return None
 
 
@@ -55,9 +57,13 @@ def _resolved_package_qualified_target(
     if not value or ":" not in value:
         return None
     try:
-        return resolve_package_qualified_path_with_base(value, list(search_roots), relative_base)
+        return resolve_package_qualified_path_with_base(
+            value, list(search_roots), relative_base
+        )
     except OSError as exc:
-        logger.warning("Package-qualified link resolution failed for %r: %s", value, exc)
+        logger.warning(
+            "Package-qualified link resolution failed for %r: %s", value, exc
+        )
         return None
 
 
@@ -123,8 +129,12 @@ def _check_line_for_document_link(
             list_match.end(2),
         )
         if parent in _FILE_REFERENCE_LIST_PARENTS and ":" in value:
-            relative_base = "data/questions" if parent in _NON_ATTACHMENT_FILE_KEYS else None
-            target_path = _resolved_package_qualified_target(value, search_roots, relative_base=relative_base)
+            relative_base = (
+                "data/questions" if parent in _NON_ATTACHMENT_FILE_KEYS else None
+            )
+            target_path = _resolved_package_qualified_target(
+                value, search_roots, relative_base=relative_base
+            )
             if target_path is not None:
                 return DocumentLinkTarget(
                     line=line_index,
@@ -146,15 +156,25 @@ def _check_line_for_document_link(
             target_path = None
 
             # ── Fast path: known template in validated names cache ──
-            if key_name in _ATTACHMENT_FILE_KEYS and templates_dir is not None and value in template_file_names:
+            if (
+                key_name in _ATTACHMENT_FILE_KEYS
+                and templates_dir is not None
+                and value in template_file_names
+            ):
                 target_path = (templates_dir / value).resolve()
 
             # ── Slow path: fallback resolution ──
             if target_path is None:
                 target_path = _resolved_local_target(current_path, value)
                 if target_path is None and search_roots:
-                    relative_base = "data/questions" if key_name in _NON_ATTACHMENT_FILE_KEYS else None
-                    target_path = _resolved_package_qualified_target(value, search_roots, relative_base=relative_base)
+                    relative_base = (
+                        "data/questions"
+                        if key_name in _NON_ATTACHMENT_FILE_KEYS
+                        else None
+                    )
+                    target_path = _resolved_package_qualified_target(
+                        value, search_roots, relative_base=relative_base
+                    )
                 if target_path is None and templates_dir is not None:
                     if value in template_file_names:
                         target_path = (templates_dir / value).resolve()
@@ -183,8 +203,12 @@ def _check_line_for_document_link(
             and "." in key_name
         ):
             full_value = f"{key_name}:{value}"
-            relative_base = "data/questions" if parent in _NON_ATTACHMENT_FILE_KEYS else None
-            target_path = _resolved_package_qualified_target(full_value, search_roots, relative_base=relative_base)
+            relative_base = (
+                "data/questions" if parent in _NON_ATTACHMENT_FILE_KEYS else None
+            )
+            target_path = _resolved_package_qualified_target(
+                full_value, search_roots, relative_base=relative_base
+            )
             if target_path is not None:
                 return DocumentLinkTarget(
                     line=line_index,
@@ -218,11 +242,15 @@ def _check_line_for_document_link(
                 normalized = normalize_module_name(value, current_path)
                 if normalized is not None:
                     if workspace_module_paths is None:
-                        workspace_module_paths = _workspace_module_paths_by_name(workspace_index)
+                        workspace_module_paths = _workspace_module_paths_by_name(
+                            workspace_index
+                        )
                     target_path = workspace_module_paths.get(normalized)
                     if target_path is None:
                         try:
-                            target_path = resolve_python_module_path(normalized, current_path, workspace_index)
+                            target_path = resolve_python_module_path(
+                                normalized, current_path, workspace_index
+                            )
                         except Exception:
                             target_path = None
                     if target_path is not None:
@@ -264,7 +292,11 @@ def resolve_document_link_target_at(
     current_path = path_from_uri_or_path(uri_or_path)
     if current_path is None:
         return None
-    templates_dir = workspace_index.templates_dir_for(current_path) if workspace_index is not None else None
+    templates_dir = (
+        workspace_index.templates_dir_for(current_path)
+        if workspace_index is not None
+        else None
+    )
     if templates_dir is None:
         templates_dir = templates_dir_for_path(current_path)
     template_file_names = resolve_template_names(templates_dir)
@@ -282,7 +314,10 @@ def resolve_document_link_target_at(
         template_file_names=template_file_names,
         workspace_index=workspace_index,
     )
-    if target is not None and target.start_character <= character <= target.end_character:
+    if (
+        target is not None
+        and target.start_character <= character <= target.end_character
+    ):
         return target
     return None
 
@@ -298,7 +333,11 @@ def resolve_document_link_targets(
     if current_path is None:
         return []
 
-    templates_dir = workspace_index.templates_dir_for(current_path) if workspace_index is not None else None
+    templates_dir = (
+        workspace_index.templates_dir_for(current_path)
+        if workspace_index is not None
+        else None
+    )
     if templates_dir is None:
         templates_dir = templates_dir_for_path(current_path)
     template_file_names = resolve_template_names(templates_dir)
@@ -326,8 +365,12 @@ def resolve_document_link_targets(
             )
             parent = parents[line_index]
             if parent in _FILE_REFERENCE_LIST_PARENTS and ":" in value:
-                relative_base = "data/questions" if parent in _NON_ATTACHMENT_FILE_KEYS else None
-                target_path = _resolved_package_qualified_target(value, search_roots, relative_base=relative_base)
+                relative_base = (
+                    "data/questions" if parent in _NON_ATTACHMENT_FILE_KEYS else None
+                )
+                target_path = _resolved_package_qualified_target(
+                    value, search_roots, relative_base=relative_base
+                )
                 if target_path is not None:
                     _append_link(
                         links,
@@ -352,14 +395,22 @@ def resolve_document_link_targets(
                 target_path = None
 
                 # ── Fast path: known template in validated names cache ──
-                if key_name in _ATTACHMENT_FILE_KEYS and templates_dir is not None and value in template_file_names:
+                if (
+                    key_name in _ATTACHMENT_FILE_KEYS
+                    and templates_dir is not None
+                    and value in template_file_names
+                ):
                     target_path = (templates_dir / value).resolve()
 
                 # ── Slow path: fallback resolution ──
                 if target_path is None:
                     target_path = _resolved_local_target(current_path, value)
                     if target_path is None and search_roots:
-                        relative_base = "data/questions" if key_name in _NON_ATTACHMENT_FILE_KEYS else None
+                        relative_base = (
+                            "data/questions"
+                            if key_name in _NON_ATTACHMENT_FILE_KEYS
+                            else None
+                        )
                         target_path = _resolved_package_qualified_target(
                             value, search_roots, relative_base=relative_base
                         )
@@ -399,8 +450,12 @@ def resolve_document_link_targets(
                 and "." in key_name
             ):
                 full_value = f"{key_name}:{value}"
-                relative_base = "data/questions" if parent in _NON_ATTACHMENT_FILE_KEYS else None
-                target_path = _resolved_package_qualified_target(full_value, search_roots, relative_base=relative_base)
+                relative_base = (
+                    "data/questions" if parent in _NON_ATTACHMENT_FILE_KEYS else None
+                )
+                target_path = _resolved_package_qualified_target(
+                    full_value, search_roots, relative_base=relative_base
+                )
                 if target_path is not None:
                     _append_link(
                         links,
@@ -448,7 +503,9 @@ def resolve_document_link_targets(
                 )
                 if normalized is not None:
                     if workspace_module_paths is None:
-                        workspace_module_paths = _workspace_module_paths_by_name(workspace_index)
+                        workspace_module_paths = _workspace_module_paths_by_name(
+                            workspace_index
+                        )
                     target_path = workspace_module_paths.get(normalized)
                     if target_path is not None:
                         logger.debug(
@@ -458,7 +515,9 @@ def resolve_document_link_targets(
                         )
                     else:
                         try:
-                            target_path = resolve_python_module_path(normalized, current_path, workspace_index)
+                            target_path = resolve_python_module_path(
+                                normalized, current_path, workspace_index
+                            )
                         except Exception as exc:
                             logger.debug(
                                 "Module link resolution failed: normalized=%r error=%s",

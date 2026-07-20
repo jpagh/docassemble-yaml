@@ -47,12 +47,20 @@ def validate_table_block_in_doc(
     has_rows = "rows" in doc_keys_lower
     has_cols = "columns" in doc_keys_lower
 
-    if (has_table or has_rows or has_cols) and not (has_table and has_rows and has_cols):
-        table_key = doc_keys_lower.get("table") or doc_keys_lower.get("rows") or doc_keys_lower.get("columns")
+    if (has_table or has_rows or has_cols) and not (
+        has_table and has_rows and has_cols
+    ):
+        table_key = (
+            doc_keys_lower.get("table")
+            or doc_keys_lower.get("rows")
+            or doc_keys_lower.get("columns")
+        )
         errors.append(
             _yaml_error(
                 code=MessageCode.TABLE_REQUIRED_KEYS,
-                line_number=_absolute_document_line(line_number, _lc_key_line(doc, table_key)),
+                line_number=_absolute_document_line(
+                    line_number, _lc_key_line(doc, table_key)
+                ),
                 file_name=input_file,
             )
         )
@@ -64,7 +72,9 @@ def validate_table_block_in_doc(
             errors.append(
                 _yaml_error(
                     code=MessageCode.TABLE_ROWS_TYPE,
-                    line_number=_absolute_document_line(line_number, _lc_key_line(doc, rows_key)),
+                    line_number=_absolute_document_line(
+                        line_number, _lc_key_line(doc, rows_key)
+                    ),
                     file_name=input_file,
                 )
             )
@@ -76,7 +86,9 @@ def validate_table_block_in_doc(
             errors.append(
                 _yaml_error(
                     code=MessageCode.TABLE_COLUMNS_TYPE,
-                    line_number=_absolute_document_line(line_number, _lc_key_line(doc, cols_key)),
+                    line_number=_absolute_document_line(
+                        line_number, _lc_key_line(doc, cols_key)
+                    ),
                     file_name=input_file,
                 )
             )
@@ -86,7 +98,9 @@ def validate_table_block_in_doc(
                     errors.append(
                         _yaml_error(
                             code=MessageCode.TABLE_COLUMN_ITEM_TYPE,
-                            line_number=_absolute_document_line(line_number, _seq_item_line(cols_value, idx)),
+                            line_number=_absolute_document_line(
+                                line_number, _seq_item_line(cols_value, idx)
+                            ),
                             file_name=input_file,
                         )
                     )
@@ -96,7 +110,9 @@ def validate_table_block_in_doc(
                         errors.append(
                             _yaml_error(
                                 code=MessageCode.TABLE_COLUMN_HEADER_TYPE,
-                                line_number=_absolute_document_line(line_number, col_line),
+                                line_number=_absolute_document_line(
+                                    line_number, col_line
+                                ),
                                 file_name=input_file,
                             )
                         )
@@ -104,7 +120,9 @@ def validate_table_block_in_doc(
                         errors.append(
                             _yaml_error(
                                 code=MessageCode.TABLE_COLUMN_CELL_TYPE,
-                                line_number=_absolute_document_line(line_number, col_line),
+                                line_number=_absolute_document_line(
+                                    line_number, col_line
+                                ),
                                 file_name=input_file,
                             )
                         )

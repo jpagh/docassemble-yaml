@@ -80,7 +80,9 @@ def _clean_value(value: str) -> str:
     return _strip_quotes(_strip_inline_comment(value))
 
 
-def _clean_value_and_range(raw_value: str, start: int, end: int) -> tuple[str, int, int]:
+def _clean_value_and_range(
+    raw_value: str, start: int, end: int
+) -> tuple[str, int, int]:
     del end
     leading_offset = len(raw_value) - len(raw_value.lstrip())
     value_text = raw_value[leading_offset:]
@@ -91,7 +93,11 @@ def _clean_value_and_range(raw_value: str, start: int, end: int) -> tuple[str, i
 
     value_start = start + leading_offset
     value_end = value_start + len(value_text)
-    if len(value_text) >= 2 and value_text[0] == value_text[-1] and value_text[0] in {'"', "'"}:
+    if (
+        len(value_text) >= 2
+        and value_text[0] == value_text[-1]
+        and value_text[0] in {'"', "'"}
+    ):
         value_start += 1
         value_end -= 1
         value_text = value_text[1:-1]
@@ -205,7 +211,8 @@ def _block_scalar_region_from_key_line(
     non_empty_indents = [_line_indent(text) for text in content_lines if text.strip()]
     content_indent = min(non_empty_indents) if non_empty_indents else key_indent + 2
     text = "\n".join(
-        line[content_indent:] if line.strip() and len(line) >= content_indent else "" for line in content_lines
+        line[content_indent:] if line.strip() and len(line) >= content_indent else ""
+        for line in content_lines
     )
     return BlockScalarRegion(
         key_name=key_name,
@@ -228,7 +235,9 @@ def _line_col_to_offset(lines: list[str], line: int, character: int) -> int:
     return offsets[line] + character
 
 
-def _iter_mako_block_regions(source: str, *, include_incomplete: bool = True) -> list[MakoBlockRegion]:
+def _iter_mako_block_regions(
+    source: str, *, include_incomplete: bool = True
+) -> list[MakoBlockRegion]:
     regions: list[MakoBlockRegion] = []
     for match in _MAKO_BLOCK_RE.finditer(source):
         modifier = match.group(1)
@@ -247,7 +256,10 @@ def _iter_mako_block_regions(source: str, *, include_incomplete: bool = True) ->
 
     if include_incomplete:
         for match in _MAKO_BLOCK_OPEN_RE.finditer(source):
-            if any(r.content_start_offset <= match.start(2) < r.content_end_offset for r in regions):
+            if any(
+                r.content_start_offset <= match.start(2) < r.content_end_offset
+                for r in regions
+            ):
                 continue
             modifier = match.group(1)
             code = match.group(2)

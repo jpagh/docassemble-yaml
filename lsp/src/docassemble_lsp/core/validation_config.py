@@ -15,11 +15,15 @@ class RuntimeOptions:
     indent: int = 2
 
     def accessibility_options(self) -> AccessibilityLintOptions:
-        return AccessibilityLintOptions(error_on_widgets=self.accessibility_error_on_widgets)
+        return AccessibilityLintOptions(
+            error_on_widgets=self.accessibility_error_on_widgets
+        )
 
     def convention_enabled(self, code: str) -> bool:
         normalized = code.strip().upper()
-        return "ALL" in self.enabled_conventions or normalized in self.enabled_conventions
+        return (
+            "ALL" in self.enabled_conventions or normalized in self.enabled_conventions
+        )
 
     def allows_code(self, code: str | None) -> bool:
         if code is None:
@@ -35,7 +39,9 @@ class RuntimeOptions:
 
 
 def parse_ignore_codes(raw_codes: str) -> frozenset[str]:
-    return frozenset(code.strip().upper() for code in raw_codes.split(",") if code.strip())
+    return frozenset(
+        code.strip().upper() for code in raw_codes.split(",") if code.strip()
+    )
 
 
 def message_severity(code: str | None) -> Literal["error", "warning", "convention"]:

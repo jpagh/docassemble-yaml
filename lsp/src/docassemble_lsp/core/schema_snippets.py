@@ -18,10 +18,15 @@ def _line_at(source: str, line: int) -> str:
 
 
 def _is_list_item_context(source: str, line: int) -> bool:
-    return re.fullmatch(r"\s*-\s*(?:[\w/.-][\w /.-]*)?", _line_at(source, line)) is not None
+    return (
+        re.fullmatch(r"\s*-\s*(?:[\w/.-][\w /.-]*)?", _line_at(source, line))
+        is not None
+    )
 
 
-def shorthand_candidates(scope: CompletionScope, source: str, line: int) -> list[CompletionCandidate]:
+def shorthand_candidates(
+    scope: CompletionScope, source: str, line: int
+) -> list[CompletionCandidate]:
     line_text = _line_at(source, line)
     if not (_is_list_item_context(source, line) or re.fullmatch(r"\s*", line_text)):
         return []

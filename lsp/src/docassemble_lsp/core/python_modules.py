@@ -26,11 +26,15 @@ from docassemble_lsp.core.workspace import WorkspaceIndex
 logger = logging.getLogger(__name__)
 
 _VENDORED_PYTHON_MODULES = {
-    "docassemble.base.util": Path(__file__).resolve().parent.parent / "data" / "vendored_docassemble_base_util.pyi",
+    "docassemble.base.util": Path(__file__).resolve().parent.parent
+    / "data"
+    / "vendored_docassemble_base_util.pyi",
     "docassemble.base.functions": Path(__file__).resolve().parent.parent
     / "data"
     / "vendored_docassemble_base_functions.pyi",
-    "docassemble.base.error": Path(__file__).resolve().parent.parent / "data" / "vendored_docassemble_base_error.pyi",
+    "docassemble.base.error": Path(__file__).resolve().parent.parent
+    / "data"
+    / "vendored_docassemble_base_error.pyi",
 }
 
 VENDORED_MODULE_NAMES: tuple[str, ...] = tuple(_VENDORED_PYTHON_MODULES.keys())
@@ -108,7 +112,9 @@ PYTHON_BUILTIN_EXCEPTIONS = frozenset(
 )
 
 
-def _yaml_search_paths(current_path: Path | None, workspace_index: WorkspaceIndex) -> list[Path]:
+def _yaml_search_paths(
+    current_path: Path | None, workspace_index: WorkspaceIndex
+) -> list[Path]:
     if workspace_index.search_roots:
         return list(workspace_index.search_roots)
     if current_path is None:
@@ -118,7 +124,9 @@ def _yaml_search_paths(current_path: Path | None, workspace_index: WorkspaceInde
     return [project_root or current_path.parent]
 
 
-def python_search_paths(current_path: Path | None, workspace_index: WorkspaceIndex) -> list[Path]:
+def python_search_paths(
+    current_path: Path | None, workspace_index: WorkspaceIndex
+) -> list[Path]:
     if workspace_index.search_roots:
         paths: list[Path] = []
         seen: set[Path] = set()
@@ -158,7 +166,9 @@ def resolve_python_module_source(
 ) -> PythonModuleResolution:
     normalized = normalize_module_name(module_name, current_path)
     if normalized is None:
-        return PythonModuleResolution(module_name=module_name, path=None, source_kind="unresolved")
+        return PythonModuleResolution(
+            module_name=module_name, path=None, source_kind="unresolved"
+        )
     vendored_path = _VENDORED_PYTHON_MODULES.get(normalized)
 
     for root in python_search_paths(current_path, workspace_index):
@@ -189,11 +199,15 @@ def resolve_python_module_source(
                 path=vendored_path.resolve(),
                 source_kind="vendored",
             )
-        return PythonModuleResolution(module_name=normalized, path=None, source_kind="unresolved")
+        return PythonModuleResolution(
+            module_name=normalized, path=None, source_kind="unresolved"
+        )
 
     origin_str = spec.origin
     if origin_str is None:
-        return PythonModuleResolution(module_name=normalized, path=None, source_kind="unresolved")
+        return PythonModuleResolution(
+            module_name=normalized, path=None, source_kind="unresolved"
+        )
     origin = Path(origin_str)
     if not origin.exists() or origin.suffix != ".py":
         if vendored_path is not None and vendored_path.is_file():
@@ -202,7 +216,9 @@ def resolve_python_module_source(
                 path=vendored_path.resolve(),
                 source_kind="vendored",
             )
-        return PythonModuleResolution(module_name=normalized, path=None, source_kind="unresolved")
+        return PythonModuleResolution(
+            module_name=normalized, path=None, source_kind="unresolved"
+        )
     return PythonModuleResolution(
         module_name=normalized,
         path=origin.resolve(),
@@ -255,7 +271,10 @@ def _python_all_exports(tree: ast.Module) -> tuple[str, ...] | None:
     for node in tree.body:
         value: ast.expr | None = None
         if isinstance(node, ast.Assign):
-            if any(isinstance(target, ast.Name) and target.id == "__all__" for target in node.targets):
+            if any(
+                isinstance(target, ast.Name) and target.id == "__all__"
+                for target in node.targets
+            ):
                 value = node.value
         elif isinstance(node, ast.AnnAssign):
             if isinstance(node.target, ast.Name) and node.target.id == "__all__":
@@ -281,7 +300,11 @@ def _iter_top_level_assigned_names(node: ast.AST) -> tuple[str, ...]:
     if isinstance(node, ast.Assign):
         names = [target.id for target in node.targets if isinstance(target, ast.Name)]
         return tuple(name for name in names if name != "__all__")
-    if isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name) and node.target.id != "__all__":
+    if (
+        isinstance(node, ast.AnnAssign)
+        and isinstance(node.target, ast.Name)
+        and node.target.id != "__all__"
+    ):
         return (node.target.id,)
     return ()
 
@@ -331,7 +354,9 @@ def python_module_symbol_detail(
     if key in seen:
         return "symbol"
     seen.add(key)
-    return python_module_symbol_detail(symbol.imported_module_path, symbol.imported_name, _seen=seen)
+    return python_module_symbol_detail(
+        symbol.imported_module_path, symbol.imported_name, _seen=seen
+    )
 
 
 def load_python_module_index(
@@ -388,7 +413,9 @@ def load_python_module_index(
 
             target = _python_definition_target(module_path, lines, node)
             if target is not None:
-                base_names = tuple(base.id for base in node.bases if isinstance(base, ast.Name))
+                base_names = tuple(
+                    base.id for base in node.bases if isinstance(base, ast.Name)
+                )
                 symbols[node.name] = PythonModuleSymbol(
                     kind="class",
                     target=target,
@@ -402,8 +429,13 @@ def load_python_module_index(
                 for item in node.body:
                     if isinstance(item, ast.Assign) and item.targets:
                         target_name = item.targets[0]
-                        if isinstance(target_name, ast.Name) and target_name.id == "name":
-                            if isinstance(item.value, ast.Constant) and isinstance(item.value.value, str):
+                        if (
+                            isinstance(target_name, ast.Name)
+                            and target_name.id == "name"
+                        ):
+                            if isinstance(item.value, ast.Constant) and isinstance(
+                                item.value.value, str
+                            ):
                                 custom_datatypes.add(item.value.value)
                             break
             continue
@@ -412,7 +444,9 @@ def load_python_module_index(
         if assigned_names:
             target = _python_definition_target(module_path, lines, node)
             for name in assigned_names:
-                symbols[name] = PythonModuleSymbol(kind="symbol", target=target, methods={})
+                symbols[name] = PythonModuleSymbol(
+                    kind="symbol", target=target, methods={}
+                )
             continue
 
         if isinstance(node, ast.Import):
@@ -489,7 +523,9 @@ def load_python_module_index(
     exported_names = _python_all_exports(tree)
     if exported_names is not None:
         for name in exported_names:
-            symbols.setdefault(name, PythonModuleSymbol(kind="symbol", target=None, methods={}))
+            symbols.setdefault(
+                name, PythonModuleSymbol(kind="symbol", target=None, methods={})
+            )
 
     result = PythonModuleIndex(
         symbols=symbols,
@@ -502,12 +538,18 @@ def load_python_module_index(
 
 def collect_class_names(index: PythonModuleIndex) -> frozenset[str]:
     """Return all class and exception names from a Python module index."""
-    return frozenset(name for name, symbol in index.symbols.items() if symbol.kind in ("class", "exception"))
+    return frozenset(
+        name
+        for name, symbol in index.symbols.items()
+        if symbol.kind in ("class", "exception")
+    )
 
 
 def collect_non_exception_class_names(index: PythonModuleIndex) -> frozenset[str]:
     """Return class names excluding exception/error/warning names from a Python module index."""
-    return frozenset(name for name, symbol in index.symbols.items() if symbol.kind == "class")
+    return frozenset(
+        name for name, symbol in index.symbols.items() if symbol.kind == "class"
+    )
 
 
 def compute_da_object_subclasses(
@@ -545,7 +587,9 @@ def python_module_symbol_details(module_path: Path | None) -> dict[str, str]:
     return details
 
 
-def module_completion_members(module_path: Path | None, chain: tuple[str, ...]) -> dict[str, str]:
+def module_completion_members(
+    module_path: Path | None, chain: tuple[str, ...]
+) -> dict[str, str]:
     if module_path is None:
         return {}
 
@@ -558,7 +602,9 @@ def module_completion_members(module_path: Path | None, chain: tuple[str, ...]) 
         return {}
 
     if symbol.imported_module_path is not None:
-        delegated_chain = ((symbol.imported_name,) if symbol.imported_name is not None else ()) + chain[1:]
+        delegated_chain = (
+            (symbol.imported_name,) if symbol.imported_name is not None else ()
+        ) + chain[1:]
         return module_completion_members(symbol.imported_module_path, delegated_chain)
 
     if len(chain) == 1:
@@ -595,7 +641,11 @@ def resolve_python_symbol_chain(
     if module_path is None:
         return []
     if not chain:
-        return [DefinitionTarget(path=module_path, line=0, start_character=0, end_character=0)]
+        return [
+            DefinitionTarget(
+                path=module_path, line=0, start_character=0, end_character=0
+            )
+        ]
 
     index = load_python_module_index(module_path, workspace_index=workspace_index)
     symbol = index.symbols.get(chain[0])
@@ -603,7 +653,9 @@ def resolve_python_symbol_chain(
         return []
 
     if symbol.imported_module_path is not None:
-        delegated_chain = ((symbol.imported_name,) if symbol.imported_name is not None else ()) + chain[1:]
+        delegated_chain = (
+            (symbol.imported_name,) if symbol.imported_name is not None else ()
+        ) + chain[1:]
         return resolve_python_symbol_chain(
             symbol.imported_module_path,
             delegated_chain,

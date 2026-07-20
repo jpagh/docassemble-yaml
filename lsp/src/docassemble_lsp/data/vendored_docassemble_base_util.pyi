@@ -379,7 +379,9 @@ class Address(DAObject):
     def reset_geocoding(self) -> Any:
         """Clear all geocoding results so the address can be geocoded again."""
         ...
-    def block(self, language: Any = ..., international: Any = ..., show_country: Any = ...) -> Any:
+    def block(
+        self, language: Any = ..., international: Any = ..., show_country: Any = ...
+    ) -> Any:
         """
         Return the address formatted as a multi-line mailing block.
 
@@ -509,7 +511,9 @@ class Person(DAObject):
             str: Appropriate verb phrase (e.g. ``'are you'`` or ``'is Jane'``).
         """
         ...
-    def address_block(self, language: Any = ..., international: Any = ..., show_country: Any = ...) -> Any:
+    def address_block(
+        self, language: Any = ..., international: Any = ..., show_country: Any = ...
+    ) -> Any:
         """
         Return the person's name and address formatted as a mailing block.
 
@@ -1000,7 +1004,9 @@ def send_sms(
     """
     ...
 
-def send_fax(fax_number: Any, file_object: Any, config: Any = ..., country: Any = ...) -> Any:
+def send_fax(
+    fax_number: Any, file_object: Any, config: Any = ..., country: Any = ...
+) -> Any:
     """
     Send a fax via Twilio.
 
@@ -1184,7 +1190,9 @@ class DAObject:
             The recomputed attribute value.
         """
         ...
-    def is_peer_relation(self, target: Any, relationship_type: Any, tree: Any) -> Any: ...
+    def is_peer_relation(
+        self, target: Any, relationship_type: Any, tree: Any
+    ) -> Any: ...
     def is_relation(
         self,
         target: Any,
@@ -1216,7 +1224,9 @@ class DAObject:
         filter_by: Any = ...,
         count: Any = ...,
     ) -> Any: ...
-    def set_peer_relationship(self, target: Any, relationship_type: Any, tree: Any, replace: Any = ...) -> Any: ...
+    def set_peer_relationship(
+        self, target: Any, relationship_type: Any, tree: Any, replace: Any = ...
+    ) -> Any: ...
     def set_relationship(
         self,
         target: Any,
@@ -1735,7 +1745,9 @@ class DAList(DAObject):
     def _trigger_gather(self) -> Any:
         """Triggers the gathering process."""
         ...
-    def reset_gathered(self, recursive: Any = ..., only_if_empty: Any = ..., mark_incomplete: Any = ...) -> Any:
+    def reset_gathered(
+        self, recursive: Any = ..., only_if_empty: Any = ..., mark_incomplete: Any = ...
+    ) -> Any:
         """
         Reset the gathered state so the collection will be re-gathered.
 
@@ -2248,7 +2260,9 @@ class DAList(DAObject):
             str: HTML string containing edit and/or delete buttons.
         """
         ...
-    def _add_action_button(self, url: Any, classes: Any, icon: Any, the_message: Any) -> Any: ...
+    def _add_action_button(
+        self, url: Any, classes: Any, icon: Any, the_message: Any
+    ) -> Any: ...
     def add_action(
         self,
         label: Any = ...,
@@ -2503,7 +2517,9 @@ class DADict(DAObject):
                 constructor.
         """
         ...
-    def reset_gathered(self, recursive: Any = ..., only_if_empty: Any = ..., mark_incomplete: Any = ...) -> Any:
+    def reset_gathered(
+        self, recursive: Any = ..., only_if_empty: Any = ..., mark_incomplete: Any = ...
+    ) -> Any:
         """
         Reset the gathered state so the collection will be re-gathered.
 
@@ -2687,7 +2703,9 @@ class DADict(DAObject):
     def _sorted_keys(self) -> Any: ...
     def _sorted_elements_keys(self) -> Any: ...
     def _complete_attributes(self, complete_attribute: Any = ...) -> Any: ...
-    def _validate(self, item_object_type: Any, complete_attribute: Any, keys: Any = ...) -> Any: ...
+    def _validate(
+        self, item_object_type: Any, complete_attribute: Any, keys: Any = ...
+    ) -> Any: ...
     def cancel_add_or_edit(self) -> Any: ...
     def gathered_and_complete(self) -> Any:
         """
@@ -2988,7 +3006,9 @@ class DADict(DAObject):
             str: HTML string containing edit and/or delete buttons.
         """
         ...
-    def _add_action_button(self, url: Any, classes: Any, icon: Any, the_message: Any) -> Any: ...
+    def _add_action_button(
+        self, url: Any, classes: Any, icon: Any, the_message: Any
+    ) -> Any: ...
     def add_action(
         self,
         label: Any = ...,
@@ -3099,7 +3119,9 @@ class DASet(DAObject):
     def _trigger_gather(self) -> Any:
         """Triggers the gathering process."""
         ...
-    def reset_gathered(self, recursive: Any = ..., only_if_empty: Any = ..., mark_incomplete: Any = ...) -> Any:
+    def reset_gathered(
+        self, recursive: Any = ..., only_if_empty: Any = ..., mark_incomplete: Any = ...
+    ) -> Any:
         """
         Reset the gathered state so the collection will be re-gathered.
 
@@ -3627,7 +3649,9 @@ class DAFile(DAObject):
                 or str): Source file object or filesystem path.
         """
         ...
-    def extract_pages(self, first: Any = ..., last: Any = ..., output_to: Any = ...) -> Any: ...
+    def extract_pages(
+        self, first: Any = ..., last: Any = ..., output_to: Any = ...
+    ) -> Any: ...
     def bates_number(self, *pargs: Any, **kwargs: Any) -> Any:
         """
         Apply Bates numbering to this file or a set of provided files.
@@ -5552,7 +5576,9 @@ class RelationshipTree(DAObject):
                 filter function.
         """
         ...
-    def add_relationship_dir(self, parent: Any = ..., child: Any = ..., relationship_type: Any = ...) -> Any:
+    def add_relationship_dir(
+        self, parent: Any = ..., child: Any = ..., relationship_type: Any = ...
+    ) -> Any:
         """
         Add or retrieve a directed (parent/child) relationship.
 
@@ -6186,7 +6212,9 @@ def stash_data(data: Any, expire: Any = ...) -> Any:
     """
     ...
 
-def retrieve_stashed_data(stash_key: Any, secret: Any, delete: Any = ..., refresh: Any = ...) -> Any:
+def retrieve_stashed_data(
+    stash_key: Any, secret: Any, delete: Any = ..., refresh: Any = ...
+) -> Any:
     """
     Retrieve data previously stored with :func:`stash_data`.
 

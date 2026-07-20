@@ -45,7 +45,9 @@ def test_format_malformed_yaml_propagates_error_message() -> None:
 
 
 def test_format_malformed_jinja_yaml_returns_unchanged() -> None:
-    malformed = "# use jinja\n{% block content %}\nkey: [unclosed list\n{% endblock %}\n"
+    malformed = (
+        "# use jinja\n{% block content %}\nkey: [unclosed list\n{% endblock %}\n"
+    )
     result = format_text(malformed)
     assert result.changed is False
     assert result.text == malformed

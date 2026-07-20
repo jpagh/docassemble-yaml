@@ -58,7 +58,9 @@ def _document_ranges(lines: list[str]) -> list[tuple[int, int]]:
     return ranges
 
 
-def _top_level_key_facts(lines: list[str], start: int, end: int) -> tuple[TopLevelKeyFact, ...]:
+def _top_level_key_facts(
+    lines: list[str], start: int, end: int
+) -> tuple[TopLevelKeyFact, ...]:
     facts: list[TopLevelKeyFact] = []
     for line_index in range(start, end + 1):
         text = lines[line_index]
@@ -84,7 +86,9 @@ def _display_value(value: str) -> str:
     return stripped
 
 
-def _document_name(keys: tuple[TopLevelKeyFact, ...], doc_index: int) -> tuple[str, int]:
+def _document_name(
+    keys: tuple[TopLevelKeyFact, ...], doc_index: int
+) -> tuple[str, int]:
     keyed = {fact.name: fact for fact in keys}
 
     for preferred in _PREFERRED_NAME_KEYS:

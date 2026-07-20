@@ -32,7 +32,10 @@ from tests.corpus import (
 # File-only keys that are correctly filtered from completions when no
 # file-like datatype is declared on the field.
 _FILE_ONLY_KEYS = set(
-    FIELDS_ITEM_FILE_STRING_KEYS + FIELDS_ITEM_FILE_COMPLEX_KEYS + FIELDS_ITEM_FILE_BOOLEAN_KEYS + ("file css class",)
+    FIELDS_ITEM_FILE_STRING_KEYS
+    + FIELDS_ITEM_FILE_COMPLEX_KEYS
+    + FIELDS_ITEM_FILE_BOOLEAN_KEYS
+    + ("file css class",)
 )
 
 
@@ -150,7 +153,9 @@ def test_scope_key_regression_cases_cover_all_scopes_with_registered_keys() -> N
     _SCOPE_KEY_REGRESSION_CASES,
     ids=[scope_name for scope_name, _, _, _ in _SCOPE_KEY_REGRESSION_CASES],
 )
-def test_scope_completions_include_all_registered_keys(scope_name: str, source: str, line: int, character: int) -> None:
+def test_scope_completions_include_all_registered_keys(
+    scope_name: str, source: str, line: int, character: int
+) -> None:
     schema = load_schema()
 
     assert completion_scope(source, line, character) == scope_name
@@ -410,7 +415,9 @@ def test_fields_item_shows_file_keys_for_user_datatype() -> None:
 
 
 def test_fields_item_shows_file_keys_for_environment_datatype() -> None:
-    source = "question: Hi\nfields:\n  - label: Upload\n    datatype: environment\n    \n"
+    source = (
+        "question: Hi\nfields:\n  - label: Upload\n    datatype: environment\n    \n"
+    )
 
     labels = {item.label for item in get_completions(source, 4, 4)}
     assert "accept" in labels
@@ -443,7 +450,9 @@ def test_fields_item_shows_rows_with_multiselect_datatype() -> None:
 
 
 def test_fields_item_shows_rows_with_object_multiselect_datatype() -> None:
-    source = "question: Hi\nfields:\n  - label: Ex\n    datatype: object_multiselect\n    \n"
+    source = (
+        "question: Hi\nfields:\n  - label: Ex\n    datatype: object_multiselect\n    \n"
+    )
 
     labels = {item.label for item in get_completions(source, 4, 4)}
     assert "rows" in labels
@@ -469,7 +478,9 @@ def test_fields_item_filters_none_of_the_above_for_area() -> None:
 
 
 def test_fields_item_shows_none_of_the_above_for_object_radio() -> None:
-    source = "question: Hi\nfields:\n  - label: Pick\n    datatype: object_radio\n    \n"
+    source = (
+        "question: Hi\nfields:\n  - label: Pick\n    datatype: object_radio\n    \n"
+    )
 
     labels = {item.label for item in get_completions(source, 4, 4)}
     assert "none of the above" in labels
@@ -513,7 +524,9 @@ def test_fields_item_filters_disable_others_for_each_blocked_datatype() -> None:
     for dt in blocked:
         source = f"question: Hi\nfields:\n  - label: Ex\n    datatype: {dt}\n    \n"
         labels = {item.label for item in get_completions(source, 4, 4)}
-        assert "disable others" not in labels, f"disable others should be filtered for datatype '{dt}'"
+        assert "disable others" not in labels, (
+            f"disable others should be filtered for datatype '{dt}'"
+        )
 
 
 def test_fields_item_shows_disable_others_for_each_allowed_datatype() -> None:
@@ -522,7 +535,9 @@ def test_fields_item_shows_disable_others_for_each_allowed_datatype() -> None:
     for dt in allowed:
         source = f"question: Hi\nfields:\n  - label: Ex\n    datatype: {dt}\n    \n"
         labels = {item.label for item in get_completions(source, 4, 4)}
-        assert "disable others" in labels, f"disable others should be shown for datatype '{dt}'"
+        assert "disable others" in labels, (
+            f"disable others should be shown for datatype '{dt}'"
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -535,7 +550,9 @@ def test_fields_item_filters_uncheck_others_for_each_incompatible_datatype() -> 
     for dt in incompatible:
         source = f"question: Hi\nfields:\n  - label: Ex\n    datatype: {dt}\n    \n"
         labels = {item.label for item in get_completions(source, 4, 4)}
-        assert "uncheck others" not in labels, f"uncheck others should be filtered for datatype '{dt}'"
+        assert "uncheck others" not in labels, (
+            f"uncheck others should be filtered for datatype '{dt}'"
+        )
 
 
 def test_fields_item_shows_uncheck_others_for_each_compatible_datatype() -> None:
@@ -543,7 +560,9 @@ def test_fields_item_shows_uncheck_others_for_each_compatible_datatype() -> None
     for dt in compatible:
         source = f"question: Hi\nfields:\n  - label: Ex\n    datatype: {dt}\n    \n"
         labels = {item.label for item in get_completions(source, 4, 4)}
-        assert "uncheck others" in labels, f"uncheck others should be shown for datatype '{dt}'"
+        assert "uncheck others" in labels, (
+            f"uncheck others should be shown for datatype '{dt}'"
+        )
 
 
 def test_fields_item_filters_check_others_for_yesnoradio() -> None:
@@ -566,14 +585,18 @@ def test_fields_item_shows_object_labeler_for_object_radio() -> None:
 
 
 def test_fields_item_shows_object_labeler_for_object_multiselect() -> None:
-    source = "question: Hi\nfields:\n  - label: Ex\n    datatype: object_multiselect\n    \n"
+    source = (
+        "question: Hi\nfields:\n  - label: Ex\n    datatype: object_multiselect\n    \n"
+    )
 
     labels = {item.label for item in get_completions(source, 4, 4)}
     assert "object labeler" in labels
 
 
 def test_fields_item_shows_object_labeler_for_object_checkboxes() -> None:
-    source = "question: Hi\nfields:\n  - label: Ex\n    datatype: object_checkboxes\n    \n"
+    source = (
+        "question: Hi\nfields:\n  - label: Ex\n    datatype: object_checkboxes\n    \n"
+    )
 
     labels = {item.label for item in get_completions(source, 4, 4)}
     assert "object labeler" in labels
@@ -598,8 +621,12 @@ def test_fields_item_filters_choices_for_each_boolean_datatype() -> None:
     for dt in boolean_dts:
         source = f"question: Hi\nfields:\n  - label: Ex\n    datatype: {dt}\n    \n"
         labels = {item.label for item in get_completions(source, 4, 4)}
-        assert "choices" not in labels, f"choices should be filtered for boolean datatype '{dt}'"
-        assert "code" not in labels, f"code should be filtered for boolean datatype '{dt}'"
+        assert "choices" not in labels, (
+            f"choices should be filtered for boolean datatype '{dt}'"
+        )
+        assert "code" not in labels, (
+            f"code should be filtered for boolean datatype '{dt}'"
+        )
 
 
 def test_fields_item_shows_choices_for_non_boolean_datatypes() -> None:
@@ -607,7 +634,9 @@ def test_fields_item_shows_choices_for_non_boolean_datatypes() -> None:
     for dt in non_boolean:
         source = f"question: Hi\nfields:\n  - label: Ex\n    datatype: {dt}\n    \n"
         labels = {item.label for item in get_completions(source, 4, 4)}
-        assert "choices" in labels, f"choices should be shown for non-boolean datatype '{dt}'"
+        assert "choices" in labels, (
+            f"choices should be shown for non-boolean datatype '{dt}'"
+        )
         assert "code" in labels, f"code should be shown for non-boolean datatype '{dt}'"
 
 
@@ -652,8 +681,12 @@ def test_fields_item_shows_file_keys_for_each_file_like_datatype() -> None:
     for dt in file_dts:
         source = f"question: Hi\nfields:\n  - label: Upload\n    datatype: {dt}\n    \n"
         labels = {item.label for item in get_completions(source, 4, 4)}
-        assert "accept" in labels, f"accept should be shown for file-like datatype '{dt}'"
-        assert "maximum image size" in labels, f"maximum image size should be shown for file-like datatype '{dt}'"
+        assert "accept" in labels, (
+            f"accept should be shown for file-like datatype '{dt}'"
+        )
+        assert "maximum image size" in labels, (
+            f"maximum image size should be shown for file-like datatype '{dt}'"
+        )
 
 
 def test_fields_item_filters_file_keys_for_non_file_datatypes() -> None:
@@ -661,7 +694,9 @@ def test_fields_item_filters_file_keys_for_non_file_datatypes() -> None:
     for dt in non_file:
         source = f"question: Hi\nfields:\n  - label: Ex\n    datatype: {dt}\n    \n"
         labels = {item.label for item in get_completions(source, 4, 4)}
-        assert "accept" not in labels, f"accept should be filtered for non-file datatype '{dt}'"
+        assert "accept" not in labels, (
+            f"accept should be filtered for non-file datatype '{dt}'"
+        )
 
 
 def test_fields_item_filters_file_keys_when_datatype_not_set() -> None:
@@ -703,13 +738,19 @@ def test_fields_item_filters_file_keys_with_hidden_and_file_datatype() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_fields_item_filters_using_and_keep_for_training_for_each_non_ml_datatype() -> None:
+def test_fields_item_filters_using_and_keep_for_training_for_each_non_ml_datatype() -> (
+    None
+):
     non_ml = ["text", "yesno", "checkboxes", "file", "range", "email", "object"]
     for dt in non_ml:
         source = f"question: Hi\nfields:\n  - label: Ex\n    datatype: {dt}\n    \n"
         labels = {item.label for item in get_completions(source, 4, 4)}
-        assert "using" not in labels, f"using should be filtered for non-ml datatype '{dt}'"
-        assert "keep for training" not in labels, f"keep for training should be filtered for non-ml datatype '{dt}'"
+        assert "using" not in labels, (
+            f"using should be filtered for non-ml datatype '{dt}'"
+        )
+        assert "keep for training" not in labels, (
+            f"keep for training should be filtered for non-ml datatype '{dt}'"
+        )
 
 
 def test_fields_item_shows_using_and_keep_for_training_for_mlarea() -> None:
@@ -877,7 +918,9 @@ def test_fields_item_action_is_promoted_with_ajax_input_type() -> None:
     candidates = get_completions(source, 4, 4)
     property_labels = [c.label for c in candidates if "(block)" not in (c.label or "")]
     action_idx = property_labels.index("action")
-    assert action_idx == 0, "action should be first property key when input type is ajax"
+    assert action_idx == 0, (
+        "action should be first property key when input type is ajax"
+    )
 
 
 def test_fields_item_promotion_sorts_action_first() -> None:
@@ -898,7 +941,9 @@ def test_fields_item_field_promoted_when_label_present() -> None:
     candidates = get_completions(source, 3, 4)
     property_labels = [c.label for c in candidates if "(block)" not in (c.label or "")]
     field_idx = property_labels.index("field")
-    assert field_idx == 0, "field should be first property key when label exists but field is missing"
+    assert field_idx == 0, (
+        "field should be first property key when label exists but field is missing"
+    )
 
 
 def test_fields_item_label_promoted_when_field_present() -> None:
@@ -908,7 +953,9 @@ def test_fields_item_label_promoted_when_field_present() -> None:
     candidates = get_completions(source, 3, 4)
     property_labels = [c.label for c in candidates if "(block)" not in (c.label or "")]
     label_idx = property_labels.index("label")
-    assert label_idx == 0, "label should be first property key when field exists but label is missing"
+    assert label_idx == 0, (
+        "label should be first property key when field exists but label is missing"
+    )
 
 
 def test_fields_item_promotion_not_applied_when_both_label_and_field_present() -> None:
@@ -918,7 +965,9 @@ def test_fields_item_promotion_not_applied_when_both_label_and_field_present() -
     candidates = get_completions(source, 4, 4)
     property_labels = [c.label for c in candidates if "(block)" not in (c.label or "")]
     first_key = property_labels[0]
-    assert first_key not in ("label", "field"), "neither label nor field should be promoted when both exist"
+    assert first_key not in ("label", "field"), (
+        "neither label nor field should be promoted when both exist"
+    )
 
 
 def test_fields_item_both_ajax_and_field_promoted_together() -> None:
@@ -943,7 +992,9 @@ def test_fields_item_choices_and_code_promoted_when_multiple_choice_datatype() -
     assert "code" in promoted
 
 
-def test_fields_item_choices_and_code_promoted_when_multiple_choice_input_type() -> None:
+def test_fields_item_choices_and_code_promoted_when_multiple_choice_input_type() -> (
+    None
+):
     """choices and code are promoted when input type requires choices but none provided."""
     source = "question: Hi\nfields:\n  - label: Pick\n    field: thing\n    input type: radio\n    \n"
 
@@ -961,7 +1012,9 @@ def test_fields_item_choices_not_promoted_when_choices_already_present() -> None
     candidates = get_completions(source, 7, 4)
     property_labels = [c.label for c in candidates if "(block)" not in (c.label or "")]
     first_key = property_labels[0]
-    assert first_key not in ("choices", "code"), "neither choices nor code should be promoted when choices exists"
+    assert first_key not in ("choices", "code"), (
+        "neither choices nor code should be promoted when choices exists"
+    )
 
 
 def test_fields_item_choices_not_promoted_when_datatype_not_multiple_choice() -> None:
@@ -1060,7 +1113,11 @@ def test_fields_item_new_item_promotes_label_and_field() -> None:
     assert "maximum image size" not in labels
 
     # Among property keys (excluding shorthand/block entries), field and label are first
-    property_labels = [c.label for c in candidates if "(block)" not in (c.label or "") and ": " not in (c.label or "")]
+    property_labels = [
+        c.label
+        for c in candidates
+        if "(block)" not in (c.label or "") and ": " not in (c.label or "")
+    ]
     assert property_labels[:2] == ["field", "label"], (
         f"expected ['field', 'label'] at start of property keys, got {property_labels[:4]}"
     )
@@ -1290,7 +1347,9 @@ def test_fields_item_completions_inside_show_if_block() -> None:
 
 def test_fields_item_completions_after_validation_messages_sibling() -> None:
     """Cursor at sibling level after validation messages still gets field keys."""
-    source = "question: Hi\nfields:\n  - validation messages:\n    required: This\n    \n"
+    source = (
+        "question: Hi\nfields:\n  - validation messages:\n    required: This\n    \n"
+    )
 
     labels = {item.label for item in get_completions(source, 5, 4)}
     assert "field" in labels
@@ -1415,7 +1474,9 @@ def test_top_level_scope_includes_example_corpus_keys() -> None:
 
 def test_top_level_scope_covers_example_corpora() -> None:
     labels = {item.label for item in get_completions("", 0, 0)}
-    missing = (top_level_keys_from_example_corpora() - {"required", "pen color"}) - labels
+    missing = (
+        top_level_keys_from_example_corpora() - {"required", "pen color"}
+    ) - labels
 
     assert not missing
 
@@ -1757,7 +1818,9 @@ def test_include_item_completes_workspace_yaml_files(tmp_path) -> None:
     source_path = tmp_path / "interview.yml"
     labels = {
         item.label
-        for item in get_completions(source, 1, 4, uri_or_path=str(source_path), workspace_paths=[str(tmp_path)])
+        for item in get_completions(
+            source, 1, 4, uri_or_path=str(source_path), workspace_paths=[str(tmp_path)]
+        )
     }
     assert "a.yml" in labels
     assert "b.yml" in labels
@@ -1773,7 +1836,9 @@ def test_include_item_completes_relative_paths(tmp_path) -> None:
     source_path = tmp_path / "interview.yml"
     labels = {
         item.label
-        for item in get_completions(source, 1, 4, uri_or_path=str(source_path), workspace_paths=[str(tmp_path)])
+        for item in get_completions(
+            source, 1, 4, uri_or_path=str(source_path), workspace_paths=[str(tmp_path)]
+        )
     }
     assert "sub/shared.yml" in labels or "sub\\shared.yml" in labels
 
@@ -1787,7 +1852,9 @@ def test_include_item_completes_partial_prefix(tmp_path) -> None:
     # Cursor right after "q" (position 5) so line_prefix captures the typed prefix.
     labels = {
         item.label
-        for item in get_completions(source, 1, 5, uri_or_path=str(source_path), workspace_paths=[str(tmp_path)])
+        for item in get_completions(
+            source, 1, 5, uri_or_path=str(source_path), workspace_paths=[str(tmp_path)]
+        )
     }
     assert "questions.yml" in labels
     assert "shared.yml" not in labels
@@ -1800,7 +1867,9 @@ def test_modules_item_never_includes_vendored_modules(tmp_path) -> None:
     source_path = tmp_path / "interview.yml"
     labels = {
         item.label
-        for item in get_completions(source, 1, 5, uri_or_path=str(source_path), workspace_paths=[str(tmp_path)])
+        for item in get_completions(
+            source, 1, 5, uri_or_path=str(source_path), workspace_paths=[str(tmp_path)]
+        )
     }
     assert "docassemble.base.util" not in labels
     assert "docassemble.base.functions" not in labels
@@ -1824,7 +1893,9 @@ def test_modules_item_relative_prefix_matches_workspace_stems(tmp_path) -> None:
     )
     source = "modules:\n  - .func\n"
     source_path = tmp_path / "interview.yml"
-    items = list(get_completions(source, 1, 6, uri_or_path=str(source_path), workspace_index=wi))
+    items = list(
+        get_completions(source, 1, 6, uri_or_path=str(source_path), workspace_index=wi)
+    )
     labels = {item.label for item in items}
     assert ".functions" in labels
     assert ".dw_objects" not in labels  # filtered by .func prefix
@@ -1855,7 +1926,9 @@ def test_modules_item_relative_prefix_excludes_vendored_modules(tmp_path) -> Non
     source = "modules:\n  - .\n"
     source_path = tmp_path / "interview.yml"
     # character=5 so line_prefix = "  - ." → partial = "." → is_relative = True
-    items = list(get_completions(source, 1, 5, uri_or_path=str(source_path), workspace_index=wi))
+    items = list(
+        get_completions(source, 1, 5, uri_or_path=str(source_path), workspace_index=wi)
+    )
     labels = {item.label for item in items}
     assert ".utils" in labels
     assert "docassemble.base.util" not in labels
@@ -1878,7 +1951,9 @@ def test_modules_item_non_relative_prefix_shows_workspace_modules(tmp_path) -> N
     )
     source = "modules:\n  - util\n"
     source_path = tmp_path / "interview.yml"
-    items = list(get_completions(source, 1, 6, uri_or_path=str(source_path), workspace_index=wi))
+    items = list(
+        get_completions(source, 1, 6, uri_or_path=str(source_path), workspace_index=wi)
+    )
     labels = {item.label for item in items}
     assert ".utils" in labels
     assert "utils" not in labels
@@ -1903,7 +1978,9 @@ def test_modules_item_relative_prefix_snippets_without_workspace(tmp_path) -> No
     # property_completion_provider which needs the regex to allow dots.
     labels = {
         item.label
-        for item in get_completions(source, 1, 5, uri_or_path=str(source_path), workspace_paths=[str(tmp_path)])
+        for item in get_completions(
+            source, 1, 5, uri_or_path=str(source_path), workspace_paths=[str(tmp_path)]
+        )
     }
     assert "module_name" in labels
     assert ".relative_module" in labels
@@ -1915,7 +1992,9 @@ def test_objects_item_completes_da_object_subclass_names(tmp_path) -> None:
     source_path = tmp_path / "interview.yml"
     labels = {
         item.label
-        for item in get_completions(source, 1, 12, uri_or_path=str(source_path), workspace_paths=[str(tmp_path)])
+        for item in get_completions(
+            source, 1, 12, uri_or_path=str(source_path), workspace_paths=[str(tmp_path)]
+        )
     }
     assert "Individual" in labels or "DAObject" in labels
 
@@ -2003,7 +2082,9 @@ def test_using_kwarg_object_type_value_block_scalar(tmp_path) -> None:
     questions_dir = pkg_dir / "data" / "questions"
     questions_dir.mkdir(parents=True)
     (pkg_dir / "__init__.py").write_text("", encoding="utf-8")
-    (tmp_path / "pyproject.toml").write_text("[project]\nname = 'demo'\n", encoding="utf-8")
+    (tmp_path / "pyproject.toml").write_text(
+        "[project]\nname = 'demo'\n", encoding="utf-8"
+    )
     (pkg_dir / "objects.py").write_text(
         "from docassemble.base.util import DAObject\nclass CustomObj(DAObject):\n    pass\n",
         encoding="utf-8",
@@ -2124,7 +2205,9 @@ def test_object_type_block_scalar_line1(tmp_path) -> None:
     questions_dir = pkg_dir / "data" / "questions"
     questions_dir.mkdir(parents=True)
     (pkg_dir / "__init__.py").write_text("", encoding="utf-8")
-    (tmp_path / "pyproject.toml").write_text("[project]\nname = 'demo'\n", encoding="utf-8")
+    (tmp_path / "pyproject.toml").write_text(
+        "[project]\nname = 'demo'\n", encoding="utf-8"
+    )
     (pkg_dir / "objects.py").write_text(
         "from docassemble.base.util import DAObject\nclass CustomObj(DAObject):\n    pass\n",
         encoding="utf-8",
@@ -2164,12 +2247,16 @@ def test_using_dot_not_suggested_without_dot(tmp_path) -> None:
 def test_reset_item_completes_known_variable_names(tmp_path) -> None:
     """reset: list items suggest field variable names from the workspace."""
     src_a = tmp_path / "a.yml"
-    src_a.write_text("fields:\n  - field: known_var\n    datatype: text\n", encoding="utf-8")
+    src_a.write_text(
+        "fields:\n  - field: known_var\n    datatype: text\n", encoding="utf-8"
+    )
     source = "reset:\n  - \n"
     source_path = tmp_path / "main.yml"
     labels = {
         item.label
-        for item in get_completions(source, 1, 4, uri_or_path=str(source_path), workspace_paths=[str(tmp_path)])
+        for item in get_completions(
+            source, 1, 4, uri_or_path=str(source_path), workspace_paths=[str(tmp_path)]
+        )
     }
     assert "known_var" in labels
 
@@ -2183,7 +2270,9 @@ def test_include_item_completes_paths_outside_document_dir(tmp_path) -> None:
     source_path = sub / "interview.yml"
     labels = {
         item.label
-        for item in get_completions(source, 1, 4, uri_or_path=str(source_path), workspace_paths=[str(tmp_path)])
+        for item in get_completions(
+            source, 1, 4, uri_or_path=str(source_path), workspace_paths=[str(tmp_path)]
+        )
     }
     assert "../other.yml" in labels
 
@@ -2196,7 +2285,9 @@ def test_order_item_completes_block_ids(tmp_path) -> None:
     source_path = tmp_path / "main.yml"
     labels = {
         item.label
-        for item in get_completions(source, 1, 4, uri_or_path=str(source_path), workspace_paths=[str(tmp_path)])
+        for item in get_completions(
+            source, 1, 4, uri_or_path=str(source_path), workspace_paths=[str(tmp_path)]
+        )
     }
     assert "intro_block" in labels
 
@@ -2465,9 +2556,15 @@ def test_action_button_multiline_snippet_uses_current_indent_width() -> None:
     source = "question: Hi\nfield: ready\naction buttons:\n    - \n"
 
     candidates = get_completions(source, 3, 6)
-    snippet = next(candidate for candidate in candidates if candidate.label == "label/action with arguments")
+    snippet = next(
+        candidate
+        for candidate in candidates
+        if candidate.label == "label/action with arguments"
+    )
 
-    assert snippet.insert_text == ("label: ${1:Label}\naction: ${2:event_name}\narguments:\n  ${3:key}: ${4:value}")
+    assert snippet.insert_text == (
+        "label: ${1:Label}\naction: ${2:event_name}\narguments:\n  ${3:key}: ${4:value}"
+    )
 
 
 def test_action_button_property_snippet_uses_tab_indentation() -> None:
@@ -2515,7 +2612,9 @@ def test_get_completions_in_code_block_include_python_module_symbols(tmp_path) -
     assert "plus_one" in labels
 
 
-def test_get_completions_in_code_block_include_implicit_docassemble_base_classes() -> None:
+def test_get_completions_in_code_block_include_implicit_docassemble_base_classes() -> (
+    None
+):
     source = "code: |\n  Ad\n"
 
     labels = {
@@ -2532,7 +2631,9 @@ def test_get_completions_in_code_block_include_implicit_docassemble_base_classes
     assert "Address" in labels
 
 
-def test_get_completions_in_objects_value_include_implicit_docassemble_base_classes() -> None:
+def test_get_completions_in_objects_value_include_implicit_docassemble_base_classes() -> (
+    None
+):
     source = "objects:\n  - physical_address: Ad\n"
 
     labels = {
@@ -2549,7 +2650,9 @@ def test_get_completions_in_objects_value_include_implicit_docassemble_base_clas
     assert "Address" in labels
 
 
-def test_get_completions_in_objects_value_include_classes_for_lowercase_prefix() -> None:
+def test_get_completions_in_objects_value_include_classes_for_lowercase_prefix() -> (
+    None
+):
     source = "objects:\n  - physical_address: a\n"
 
     labels = {
@@ -2645,7 +2748,9 @@ def test_get_completions_respect_module_all_exports(tmp_path) -> None:
     questions_dir = package_dir / "data" / "questions"
     questions_dir.mkdir(parents=True)
     (package_dir / "__init__.py").write_text("", encoding="utf-8")
-    (tmp_path / "pyproject.toml").write_text("[project]\nname = 'demo'\n", encoding="utf-8")
+    (tmp_path / "pyproject.toml").write_text(
+        "[project]\nname = 'demo'\n", encoding="utf-8"
+    )
     (package_dir / "shared.py").write_text(
         "from docassemble.base.util import DAObject\n"
         "class ExportedClass(DAObject):\n    pass\n\ndef exported_function():\n    return 1\n",
@@ -2790,7 +2895,9 @@ def test_get_completions_in_if_value_include_python_aliases(tmp_path) -> None:
     package_dir = tmp_path / "docassemble" / "demo"
     questions_dir = package_dir / "data" / "questions"
     questions_dir.mkdir(parents=True)
-    (package_dir / "helpers.py").write_text("def eligible(user):\n    return True\n", encoding="utf-8")
+    (package_dir / "helpers.py").write_text(
+        "def eligible(user):\n    return True\n", encoding="utf-8"
+    )
     source_path = questions_dir / "main.yml"
     source = "modules:\n  - .helpers\n---\nif: eli\nquestion: Hi\n"
 
@@ -2812,7 +2919,9 @@ def test_get_completions_in_need_list_item_include_python_aliases(tmp_path) -> N
     package_dir = tmp_path / "docassemble" / "demo"
     questions_dir = package_dir / "data" / "questions"
     questions_dir.mkdir(parents=True)
-    (package_dir / "helpers.py").write_text("def eligible(user):\n    return True\n", encoding="utf-8")
+    (package_dir / "helpers.py").write_text(
+        "def eligible(user):\n    return True\n", encoding="utf-8"
+    )
     source_path = questions_dir / "main.yml"
     source = "modules:\n  - .helpers\n---\nneed:\n  - eli\nquestion: Hi\n"
 
@@ -2834,7 +2943,9 @@ def test_get_completions_in_require_list_item_include_python_aliases(tmp_path) -
     package_dir = tmp_path / "docassemble" / "demo"
     questions_dir = package_dir / "data" / "questions"
     questions_dir.mkdir(parents=True)
-    (package_dir / "helpers.py").write_text("def eligible(user):\n    return True\n", encoding="utf-8")
+    (package_dir / "helpers.py").write_text(
+        "def eligible(user):\n    return True\n", encoding="utf-8"
+    )
     source_path = questions_dir / "main.yml"
     source = "modules:\n  - .helpers\n---\nrequire:\n  - eli\norelse:\n  question: Hi\n"
 
@@ -2858,7 +2969,9 @@ def test_get_completions_in_list_collect_enable_include_python_aliases(
     package_dir = tmp_path / "docassemble" / "demo"
     questions_dir = package_dir / "data" / "questions"
     questions_dir.mkdir(parents=True)
-    (package_dir / "helpers.py").write_text("def eligible(user):\n    return True\n", encoding="utf-8")
+    (package_dir / "helpers.py").write_text(
+        "def eligible(user):\n    return True\n", encoding="utf-8"
+    )
     source_path = questions_dir / "main.yml"
     source = "modules:\n  - .helpers\n---\nquestion: Hi\nfields:\n  - field: user.name\nlist collect:\n  enable: eli\n"
 
@@ -2882,7 +2995,9 @@ def test_get_completions_in_field_validate_value_include_python_aliases(
     package_dir = tmp_path / "docassemble" / "demo"
     questions_dir = package_dir / "data" / "questions"
     questions_dir.mkdir(parents=True)
-    (package_dir / "helpers.py").write_text("def eligible(user):\n    return True\n", encoding="utf-8")
+    (package_dir / "helpers.py").write_text(
+        "def eligible(user):\n    return True\n", encoding="utf-8"
+    )
     source_path = questions_dir / "main.yml"
     source = "modules:\n  - .helpers\n---\nquestion: Hi\nfields:\n  - field: user.name\n    validate: eli\n"
 
@@ -2906,7 +3021,9 @@ def test_get_completions_in_field_show_if_code_value_include_python_aliases(
     package_dir = tmp_path / "docassemble" / "demo"
     questions_dir = package_dir / "data" / "questions"
     questions_dir.mkdir(parents=True)
-    (package_dir / "helpers.py").write_text("def eligible(user):\n    return True\n", encoding="utf-8")
+    (package_dir / "helpers.py").write_text(
+        "def eligible(user):\n    return True\n", encoding="utf-8"
+    )
     source_path = questions_dir / "main.yml"
     source = "modules:\n  - .helpers\n---\nquestion: Hi\nfields:\n  - field: user.name\n    show if:\n      code: eli\n"
 
@@ -2928,7 +3045,9 @@ def test_get_completions_in_field_grid_width_include_python_aliases(tmp_path) ->
     package_dir = tmp_path / "docassemble" / "demo"
     questions_dir = package_dir / "data" / "questions"
     questions_dir.mkdir(parents=True)
-    (package_dir / "helpers.py").write_text("def eligible(user):\n    return True\n", encoding="utf-8")
+    (package_dir / "helpers.py").write_text(
+        "def eligible(user):\n    return True\n", encoding="utf-8"
+    )
     source_path = questions_dir / "main.yml"
     source = "modules:\n  - .helpers\n---\nquestion: Hi\nfields:\n  - field: user.name\n    grid:\n      width: eli\n"
 
@@ -2955,7 +3074,9 @@ def test_get_completions_in_attachment_redact_value_include_python_aliases(
     questions_dir.mkdir(parents=True)
     template_dir.mkdir(parents=True)
     (template_dir / "letter.docx").write_text("placeholder", encoding="utf-8")
-    (package_dir / "helpers.py").write_text("def eligible(user):\n    return True\n", encoding="utf-8")
+    (package_dir / "helpers.py").write_text(
+        "def eligible(user):\n    return True\n", encoding="utf-8"
+    )
     source_path = questions_dir / "main.yml"
     source = (
         "modules:\n"
@@ -2994,12 +3115,16 @@ def test_get_completions_in_docx_template_file_value_includes_template_filenames
     (template_dir / "letter.docx").write_text("placeholder", encoding="utf-8")
     (template_dir / "form.pdf").write_text("placeholder", encoding="utf-8")
     (template_dir / "notice.docx").write_text("placeholder", encoding="utf-8")
-    (tmp_path / "pyproject.toml").write_text("[project]\nname = 'demo'\n", encoding="utf-8")
+    (tmp_path / "pyproject.toml").write_text(
+        "[project]\nname = 'demo'\n", encoding="utf-8"
+    )
     (package_dir / "__init__.py").write_text("", encoding="utf-8")
     source_path = questions_dir / "main.yml"
 
     # Cursor at end of 'docx template file: ' — should suggest all template filenames
-    source = "attachment:\n  - name: Letter\n    docx template file: \n    content: Hi\n"
+    source = (
+        "attachment:\n  - name: Letter\n    docx template file: \n    content: Hi\n"
+    )
 
     labels = {
         item.label
@@ -3031,11 +3156,15 @@ def test_get_completions_attachment_template_paths_filters_hidden_and_wrong_exte
     (template_dir / "form.pdf").write_text("placeholder", encoding="utf-8")
     (template_dir / ".DS_Store").write_text("", encoding="utf-8")
     (template_dir / "~$letter.docx").write_text("", encoding="utf-8")
-    (tmp_path / "pyproject.toml").write_text("[project]\nname = 'demo'\n", encoding="utf-8")
+    (tmp_path / "pyproject.toml").write_text(
+        "[project]\nname = 'demo'\n", encoding="utf-8"
+    )
     (package_dir / "__init__.py").write_text("", encoding="utf-8")
     source_path = questions_dir / "main.yml"
 
-    source = "attachment:\n  - name: Letter\n    docx template file: \n    content: Hi\n"
+    source = (
+        "attachment:\n  - name: Letter\n    docx template file: \n    content: Hi\n"
+    )
 
     labels = {
         item.label
@@ -3063,7 +3192,9 @@ def test_get_completions_in_attachment_field_code_value_include_python_aliases(
     questions_dir.mkdir(parents=True)
     template_dir.mkdir(parents=True)
     (template_dir / "letter.docx").write_text("placeholder", encoding="utf-8")
-    (package_dir / "helpers.py").write_text("def eligible(user):\n    return True\n", encoding="utf-8")
+    (package_dir / "helpers.py").write_text(
+        "def eligible(user):\n    return True\n", encoding="utf-8"
+    )
     source_path = questions_dir / "main.yml"
     source = (
         "modules:\n"
@@ -3097,7 +3228,9 @@ def test_get_completions_in_need_post_list_item_include_python_aliases(
     package_dir = tmp_path / "docassemble" / "demo"
     questions_dir = package_dir / "data" / "questions"
     questions_dir.mkdir(parents=True)
-    (package_dir / "helpers.py").write_text("def eligible(user):\n    return True\n", encoding="utf-8")
+    (package_dir / "helpers.py").write_text(
+        "def eligible(user):\n    return True\n", encoding="utf-8"
+    )
     source_path = questions_dir / "main.yml"
     source = "modules:\n  - .helpers\n---\nneed:\n  post:\n    - eli\nquestion: Hi\n"
 
@@ -3119,7 +3252,9 @@ def test_get_completions_in_on_change_value_include_python_aliases(tmp_path) -> 
     package_dir = tmp_path / "docassemble" / "demo"
     questions_dir = package_dir / "data" / "questions"
     questions_dir.mkdir(parents=True)
-    (package_dir / "helpers.py").write_text("def eligible(user):\n    return True\n", encoding="utf-8")
+    (package_dir / "helpers.py").write_text(
+        "def eligible(user):\n    return True\n", encoding="utf-8"
+    )
     source_path = questions_dir / "main.yml"
     source = "modules:\n  - .helpers\n---\non change:\n  user.name: eli\n"
 
@@ -3442,7 +3577,9 @@ def test_custom_datatype_completion_without_modules_directive(tmp_path) -> None:
     questions_dir = pkg_dir / "data" / "questions"
     questions_dir.mkdir(parents=True)
     (pkg_dir / "__init__.py").write_text("", encoding="utf-8")
-    (tmp_path / "pyproject.toml").write_text("[project]\nname = 'demo'\n", encoding="utf-8")
+    (tmp_path / "pyproject.toml").write_text(
+        "[project]\nname = 'demo'\n", encoding="utf-8"
+    )
     (pkg_dir / "custom_types.py").write_text(
         "from docassemble.base.util import CustomDataType\n\nclass SpamDataType(CustomDataType):\n    name = 'spam'\n",
         encoding="utf-8",
@@ -3462,7 +3599,9 @@ def test_custom_datatype_completion_without_modules_directive(tmp_path) -> None:
         )
     }
 
-    assert "spam" in labels, "Custom datatype should appear even without modules: directive"
+    assert "spam" in labels, (
+        "Custom datatype should appear even without modules: directive"
+    )
     assert "text" in labels, "Built-in datatypes should still appear"
 
 
@@ -3476,7 +3615,9 @@ def test_objects_completion_from_any_package_module(tmp_path) -> None:
     questions_dir = pkg_dir / "data" / "questions"
     questions_dir.mkdir(parents=True)
     (pkg_dir / "__init__.py").write_text("", encoding="utf-8")
-    (tmp_path / "pyproject.toml").write_text("[project]\nname = 'demo'\n", encoding="utf-8")
+    (tmp_path / "pyproject.toml").write_text(
+        "[project]\nname = 'demo'\n", encoding="utf-8"
+    )
     (pkg_dir / "objects.py").write_text(
         "from docassemble.base.util import DAObject\nclass CustomObj(DAObject):\n    pass\n",
         encoding="utf-8",
@@ -3496,7 +3637,9 @@ def test_objects_completion_from_any_package_module(tmp_path) -> None:
         )
     }
 
-    assert "CustomObj" in labels, "Custom DAObject should appear from any package module"
+    assert "CustomObj" in labels, (
+        "Custom DAObject should appear from any package module"
+    )
     assert "DAObject" in labels, "Built-in Docassemble classes should still appear"
 
 
@@ -3511,7 +3654,9 @@ def test_cross_package_completions_via_include(tmp_path) -> None:
     # --- External package (simulates .venv install) ---
     ext_root = tmp_path / "ext_pkg"
     ext_root.mkdir()
-    (ext_root / "pyproject.toml").write_text("[project]\nname = 'ext_playground'\n", encoding="utf-8")
+    (ext_root / "pyproject.toml").write_text(
+        "[project]\nname = 'ext_playground'\n", encoding="utf-8"
+    )
     ext_pkg_dir = ext_root / "docassemble" / "ext_playground"
     ext_pkg_dir.mkdir(parents=True)
     (ext_pkg_dir / "__init__.py").write_text("", encoding="utf-8")
@@ -3536,7 +3681,9 @@ def test_cross_package_completions_via_include(tmp_path) -> None:
         # --- Main package ---
         main_root = tmp_path / "main_pkg"
         main_root.mkdir()
-        (main_root / "pyproject.toml").write_text("[project]\nname = 'main_demo'\n", encoding="utf-8")
+        (main_root / "pyproject.toml").write_text(
+            "[project]\nname = 'main_demo'\n", encoding="utf-8"
+        )
         main_pkg_dir = main_root / "docassemble" / "main_demo"
         main_pkg_dir.mkdir(parents=True)
         (main_pkg_dir / "__init__.py").write_text("", encoding="utf-8")
@@ -3559,7 +3706,9 @@ def test_cross_package_completions_via_include(tmp_path) -> None:
             )
         }
 
-        assert "ExternalObj" in obj_labels, "External class should appear in objects completions via modules:"
+        assert "ExternalObj" in obj_labels, (
+            "External class should appear in objects completions via modules:"
+        )
         assert "DAObject" in obj_labels, "Built-in classes should still appear"
 
         # Test datatype: completion with the external custom datatype
@@ -3586,7 +3735,9 @@ def test_cross_package_completions_via_include(tmp_path) -> None:
             )
         }
 
-        assert "ext_type" in dt_labels, "External custom datatype should appear in datatype completions via modules:"
+        assert "ext_type" in dt_labels, (
+            "External custom datatype should appear in datatype completions via modules:"
+        )
         assert "text" in dt_labels, "Built-in datatypes should still appear"
     finally:
         if str(ext_root) in sys.path:
@@ -3696,7 +3847,9 @@ def test_python_value_key_includes_expression_keywords_only() -> None:
 
 def test_keywords_have_keyword_detail() -> None:
     source = "code: |\n  Tr\n"
-    keyword_items = [item for item in get_completions(source, 1, 4) if item.label == "True"]
+    keyword_items = [
+        item for item in get_completions(source, 1, 4) if item.label == "True"
+    ]
     assert len(keyword_items) == 1
 
 
@@ -3745,5 +3898,7 @@ def test_mako_expression_includes_builtin_exceptions() -> None:
 
 def test_builtin_exception_has_exception_detail() -> None:
     source = "code: |\n  Val\n"
-    items = [item for item in get_completions(source, 1, 5) if item.label == "ValueError"]
+    items = [
+        item for item in get_completions(source, 1, 5) if item.label == "ValueError"
+    ]
     assert len(items) == 1

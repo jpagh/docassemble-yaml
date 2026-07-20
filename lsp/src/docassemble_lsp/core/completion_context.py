@@ -57,7 +57,10 @@ _BUTTON_COMMANDS = (
     "new_session",
 )
 _FILE_FIELD_KEYS = frozenset(
-    FIELDS_ITEM_FILE_STRING_KEYS + FIELDS_ITEM_FILE_COMPLEX_KEYS + FIELDS_ITEM_FILE_BOOLEAN_KEYS + ("file css class",)
+    FIELDS_ITEM_FILE_STRING_KEYS
+    + FIELDS_ITEM_FILE_COMPLEX_KEYS
+    + FIELDS_ITEM_FILE_BOOLEAN_KEYS
+    + ("file css class",)
 )
 
 # Datatype values that parse.py remaps at parse time
@@ -107,9 +110,13 @@ _TOP_LEVEL_PROMOTIONS: list[tuple[Callable[[set[str]], bool], frozenset[str]]] =
     ),
 ]
 
-_FIELD_PROMOTIONS: list[tuple[Callable[[dict[str, Any], set[str]], bool], frozenset[str]]] = [
+_FIELD_PROMOTIONS: list[
+    tuple[Callable[[dict[str, Any], set[str]], bool], frozenset[str]]
+] = [
     (
-        lambda entries, keys: entries.get("input type", "").lower() == "ajax" and "action" not in keys,
+        lambda entries, keys: (
+            entries.get("input type", "").lower() == "ajax" and "action" not in keys
+        ),
         frozenset({"action"}),
     ),
     (
@@ -124,7 +131,8 @@ _FIELD_PROMOTIONS: list[tuple[Callable[[dict[str, Any], set[str]], bool], frozen
         lambda entries, keys: (
             (
                 (entries.get("datatype") or "").lower() in MULTIPLE_CHOICE_DATATYPES
-                or (entries.get("input type") or "").lower() in MULTIPLE_CHOICE_INPUT_TYPES
+                or (entries.get("input type") or "").lower()
+                in MULTIPLE_CHOICE_INPUT_TYPES
             )
             and "choices" not in keys
             and "code" not in keys
@@ -176,7 +184,9 @@ def build_completion_context(
 ) -> CompletionContext:
     scope = completion_scope(source, line, character)
     scope_entries = _current_scope_entries(source, line, scope)
-    current_field_datatype = (scope_entries.get("datatype") or "").lower() if scope_entries else ""
+    current_field_datatype = (
+        (scope_entries.get("datatype") or "").lower() if scope_entries else ""
+    )
 
     return CompletionContext(
         source=source,
@@ -187,15 +197,19 @@ def build_completion_context(
         metadata=metadata,
         scope=scope,
         line_prefix=line_at(source, line)[:character],
-        show_if_variable_candidates=lambda callback_source, callback_line, line_prefix: _show_if_variable_candidates(
-            callback_source,
-            callback_line,
-            line_prefix,
-            metadata=metadata,
+        show_if_variable_candidates=lambda callback_source, callback_line, line_prefix: (
+            _show_if_variable_candidates(
+                callback_source,
+                callback_line,
+                line_prefix,
+                metadata=metadata,
+            )
         ),
         button_command_candidates=_button_command_candidates,
-        filter_property_candidates=lambda candidates, source, line, scope: _filter_property_candidates(
-            candidates, source, line, scope, existing_entries=scope_entries
+        filter_property_candidates=lambda candidates, source, line, scope: (
+            _filter_property_candidates(
+                candidates, source, line, scope, existing_entries=scope_entries
+            )
         ),
         should_suppress_shorthand=_should_suppress_shorthand,
         current_field_datatype=current_field_datatype,
@@ -241,7 +255,9 @@ def _current_document_top_level_keys(source: str, line: int) -> set[str]:
     return keys
 
 
-def _button_command_candidates(source: str, line: int, line_prefix: str) -> list[CompletionCandidate]:
+def _button_command_candidates(
+    source: str, line: int, line_prefix: str
+) -> list[CompletionCandidate]:
     value_match = _VALUE_RE.match(line_prefix)
     if value_match is None:
         return []
@@ -335,7 +351,9 @@ def _extract_field_var_from_item(
     return None
 
 
-def _current_screen_field_variables(source: str, line: int, metadata: SchemaMetadata) -> list[str]:
+def _current_screen_field_variables(
+    source: str, line: int, metadata: SchemaMetadata
+) -> list[str]:
     lines = source.splitlines()
     if not lines:
         return []
@@ -498,7 +516,9 @@ def _current_list_item_entries(source: str, line: int) -> dict[str, str | None]:
         if index == start_line:
             list_item_match = _LIST_ITEM_KEY_RE.match(text)
             if list_item_match is not None:
-                entries[list_item_match.group(2)] = _normalize_scalar_value(list_item_match.group(3))
+                entries[list_item_match.group(2)] = _normalize_scalar_value(
+                    list_item_match.group(3)
+                )
             continue
 
         if _line_indent(text) != item_key_indent:
@@ -509,7 +529,9 @@ def _current_list_item_entries(source: str, line: int) -> dict[str, str | None]:
             continue
 
         value_match = _VALUE_RE.match(text)
-        entries[key_match.group(1)] = _normalize_scalar_value(value_match.group(3) if value_match else None)
+        entries[key_match.group(1)] = _normalize_scalar_value(
+            value_match.group(3) if value_match else None
+        )
 
     return entries
 
@@ -568,7 +590,9 @@ def _current_mapping_entries(source: str, line: int) -> dict[str, str | None]:
             continue
 
         value_match = _VALUE_RE.match(text)
-        entries[key_match.group(1)] = _normalize_scalar_value(value_match.group(3) if value_match else None)
+        entries[key_match.group(1)] = _normalize_scalar_value(
+            value_match.group(3) if value_match else None
+        )
 
     return entries
 
@@ -592,12 +616,16 @@ def _current_top_level_entries(source: str, line: int) -> dict[str, str | None]:
             continue
 
         value_match = _VALUE_RE.match(text)
-        entries[key_match.group(1)] = _normalize_scalar_value(value_match.group(3) if value_match else None)
+        entries[key_match.group(1)] = _normalize_scalar_value(
+            value_match.group(3) if value_match else None
+        )
 
     return entries
 
 
-def _current_scope_entries(source: str, line: int, scope: CompletionScope) -> dict[str, str | None]:
+def _current_scope_entries(
+    source: str, line: int, scope: CompletionScope
+) -> dict[str, str | None]:
     if scope == "top_level" or _line_indent(line_at(source, line)) == 0:
         return _current_top_level_entries(source, line)
 
@@ -634,9 +662,15 @@ def _filter_property_candidates(
 
     if not existing_entries:
         if scope == "top_level":
-            return [candidate for candidate in candidates if candidate.label not in _SIGNATURE_ONLY_TOP_LEVEL_KEYS]
+            return [
+                candidate
+                for candidate in candidates
+                if candidate.label not in _SIGNATURE_ONLY_TOP_LEVEL_KEYS
+            ]
         if scope == "fields_item":
-            elevated = sorted(candidates, key=lambda c: (c.label not in {"label", "field"}, c.label))
+            elevated = sorted(
+                candidates, key=lambda c: (c.label not in {"label", "field"}, c.label)
+            )
             result = [c for c in elevated if c.label not in _FILE_FIELD_KEYS]
             if _enclosing_list_key(source, line) == "fields":
                 result = [c for c in result if c.label != "action"]
@@ -646,18 +680,34 @@ def _filter_property_candidates(
     existing_keys = set(existing_entries)
 
     if scope != "fields_item":
-        filtered = [candidate for candidate in candidates if candidate.label not in existing_keys]
+        filtered = [
+            candidate
+            for candidate in candidates
+            if candidate.label not in existing_keys
+        ]
         if scope == "show_if_modifier":
             if "code" in existing_keys:
-                filtered = [candidate for candidate in filtered if candidate.label not in {"variable", "is"}]
+                filtered = [
+                    candidate
+                    for candidate in filtered
+                    if candidate.label not in {"variable", "is"}
+                ]
             elif existing_keys & {"variable", "is"}:
-                filtered = [candidate for candidate in filtered if candidate.label != "code"]
+                filtered = [
+                    candidate for candidate in filtered if candidate.label != "code"
+                ]
         if scope == "top_level":
             if "signature" not in existing_keys:
                 filtered = [
-                    candidate for candidate in filtered if candidate.label not in _SIGNATURE_ONLY_TOP_LEVEL_KEYS
+                    candidate
+                    for candidate in filtered
+                    if candidate.label not in _SIGNATURE_ONLY_TOP_LEVEL_KEYS
                 ]
-            active_exclusive = {key.lower() for key in existing_keys if key.lower() in _TOP_LEVEL_EXCLUSIVE_TYPES}
+            active_exclusive = {
+                key.lower()
+                for key in existing_keys
+                if key.lower() in _TOP_LEVEL_EXCLUSIVE_TYPES
+            }
             if active_exclusive:
                 filtered = [
                     candidate
@@ -665,7 +715,8 @@ def _filter_property_candidates(
                     if candidate.label.lower() not in _TOP_LEVEL_EXCLUSIVE_TYPES
                     or all(
                         candidate.label.lower() == active_key
-                        or candidate.label.lower() in _TOP_LEVEL_EXCLUSIVE_TYPES[active_key]
+                        or candidate.label.lower()
+                        in _TOP_LEVEL_EXCLUSIVE_TYPES[active_key]
                         for active_key in active_exclusive
                     )
                 ]
@@ -674,13 +725,17 @@ def _filter_property_candidates(
                 if top_cond(existing_keys):
                     promoted_top.update(top_keys)
             if promoted_top:
-                filtered = sorted(filtered, key=lambda c: (c.label not in promoted_top, c.label))
+                filtered = sorted(
+                    filtered, key=lambda c: (c.label not in promoted_top, c.label)
+                )
         return filtered
 
     declared_datatype = (existing_entries.get("datatype") or "").lower()
     input_type = (existing_entries.get("input type") or "").lower()
     effective_datatype = _effective_datatype(declared_datatype)
-    file_context = declared_datatype in FILE_LIKE_DATATYPES or bool(existing_keys & _FILE_FIELD_KEYS)
+    file_context = declared_datatype in FILE_LIKE_DATATYPES or bool(
+        existing_keys & _FILE_FIELD_KEYS
+    )
 
     # --- Promotion: collect promoted keys from all matching rules ---
     promoted: set[str] = set()
@@ -689,7 +744,9 @@ def _filter_property_candidates(
             promoted.update(promoted_keys)
 
     if promoted:
-        candidates = sorted(candidates, key=lambda c: (c.label not in promoted, c.label))
+        candidates = sorted(
+            candidates, key=lambda c: (c.label not in promoted, c.label)
+        )
 
     # --- Detect shorthand label pattern (e.g. - Name: user.name) ---
     # Any key not in FIELD_ITEM_KNOWN_KEYS_LOWER is treated as a shorthand
@@ -725,7 +782,9 @@ def _filter_property_candidates(
         # Special-case checks use the *declared* datatype (the literal
         # value the user wrote) because they depend on the YAML value,
         # not the post-remap runtime value.
-        if candidate.label == "object labeler" and not declared_datatype.startswith("object"):
+        if candidate.label == "object labeler" and not declared_datatype.startswith(
+            "object"
+        ):
             continue
         if (
             candidate.label == "rows"
@@ -758,7 +817,11 @@ def _filter_property_candidates(
             continue
 
         # --- action is only valid in fields: when input type is ajax ---
-        if candidate.label == "action" and input_type != "ajax" and _enclosing_list_key(source, line) == "fields":
+        if (
+            candidate.label == "action"
+            and input_type != "ajax"
+            and _enclosing_list_key(source, line) == "fields"
+        ):
             continue
 
         field_filtered.append(candidate)
@@ -830,7 +893,9 @@ def completion_scope(source: str, line: int, character: int) -> CompletionScope:
         "attachment options",
     }:
         return "attachment_metadata_block"
-    if nearest == "fields" and any(key in {"attachment", "attachments"} for key in ancestors[1:]):
+    if nearest == "fields" and any(
+        key in {"attachment", "attachments"} for key in ancestors[1:]
+    ):
         return "attachment_fields_block"
     if nearest in {"field variables", "raw field variables"} and any(
         key in {"attachment", "attachments"} for key in ancestors[1:]
@@ -856,7 +921,9 @@ def completion_scope(source: str, line: int, character: int) -> CompletionScope:
         return "order_item"
     if nearest == "sections" or parent == "sections":
         return "sections_item"
-    if "table" in document_top_level_keys and (nearest == "columns" or parent == "columns"):
+    if "table" in document_top_level_keys and (
+        nearest == "columns" or parent == "columns"
+    ):
         return "table_column_item"
     if nearest in {"terms", "auto terms"} and _is_list_item_context(source, line):
         return "terms_item"
@@ -878,9 +945,17 @@ def completion_scope(source: str, line: int, character: int) -> CompletionScope:
         "validation messages",
     } and not _is_at_fields_item_key_level(source, line):
         return "validation_messages_block"
-    if nearest in {"field", "fields"} and "review" in ancestors[1:] and _is_list_item_context(source, line):
+    if (
+        nearest in {"field", "fields"}
+        and "review" in ancestors[1:]
+        and _is_list_item_context(source, line)
+    ):
         return "review_field_item"
-    if nearest not in _REVIEW_ITEM_KEYS and "review" in ancestors[1:] and _is_list_item_context(source, line):
+    if (
+        nearest not in _REVIEW_ITEM_KEYS
+        and "review" in ancestors[1:]
+        and _is_list_item_context(source, line)
+    ):
         return "review_field_item"
     if nearest == "review":
         return "review_item"
@@ -894,7 +969,9 @@ def completion_scope(source: str, line: int, character: int) -> CompletionScope:
         return "interview_help_block"
     if nearest == "help" and parent is None:
         return "help_block"
-    if nearest == "address autocomplete" and not _is_at_fields_item_key_level(source, line):
+    if nearest == "address autocomplete" and not _is_at_fields_item_key_level(
+        source, line
+    ):
         return "address_autocomplete_block"
     if nearest in {"attachment", "attachments"}:
         return "attachment_item"

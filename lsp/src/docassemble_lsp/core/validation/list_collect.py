@@ -45,15 +45,25 @@ def validate_list_collect_mako_labels(
                         label_line = _lc_key_line(field_item, "label")
                     else:
                         for key, value in field_item.items():
-                            if isinstance(key, str) and not _is_internal_metadata_key(key) and isinstance(value, str):
+                            if (
+                                isinstance(key, str)
+                                and not _is_internal_metadata_key(key)
+                                and isinstance(value, str)
+                            ):
                                 label_text = key
                                 label_line = _lc_key_line(field_item, key)
                                 break
-                    if label_text is not None and label_line is not None and _contains_mako_syntax(label_text):
+                    if (
+                        label_text is not None
+                        and label_line is not None
+                        and _contains_mako_syntax(label_text)
+                    ):
                         errors.append(
                             _yaml_error(
                                 code=MessageCode.LIST_COLLECT_LABEL_HAS_MAKO,
-                                line_number=_absolute_document_line(line_number, label_line),
+                                line_number=_absolute_document_line(
+                                    line_number, label_line
+                                ),
                                 file_name=input_file,
                                 label=label_text,
                             )

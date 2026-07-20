@@ -210,7 +210,11 @@ def _iter_top_level_list_items(source: str, key_name: str) -> list[tuple[int, st
 
         if not text.startswith((" ", "\t")):
             match = _KEY_VALUE_RE.match(text)
-            if match is not None and match.group(2).strip() == key_name and not match.group(3).strip():
+            if (
+                match is not None
+                and match.group(2).strip() == key_name
+                and not match.group(3).strip()
+            ):
                 in_block = True
                 block_indent = len(match.group(1))
                 continue
@@ -240,7 +244,9 @@ def _parse_import_binding(
     current_path: Path | None,
     workspace_index: WorkspaceIndex,
 ) -> list[PythonNamespaceBinding]:
-    statement = entry if entry.lstrip().startswith(("from ", "import ")) else f"import {entry}"
+    statement = (
+        entry if entry.lstrip().startswith(("from ", "import ")) else f"import {entry}"
+    )
     try:
         node = _safe_ast_parse(statement).body[0]
     except SyntaxError:
@@ -256,7 +262,9 @@ def _parse_import_binding(
                 PythonNamespaceBinding(
                     kind="module_namespace",
                     module_name=module_name,
-                    module_path=resolve_python_module_path(module_name, current_path, workspace_index),
+                    module_path=resolve_python_module_path(
+                        module_name, current_path, workspace_index
+                    ),
                     alias=alias.asname or alias.name.rsplit(".", 1)[-1],
                 )
             )
@@ -323,7 +331,9 @@ def _python_namespace_bindings(
     seen_modules: set[Path] = set()
 
     for module_name in VENDORED_MODULE_NAMES:
-        mod_path = resolve_python_module_path(module_name, current_path, workspace_index)
+        mod_path = resolve_python_module_path(
+            module_name, current_path, workspace_index
+        )
         if mod_path is not None and mod_path not in seen_modules:
             seen_modules.add(mod_path)
             bindings.append(
@@ -372,7 +382,9 @@ def _python_namespace_bindings(
             PythonNamespaceBinding(
                 kind="module_star",
                 module_name=normalized_module_name,
-                module_path=resolve_python_module_path(normalized_module_name, current_path, workspace_index),
+                module_path=resolve_python_module_path(
+                    normalized_module_name, current_path, workspace_index
+                ),
             )
         )
     for _line, entry in _iter_top_level_list_items(source, "imports"):
@@ -393,13 +405,17 @@ def enclosing_block_scalar_region(source: str, line: int) -> BlockScalarRegion |
         raw_value = match.group(3).strip()
         if raw_value not in _BLOCK_SCALAR_MARKERS:
             continue
-        region = _block_scalar_region_from_key_line(lines, key_line, match.group(2).strip(), len(match.group(1)))
+        region = _block_scalar_region_from_key_line(
+            lines, key_line, match.group(2).strip(), len(match.group(1))
+        )
         if region.content_start_line <= line <= region.end_line:
             return region
     return None
 
 
-def _python_completion_prefix_in_text(text: str, line: int, character: int) -> tuple[tuple[str, ...], str] | None:
+def _python_completion_prefix_in_text(
+    text: str, line: int, character: int
+) -> tuple[tuple[str, ...], str] | None:
     lines = text.splitlines() or [""]
     line_index = min(max(line - 1, 0), len(lines) - 1)
     prefix_text = lines[line_index][: max(character, 0)]
@@ -422,7 +438,10 @@ def _key_path(source: str, line: int, key_name: str) -> tuple[str, ...]:
 
 
 def _path_has_suffix(path: tuple[str, ...], suffixes: set[tuple[str, ...]]) -> bool:
-    return any(len(path) >= len(suffix) and path[-len(suffix) :] == suffix for suffix in suffixes)
+    return any(
+        len(path) >= len(suffix) and path[-len(suffix) :] == suffix
+        for suffix in suffixes
+    )
 
 
 def _is_objects_value_path(path: tuple[str, ...]) -> bool:
@@ -450,7 +469,9 @@ def _scalar_python_completion_prefix_at_position(
         return None
     raw_value = match.group(3)
     trimmed = raw_value.strip()
-    start_character, _end_character = _value_range(raw_value, match.start(3), match.end(3))
+    start_character, _end_character = _value_range(
+        raw_value, match.start(3), match.end(3)
+    )
     if character < start_character:
         return None
     if not trimmed:
@@ -483,14 +504,18 @@ def _list_item_python_completion_prefix_at_position(
     if not trimmed:
         return None
 
-    start_character, _end_character = _value_range(raw_value, match.start(2), match.end(2))
+    start_character, _end_character = _value_range(
+        raw_value, match.start(2), match.end(2)
+    )
     if character < start_character:
         return None
     local_character = max(character - start_character, 0)
     return _python_completion_prefix_in_text(trimmed, 1, local_character)
 
 
-def _python_completion_prefix_at_position(source: str, line: int, character: int) -> tuple[tuple[str, ...], str] | None:
+def _python_completion_prefix_at_position(
+    source: str, line: int, character: int
+) -> tuple[tuple[str, ...], str] | None:
     region = enclosing_block_scalar_region(source, line)
     if region is not None and (
         region.key_name in _PYTHON_BLOCK_KEYS
@@ -498,7 +523,9 @@ def _python_completion_prefix_at_position(source: str, line: int, character: int
     ):
         local_line = line - region.content_start_line + 1
         local_character = max(character - region.content_indent, 0)
-        prefix = _python_completion_prefix_in_text(region.text, local_line, local_character)
+        prefix = _python_completion_prefix_in_text(
+            region.text, local_line, local_character
+        )
         if prefix is not None:
             return prefix
 
@@ -509,21 +536,29 @@ def _python_completion_prefix_at_position(source: str, line: int, character: int
     for mako_region in _iter_mako_block_regions(source):
         if mako_region.is_expression:
             continue
-        if not (mako_region.content_start_offset <= cursor_offset < mako_region.content_end_offset):
+        if not (
+            mako_region.content_start_offset
+            <= cursor_offset
+            < mako_region.content_end_offset
+        ):
             continue
         local_offset = cursor_offset - mako_region.content_start_offset
         code_before = mako_region.code_text[:local_offset]
         local_line = code_before.count("\n")
         last_nl = code_before.rfind("\n")
         local_char = local_offset - last_nl - 1 if last_nl != -1 else local_offset
-        prefix = _python_completion_prefix_in_text(mako_region.code_text, local_line + 1, local_char)
+        prefix = _python_completion_prefix_in_text(
+            mako_region.code_text, local_line + 1, local_char
+        )
         if prefix is not None:
             return prefix
 
     for match in _MAKO_EXPRESSION_RE.finditer(text):
         if not (match.start(1) <= character <= match.end(1) + 1):
             continue
-        prefix = _python_completion_prefix_in_text(match.group(1), 1, character - match.start(1))
+        prefix = _python_completion_prefix_in_text(
+            match.group(1), 1, character - match.start(1)
+        )
         if prefix is not None:
             return prefix
 
@@ -532,9 +567,13 @@ def _python_completion_prefix_at_position(source: str, line: int, character: int
         percent_index = text.index("%")
         statement = text[percent_index + 1 :].lstrip()
         if statement:
-            statement_start = percent_index + 1 + len(text[percent_index + 1 :]) - len(statement)
+            statement_start = (
+                percent_index + 1 + len(text[percent_index + 1 :]) - len(statement)
+            )
             if character >= statement_start:
-                prefix = _python_completion_prefix_in_text(statement, 1, character - statement_start)
+                prefix = _python_completion_prefix_in_text(
+                    statement, 1, character - statement_start
+                )
                 if prefix is not None:
                     return prefix
 
@@ -574,7 +613,11 @@ def _keywords_for_context(source: str, line: int, character: int) -> frozenset |
     for mako_region in _iter_mako_block_regions(source):
         if mako_region.is_expression:
             continue
-        if mako_region.content_start_offset <= cursor_offset < mako_region.content_end_offset:
+        if (
+            mako_region.content_start_offset
+            <= cursor_offset
+            < mako_region.content_end_offset
+        ):
             return _PYTHON_KEYWORDS
 
     if text.lstrip().startswith("%"):
@@ -587,11 +630,15 @@ def _keywords_for_context(source: str, line: int, character: int) -> frozenset |
     ):
         return _PYTHON_KEYWORDS
 
-    scalar_prefix = _scalar_python_completion_prefix_at_position(source, line, character)
+    scalar_prefix = _scalar_python_completion_prefix_at_position(
+        source, line, character
+    )
     if scalar_prefix is not None:
         return _EXPRESSION_KEYWORDS
 
-    list_prefix = _list_item_python_completion_prefix_at_position(source, line, character)
+    list_prefix = _list_item_python_completion_prefix_at_position(
+        source, line, character
+    )
     if list_prefix is not None:
         return _EXPRESSION_KEYWORDS
 
@@ -604,18 +651,24 @@ def _imported_symbol_completion_detail(binding: PythonNamespaceBinding) -> str:
     return python_module_symbol_detail(binding.module_path, binding.imported_name)
 
 
-def _is_objects_value_completion_position(source: str, line: int, character: int) -> bool:
+def _is_objects_value_completion_position(
+    source: str, line: int, character: int
+) -> bool:
     lines = _document_lines(source)
     text = lines[min(max(line, 0), len(lines) - 1)]
     match = _KEY_VALUE_RE.match(text)
     if match is not None:
         raw_value = match.group(3)
-        start_character, _end_character = _value_range(raw_value, match.start(3), match.end(3))
+        start_character, _end_character = _value_range(
+            raw_value, match.start(3), match.end(3)
+        )
         if character >= start_character:
             key_name = match.group(2).strip()
             return _is_objects_value_path(_key_path(source, line, key_name))
     region = enclosing_block_scalar_region(source, line)
-    if region is not None and _is_objects_value_path(_key_path(source, region.key_line, region.key_name)):
+    if region is not None and _is_objects_value_path(
+        _key_path(source, region.key_line, region.key_name)
+    ):
         local_line = line - region.content_start_line + 1
         if local_line == 1:
             if ".using(" in region.text.splitlines()[0]:
@@ -636,7 +689,9 @@ def _is_objects_value_completion_position(source: str, line: int, character: int
 
 def _using_kwarg_completions(partial: str) -> list[PythonCompletionTarget]:
     matched = [
-        PythonCompletionTarget(label=f"{name}=", detail="kwarg", documentation=_USING_KWARGS[name])
+        PythonCompletionTarget(
+            label=f"{name}=", detail="kwarg", documentation=_USING_KWARGS[name]
+        )
         for name in _USING_KWARGS
         if not partial or partial.lower() in name.lower()
     ]
@@ -659,11 +714,17 @@ def _da_object_subclass_completions(
     if workspace_index.package_root is None:
         vendored_paths: list[Path] = []
         for module_name in VENDORED_MODULE_NAMES:
-            mod_path = resolve_python_module_path(module_name, current_path, workspace_index)
+            mod_path = resolve_python_module_path(
+                module_name, current_path, workspace_index
+            )
             if mod_path is not None:
                 vendored_paths.append(mod_path)
         if vendored_paths:
-            class_names = set(compute_da_object_subclasses(vendored_paths, workspace_index=workspace_index))
+            class_names = set(
+                compute_da_object_subclasses(
+                    vendored_paths, workspace_index=workspace_index
+                )
+            )
     for _line, entry in _iter_top_level_list_items(source, "imports"):
         for binding in _parse_import_binding(entry, current_path, workspace_index):
             if binding.alias is not None:
@@ -693,7 +754,9 @@ def _suggest_using_completions(
 ) -> list[PythonCompletionTarget] | None:
     region = enclosing_block_scalar_region(source, line)
     if region is not None:
-        if not _is_objects_value_path(_key_path(source, region.key_line, region.key_name)):
+        if not _is_objects_value_path(
+            _key_path(source, region.key_line, region.key_name)
+        ):
             return None
         local_line = line - region.content_start_line + 1
         local_char = max(character - region.content_indent, 0)
@@ -716,7 +779,9 @@ def _suggest_using_completions(
         if not _is_objects_value_path(_key_path(source, line, key_name)):
             return None
         raw_value = match.group(3)
-        start_character, _end_character = _value_range(raw_value, match.start(3), match.end(3))
+        start_character, _end_character = _value_range(
+            raw_value, match.start(3), match.end(3)
+        )
         if character < start_character:
             return None
         cursor_text = text[match.start(3) : character]
@@ -763,7 +828,9 @@ def _suggest_using_completions(
         kwarg_name = kwarg_text.replace(",", " ").split()[-1] if kwarg_text else ""
         if kwarg_name == "object_type":
             partial_value = after_using[last_eq + 1 :].strip()
-            candidates = _da_object_subclass_completions(workspace_index, source, current_path, partial_value)
+            candidates = _da_object_subclass_completions(
+                workspace_index, source, current_path, partial_value
+            )
             if candidates is not None:
                 return candidates
 
@@ -783,12 +850,18 @@ def _python_completion_candidates_from_bindings(
     if not base_chain:
         for binding in bindings:
             if binding.kind == "module_star":
-                for label, detail in python_module_symbol_details(binding.module_path).items():
+                for label, detail in python_module_symbol_details(
+                    binding.module_path
+                ).items():
                     _add_python_completion_entry(entries, label, detail, partial)
                 continue
             if binding.alias is None:
                 continue
-            detail = "module" if binding.kind == "module_namespace" else _imported_symbol_completion_detail(binding)
+            detail = (
+                "module"
+                if binding.kind == "module_namespace"
+                else _imported_symbol_completion_detail(binding)
+            )
             _add_python_completion_entry(entries, binding.alias, detail, partial)
         if keywords is not None:
             for kw in keywords:
@@ -815,7 +888,9 @@ def _python_completion_candidates_from_bindings(
 
         if binding.alias != base_chain[0] or binding.imported_name is None:
             continue
-        members = module_completion_members(binding.module_path, (binding.imported_name, *base_chain[1:]))
+        members = module_completion_members(
+            binding.module_path, (binding.imported_name, *base_chain[1:])
+        )
         for label, detail in members.items():
             _add_python_completion_entry(entries, label, detail, partial)
 
@@ -840,7 +915,9 @@ class PythonNavigationService:
 
         current_path = path_from_uri_or_path(uri_or_path)
 
-        using_candidates = _suggest_using_completions(source, line, character, self.workspace_index, current_path)
+        using_candidates = _suggest_using_completions(
+            source, line, character, self.workspace_index, current_path
+        )
         if using_candidates is not None:
             return using_candidates
 
@@ -849,10 +926,14 @@ class PythonNavigationService:
         if _is_objects_value_completion_position(source, line, character):
             base_chain, partial = prefix
             if len(base_chain) == 1:
-                known_name = base_chain[0] in self.workspace_index.all_da_object_subclass_names
+                known_name = (
+                    base_chain[0] in self.workspace_index.all_da_object_subclass_names
+                )
                 if not known_name:
                     for _line, entry in _iter_top_level_list_items(source, "imports"):
-                        for binding in _parse_import_binding(entry, current_path, self.workspace_index):
+                        for binding in _parse_import_binding(
+                            entry, current_path, self.workspace_index
+                        ):
                             if binding.alias == base_chain[0]:
                                 known_name = True
                                 break
@@ -872,7 +953,9 @@ class PythonNavigationService:
         # subclass names plus any import aliases from the current file's ``imports:``.
         if _is_objects_value_completion_position(source, line, character):
             _, partial = prefix
-            candidates = _da_object_subclass_completions(self.workspace_index, source, current_path, partial)
+            candidates = _da_object_subclass_completions(
+                self.workspace_index, source, current_path, partial
+            )
             if candidates is not None:
                 return candidates
 
@@ -910,10 +993,16 @@ class PythonNavigationService:
             module_name = normalize_module_name(value, current_path)
             if module_name is None:
                 return []
-            module_path = resolve_python_module_path(module_name, current_path, self.workspace_index)
+            module_path = resolve_python_module_path(
+                module_name, current_path, self.workspace_index
+            )
             if module_path is None:
                 return []
-            return [DefinitionTarget(path=module_path, line=0, start_character=0, end_character=0)]
+            return [
+                DefinitionTarget(
+                    path=module_path, line=0, start_character=0, end_character=0
+                )
+            ]
 
         targets: list[DefinitionTarget] = []
         for binding in _parse_import_binding(value, current_path, self.workspace_index):

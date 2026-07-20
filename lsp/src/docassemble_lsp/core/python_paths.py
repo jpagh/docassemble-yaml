@@ -114,7 +114,10 @@ def _candidate_package_dirs(package_name: str, search_roots: list[Path]) -> list
         append(resolved_root.joinpath(*package_parts))
 
         package_dir = docassemble_package_dir(resolved_root)
-        if package_dir is not None and docassemble_package_name(package_dir) == package_name:
+        if (
+            package_dir is not None
+            and docassemble_package_name(package_dir) == package_name
+        ):
             append(package_dir)
 
         # Scan subdirectories for packages matching this name.
@@ -126,8 +129,14 @@ def _candidate_package_dirs(package_name: str, search_roots: list[Path]) -> list
                         docassemble_dir = pr / "docassemble"
                         if docassemble_dir.is_dir():
                             for pkg_subdir in safe_iterdir(docassemble_dir):
-                                if pkg_subdir.is_dir() and (pkg_subdir / "__init__.py").is_file():
-                                    if docassemble_package_name(pkg_subdir) == package_name:
+                                if (
+                                    pkg_subdir.is_dir()
+                                    and (pkg_subdir / "__init__.py").is_file()
+                                ):
+                                    if (
+                                        docassemble_package_name(pkg_subdir)
+                                        == package_name
+                                    ):
                                         append(pkg_subdir)
 
     return candidates

@@ -1330,7 +1330,9 @@ def _build_registry() -> SchemaMetadata:
         "all_variables": _rule(
             "all_variables",
             value_types=("boolean",),
-            description=("When true, the response block returns all interview variables as JSON."),
+            description=(
+                "When true, the response block returns all interview variables as JSON."
+            ),
         ),
         "allow downloading": _rule(
             "allow downloading",
@@ -1785,7 +1787,9 @@ def _build_registry() -> SchemaMetadata:
         "sort key": _rule(
             "sort key",
             value_types=("string",),
-            description=("Attribute name or key function for sorting table rows. Specifies the field to sort by."),
+            description=(
+                "Attribute name or key function for sorting table rows. Specifies the field to sort by."
+            ),
         ),
         "sort reverse": _rule(
             "sort reverse",
@@ -1815,7 +1819,9 @@ def _build_registry() -> SchemaMetadata:
         "url": _rule(
             "url",
             value_types=("string",),
-            description=("URL for a special button (e.g. exit, leave) to redirect to. Supports Mako templating."),
+            description=(
+                "URL for a special button (e.g. exit, leave) to redirect to. Supports Mako templating."
+            ),
         ),
         "use objects": _rule(
             "use objects",
@@ -2970,7 +2976,9 @@ def _build_registry() -> SchemaMetadata:
 
     _ATTACHMENT_METADATA_COLLECTION_RULES = _merge_rule_maps(
         _rules(("author",), value_types=("string", "array"), insert_kind="array"),
-        _rules(("header-includes",), value_types=("string", "array"), insert_kind="array"),
+        _rules(
+            ("header-includes",), value_types=("string", "array"), insert_kind="array"
+        ),
     )
 
     _ATTACHMENT_METADATA_BOOLEANISH_RULES = _rules(
@@ -3357,7 +3365,9 @@ def _build_registry() -> SchemaMetadata:
             display_value_types=("python", "array"),
             insert_kind="array",
         ),
-        _rules(("help",), value_types=("string", "array", "object"), insert_kind="object"),
+        _rules(
+            ("help",), value_types=("string", "array", "object"), insert_kind="object"
+        ),
         _rules(
             ("note", "html", "raw html"),
             value_types=("string",),
@@ -4582,7 +4592,9 @@ def _build_registry() -> SchemaMetadata:
     _FIELDS_ITEM_SPECIAL_RULES = _merge_rule_maps(
         _rules(
             tuple(
-                key for key in FIELDS_ITEM_SPECIAL_STRING_KEYS if key not in _FIELDS_ITEM_SPECIAL_STRING_DESCRIPTIONS
+                key
+                for key in FIELDS_ITEM_SPECIAL_STRING_KEYS
+                if key not in _FIELDS_ITEM_SPECIAL_STRING_DESCRIPTIONS
             ),
             value_types=("string",),
         ),
@@ -4822,7 +4834,9 @@ def _build_registry() -> SchemaMetadata:
     }
 
     _SHOW_IF_MODIFIER_RULES = {
-        "variable": _rule("variable", value_types=("string",), description="Variable name to inspect."),
+        "variable": _rule(
+            "variable", value_types=("string",), description="Variable name to inspect."
+        ),
         "is": _rule(
             "is",
             value_types=("string", "number", "boolean", "null"),

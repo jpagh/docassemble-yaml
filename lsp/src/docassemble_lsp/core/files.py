@@ -53,7 +53,9 @@ def _tool_mapping(pyproject: dict[str, object]) -> dict[str, object]:
     return tool_section if isinstance(tool_section, dict) else {}
 
 
-def _tool_config_section(tool_section: dict[str, object], *names: str) -> dict[str, object] | None:
+def _tool_config_section(
+    tool_section: dict[str, object], *names: str
+) -> dict[str, object] | None:
     for name in names:
         section = tool_section.get(name)
         if isinstance(section, dict):
@@ -70,7 +72,9 @@ def load_dayaml_project_config(project_dir: Path) -> DayamlProjectConfig | None:
         pyproject = tomllib.load(stream)
 
     tool_section = _tool_mapping(pyproject)
-    docassemble_lsp_section = _tool_config_section(tool_section, "docassemble-lsp", "docassemble_lsp")
+    docassemble_lsp_section = _tool_config_section(
+        tool_section, "docassemble-lsp", "docassemble_lsp"
+    )
     if docassemble_lsp_section is None:
         return None
 
@@ -81,15 +85,23 @@ def load_dayaml_project_config(project_dir: Path) -> DayamlProjectConfig | None:
     if yaml_path is not None and not yaml_path.is_absolute():
         yaml_path = project_dir / yaml_path
 
-    ignore_codes_raw = docassemble_lsp_section.get("ignore-codes", docassemble_lsp_section.get("ignore_codes", ()))
+    ignore_codes_raw = docassemble_lsp_section.get(
+        "ignore-codes", docassemble_lsp_section.get("ignore_codes", ())
+    )
     return DayamlProjectConfig(
         project_root=project_dir,
         yaml_path=yaml_path,
-        conventions=_normalize_ignore_codes(docassemble_lsp_section.get("conventions", ())),
+        conventions=_normalize_ignore_codes(
+            docassemble_lsp_section.get("conventions", ())
+        ),
         ignore_codes=_normalize_ignore_codes(ignore_codes_raw),
         cli_args=_normalize_cli_args(docassemble_lsp_section.get("args", ())),
-        check_cli_args=_normalize_cli_args(docassemble_lsp_section.get("check_args", ())),
-        format_cli_args=_normalize_cli_args(docassemble_lsp_section.get("format_args", ())),
+        check_cli_args=_normalize_cli_args(
+            docassemble_lsp_section.get("check_args", ())
+        ),
+        format_cli_args=_normalize_cli_args(
+            docassemble_lsp_section.get("format_args", ())
+        ),
         lsp_cli_args=_normalize_cli_args(docassemble_lsp_section.get("lsp_args", ())),
     )
 
@@ -166,7 +178,9 @@ def resolve_static_target(current_path: Path, value: str) -> Path | None:
     return None
 
 
-_discover_package_roots_cache: dict[frozenset[Path], tuple[list[Path], dict[Path, float]]] = {}
+_discover_package_roots_cache: dict[
+    frozenset[Path], tuple[list[Path], dict[Path, float]]
+] = {}
 _detect_package_cache: dict[Path, tuple[Path, float]] = {}
 _templates_dir_cache: dict[Path, tuple[Path, float]] = {}
 _TEMPLATE_NAMES_CACHE: dict[Path, tuple[frozenset[str], float]] = {}
@@ -269,7 +283,9 @@ def templates_dir_for_path(path: Path) -> Path | None:
         return None
     docassemble_dir = pr / "docassemble"
     if not docassemble_dir.is_dir():
-        logger.debug("templates_dir_for_path(%s) -> None (no docassemble dir under root)", path)
+        logger.debug(
+            "templates_dir_for_path(%s) -> None (no docassemble dir under root)", path
+        )
         return None
     for pkg_dir in safe_iterdir(docassemble_dir):
         if pkg_dir.is_dir() and (pkg_dir / "__init__.py").is_file():
@@ -342,7 +358,9 @@ def resolve_template_names(templates_dir: Path | None) -> frozenset[str]:
     return names
 
 
-def _collect_yaml_from_package_data(package_root: Path, *, include_default_ignores: bool) -> list[Path]:
+def _collect_yaml_from_package_data(
+    package_root: Path, *, include_default_ignores: bool
+) -> list[Path]:
     """Collect all YAML files from ``docassemble/<pkg>/data/`` under *package_root*."""
     yaml_files: list[Path] = []
     docassemble_dir = package_root / "docassemble"
@@ -357,7 +375,9 @@ def _collect_yaml_from_package_data(package_root: Path, *, include_default_ignor
                             if is_default_ignored_dir(root_path.name):
                                 dirnames[:] = []
                                 continue
-                            dirnames[:] = [d for d in dirnames if not is_default_ignored_dir(d)]
+                            dirnames[:] = [
+                                d for d in dirnames if not is_default_ignored_dir(d)
+                            ]
                         for filename in filenames:
                             if filename.lower().endswith((".yml", ".yaml")):
                                 yaml_files.append(root_path / filename)
@@ -402,7 +422,9 @@ def collect_dayaml_conventions(paths: Iterable[Path]) -> frozenset[str]:
     return frozenset(conventions)
 
 
-def collect_dayaml_cli_args(paths: Iterable[Path], *, command_name: str = "check") -> tuple[str, ...]:
+def collect_dayaml_cli_args(
+    paths: Iterable[Path], *, command_name: str = "check"
+) -> tuple[str, ...]:
     cli_args: list[str] = []
     seen_projects: set[Path] = set()
 
@@ -466,7 +488,9 @@ def _collect_yaml_files(
             if package_roots:
                 for pr in package_roots:
                     yaml_files.extend(
-                        _collect_yaml_from_package_data(pr, include_default_ignores=include_default_ignores)
+                        _collect_yaml_from_package_data(
+                            pr, include_default_ignores=include_default_ignores
+                        )
                     )
             else:
                 for root, dirnames, filenames in os.walk(path, topdown=True):
@@ -475,7 +499,11 @@ def _collect_yaml_files(
                         if is_default_ignored_dir(root_path.name):
                             dirnames[:] = []
                             continue
-                        dirnames[:] = [dirname for dirname in dirnames if not is_default_ignored_dir(dirname)]
+                        dirnames[:] = [
+                            dirname
+                            for dirname in dirnames
+                            if not is_default_ignored_dir(dirname)
+                        ]
                     for filename in filenames:
                         if filename.lower().endswith((".yml", ".yaml")):
                             yaml_files.append(root_path / filename)

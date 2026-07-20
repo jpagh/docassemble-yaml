@@ -111,7 +111,9 @@ def test_resolve_python_symbol_chain_cross_module(tmp_path: Path) -> None:
     (pkg / "utils.py").write_text("FOO = 1\n")
     (pkg / "helpers.py").write_text("from .utils import FOO\n")
     idx = WorkspaceIndex.empty_for_roots((tmp_path.resolve(),))
-    result = resolve_python_symbol_chain(pkg / "helpers.py", ("FOO",), workspace_index=idx)
+    result = resolve_python_symbol_chain(
+        pkg / "helpers.py", ("FOO",), workspace_index=idx
+    )
     assert len(result) == 1
     assert result[0].path == (pkg / "utils.py").resolve()
 
@@ -194,7 +196,9 @@ def test_compute_da_object_subclasses_multi_level(tmp_path: Path) -> None:
     pkg = tmp_path / "docassemble" / "demo"
     pkg.mkdir(parents=True)
     (pkg / "__init__.py").write_text("")
-    (pkg / "mymodel.py").write_text("class A(DAObject): pass\nclass B(A): pass\nclass C(B): pass\n")
+    (pkg / "mymodel.py").write_text(
+        "class A(DAObject): pass\nclass B(A): pass\nclass C(B): pass\n"
+    )
     idx = WorkspaceIndex.empty_for_roots((tmp_path.resolve(),))
     result = compute_da_object_subclasses([pkg / "mymodel.py"], workspace_index=idx)
     assert result == {"DAObject", "A", "B", "C", "DAEmpty"}
@@ -204,7 +208,9 @@ def test_compute_da_object_subclasses_diamond(tmp_path: Path) -> None:
     pkg = tmp_path / "docassemble" / "demo"
     pkg.mkdir(parents=True)
     (pkg / "__init__.py").write_text("")
-    (pkg / "mymodel.py").write_text("class A(DAObject): pass\nclass B(DAObject): pass\nclass C(A, B): pass\n")
+    (pkg / "mymodel.py").write_text(
+        "class A(DAObject): pass\nclass B(DAObject): pass\nclass C(A, B): pass\n"
+    )
     idx = WorkspaceIndex.empty_for_roots((tmp_path.resolve(),))
     result = compute_da_object_subclasses([pkg / "mymodel.py"], workspace_index=idx)
     assert result == {"DAObject", "A", "B", "C", "DAEmpty"}
@@ -276,7 +282,9 @@ def test_module_completion_members_public_only(tmp_path: Path) -> None:
 
 def test_module_completion_members_class_methods(tmp_path: Path) -> None:
     mod_path = tmp_path / "mymod.py"
-    _write_py_file(mod_path, "class MyClass:\n    def pub(self): pass\n    def _priv(self): pass\n")
+    _write_py_file(
+        mod_path, "class MyClass:\n    def pub(self): pass\n    def _priv(self): pass\n"
+    )
     result = module_completion_members(mod_path, ("MyClass",))
     assert result == {"pub": "method", "_priv": "method"}
 

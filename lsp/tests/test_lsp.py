@@ -77,7 +77,9 @@ def build_completion_list(source: str, line: int, character: int, **kwargs: Any)
         line,
         character,
         uri_or_path=uri_or_path,
-        workspace_index=_workspace_index_from_test_args(source, uri_or_path, workspace_paths, workspace_index),
+        workspace_index=_workspace_index_from_test_args(
+            source, uri_or_path, workspace_paths, workspace_index
+        ),
         **kwargs,
     )
 
@@ -86,11 +88,17 @@ def build_workspace_symbols(query: str, **kwargs: Any) -> Any:
     workspace_paths = kwargs.pop("workspace_paths", None)
     workspace_index = kwargs.pop("workspace_index", None)
     if workspace_index is None:
-        workspace_index = build_workspace_index([Path(path) for path in workspace_paths] if workspace_paths else [])
-    return core_build_workspace_symbols(query, workspace_index=workspace_index, **kwargs)
+        workspace_index = build_workspace_index(
+            [Path(path) for path in workspace_paths] if workspace_paths else []
+        )
+    return core_build_workspace_symbols(
+        query, workspace_index=workspace_index, **kwargs
+    )
 
 
-def build_definition_locations(uri: str, source: str, line: int, character: int, **kwargs: Any) -> Any:
+def build_definition_locations(
+    uri: str, source: str, line: int, character: int, **kwargs: Any
+) -> Any:
     workspace_paths = kwargs.pop("workspace_paths", None)
     workspace_index = kwargs.pop("workspace_index", None)
     return core_build_definition_locations(
@@ -98,7 +106,9 @@ def build_definition_locations(uri: str, source: str, line: int, character: int,
         source,
         line,
         character,
-        workspace_index=_workspace_index_from_test_args(source, uri, workspace_paths, workspace_index),
+        workspace_index=_workspace_index_from_test_args(
+            source, uri, workspace_paths, workspace_index
+        ),
         **kwargs,
     )
 
@@ -113,10 +123,14 @@ def build_document_links(uri: str, source: str, **kwargs: Any) -> Any:
             current_path=current_path,
             current_source=source if current_path is not None else None,
         )
-    return core_build_document_links(uri, source, workspace_index=workspace_index, **kwargs)
+    return core_build_document_links(
+        uri, source, workspace_index=workspace_index, **kwargs
+    )
 
 
-def build_reference_locations(uri: str, source: str, line: int, character: int, **kwargs: Any) -> Any:
+def build_reference_locations(
+    uri: str, source: str, line: int, character: int, **kwargs: Any
+) -> Any:
     workspace_paths = kwargs.pop("workspace_paths", None)
     workspace_index = kwargs.pop("workspace_index", None)
     return core_build_reference_locations(
@@ -124,7 +138,9 @@ def build_reference_locations(uri: str, source: str, line: int, character: int, 
         source,
         line,
         character,
-        workspace_index=_workspace_index_from_test_args(source, uri, workspace_paths, workspace_index),
+        workspace_index=_workspace_index_from_test_args(
+            source, uri, workspace_paths, workspace_index
+        ),
         **kwargs,
     )
 
@@ -151,14 +167,23 @@ def test_completion_list_includes_top_level_keys() -> None:
 def test_completion_list_inserts_validation_code_as_block_scalar() -> None:
     completions = build_completion_list("", 0, 0)
 
-    validation_code_items = [item for item in completions.items if item.label == "validation code"]
+    validation_code_items = [
+        item for item in completions.items if item.label == "validation code"
+    ]
     assert validation_code_items
-    assert any(item.insert_text == "validation code: |\n  $0" for item in validation_code_items)
-    assert any(item.insert_text_format == InsertTextFormat.Snippet for item in validation_code_items)
+    assert any(
+        item.insert_text == "validation code: |\n  $0" for item in validation_code_items
+    )
+    assert any(
+        item.insert_text_format == InsertTextFormat.Snippet
+        for item in validation_code_items
+    )
 
 
 def test_completion_list_uses_display_type_for_boolean_python_expression_keys() -> None:
-    completions = build_completion_list("question: Sign here\nsignature: user.signature\n\n", 2, 0)
+    completions = build_completion_list(
+        "question: Sign here\nsignature: user.signature\n\n", 2, 0
+    )
 
     required = next(item for item in completions.items if item.label == "required")
 
@@ -167,7 +192,9 @@ def test_completion_list_uses_display_type_for_boolean_python_expression_keys() 
     assert "boolean | python" in required.documentation.value
 
 
-def test_completion_list_hides_signature_only_top_level_keys_without_signature() -> None:
+def test_completion_list_hides_signature_only_top_level_keys_without_signature() -> (
+    None
+):
     completions = build_completion_list("", 0, 0)
 
     labels = {item.label for item in completions.items}
@@ -177,7 +204,9 @@ def test_completion_list_hides_signature_only_top_level_keys_without_signature()
 
 
 def test_completion_list_shows_signature_only_top_level_keys_after_signature() -> None:
-    completions = build_completion_list("question: Sign here\nsignature: user.signature\n\n", 2, 0)
+    completions = build_completion_list(
+        "question: Sign here\nsignature: user.signature\n\n", 2, 0
+    )
 
     labels = {item.label for item in completions.items}
 
@@ -326,7 +355,9 @@ def test_completion_list_covers_example_corpora_top_level_keys() -> None:
     completions = build_completion_list("", 0, 0)
 
     labels = {item.label for item in completions.items}
-    missing = (top_level_keys_from_example_corpora() - {"required", "pen color"}) - labels
+    missing = (
+        top_level_keys_from_example_corpora() - {"required", "pen color"}
+    ) - labels
 
     assert not missing
 
@@ -340,7 +371,9 @@ def test_hover_uses_schema_documentation() -> None:
 
 
 def test_hover_uses_display_type_for_boolean_python_expression_keys() -> None:
-    hover = build_hover("question: Sign here\nsignature: user.signature\nrequired: False\n", 2, 2)
+    hover = build_hover(
+        "question: Sign here\nsignature: user.signature\nrequired: False\n", 2, 2
+    )
 
     assert hover is not None
     assert isinstance(hover.contents, MarkupContent)
@@ -387,13 +420,21 @@ def test_hover_returns_none_for_non_enum_value_position() -> None:
 
 
 def test_completion_list_returns_enum_values_for_known_property() -> None:
-    completions = build_completion_list("continue button color: p", 0, len("continue button color: p"))
+    completions = build_completion_list(
+        "continue button color: p", 0, len("continue button color: p")
+    )
 
-    labels = {item.label for item in completions.items if item.kind == CompletionItemKind.Value}
+    labels = {
+        item.label
+        for item in completions.items
+        if item.kind == CompletionItemKind.Value
+    }
     assert "primary" in labels
 
 
-def test_completion_list_uses_display_type_for_field_boolean_python_expression_keys() -> None:
+def test_completion_list_uses_display_type_for_field_boolean_python_expression_keys() -> (
+    None
+):
     completions = build_completion_list("question: Hi\nfields:\n  - \n", 2, 4)
 
     required = next(item for item in completions.items if item.label == "required")
@@ -445,7 +486,9 @@ def test_string_property_completion_triggers_suggest_after_insert() -> None:
 
 
 def test_completion_list_matches_type_prefix_to_datatype_and_input_type() -> None:
-    completions = build_completion_list("question: Hi\nfields:\n  - type", 2, len("  - type"))
+    completions = build_completion_list(
+        "question: Hi\nfields:\n  - type", 2, len("  - type")
+    )
 
     labels = {item.label for item in completions.items}
     assert "datatype" in labels
@@ -494,7 +537,9 @@ def test_completion_list_uses_metadata_author_scope() -> None:
 
 
 def test_completion_list_uses_metadata_social_twitter_scope() -> None:
-    completions = build_completion_list("metadata:\n  social:\n    twitter:\n      ", 3, 6)
+    completions = build_completion_list(
+        "metadata:\n  social:\n    twitter:\n      ", 3, 6
+    )
 
     labels = {item.label for item in completions.items}
     assert "card/title/site" in labels
@@ -528,7 +573,9 @@ def test_completion_list_uses_sections_item_scope() -> None:
 
 
 def test_completion_list_uses_table_column_scope() -> None:
-    completions = build_completion_list("table: fruit_table\nrows: fruit\ncolumns:\n  - ", 3, 4)
+    completions = build_completion_list(
+        "table: fruit_table\nrows: fruit\ncolumns:\n  - ", 3, 4
+    )
 
     labels = {item.label for item in completions.items}
     assert "Header: expression" in labels
@@ -615,7 +662,9 @@ def test_completion_list_uses_attachment_metadata_scope() -> None:
 
 
 def test_completion_list_uses_attachment_fields_scope() -> None:
-    completions = build_completion_list("attachment:\n  - docx template file: letter.docx\n    fields:\n      ", 3, 6)
+    completions = build_completion_list(
+        "attachment:\n  - docx template file: letter.docx\n    fields:\n      ", 3, 6
+    )
 
     labels = {item.label for item in completions.items}
     assert "template_field: value" in labels
@@ -666,7 +715,9 @@ def test_completion_list_uses_attachment_options_scope() -> None:
 
 
 def test_completion_list_uses_list_collect_scope_shorthand() -> None:
-    completions = build_completion_list("question: Hi\nfields:\n  - field: user.name\nlist collect:\n  ", 4, 2)
+    completions = build_completion_list(
+        "question: Hi\nfields:\n  - field: user.name\nlist collect:\n  ", 4, 2
+    )
 
     labels = {item.label for item in completions.items}
     assert "label/add another label" in labels
@@ -695,7 +746,9 @@ def test_completion_list_uses_default_screen_parts_scope() -> None:
 
 
 def test_completion_list_uses_list_collect_scope() -> None:
-    completions = build_completion_list("question: Hi\nfields:\n  - field: user.name\nlist collect:\n  ", 4, 2)
+    completions = build_completion_list(
+        "question: Hi\nfields:\n  - field: user.name\nlist collect:\n  ", 4, 2
+    )
 
     labels = {item.label for item in completions.items}
     assert "enable" in labels
@@ -770,7 +823,9 @@ def test_completion_list_marks_shorthand_label_value_as_snippet() -> None:
     assert "Apple" not in shorthand.documentation.value
 
 
-def test_completion_list_filters_existing_field_item_keys_on_continuation_line() -> None:
+def test_completion_list_filters_existing_field_item_keys_on_continuation_line() -> (
+    None
+):
     completions = build_completion_list(
         "question: Hi\nfields:\n  - label: Upload\n    datatype: file\n    ",
         4,
@@ -786,15 +841,23 @@ def test_completion_list_filters_existing_field_item_keys_on_continuation_line()
 
 
 def test_completion_list_offers_button_command_values_for_shorthand_pairs() -> None:
-    completions = build_completion_list("question: Hi\nbuttons:\n  Restart: re", 2, len("  Restart: re"))
+    completions = build_completion_list(
+        "question: Hi\nbuttons:\n  Restart: re", 2, len("  Restart: re")
+    )
 
-    labels = {item.label for item in completions.items if item.kind == CompletionItemKind.Value}
+    labels = {
+        item.label
+        for item in completions.items
+        if item.kind == CompletionItemKind.Value
+    }
     assert "restart" in labels
     assert "refresh" in labels
     assert "register" in labels
 
 
-def test_completion_list_does_not_offer_button_command_values_when_buttons_use_field() -> None:
+def test_completion_list_does_not_offer_button_command_values_when_buttons_use_field() -> (
+    None
+):
     completions = build_completion_list(
         "question: Hi\nfield: user.choice\nbuttons:\n  Restart: re",
         3,
@@ -811,11 +874,15 @@ def test_completion_list_sort_text_preserves_server_order() -> None:
     sort_texts = [item.sort_text for item in completions.items]
     assert len(sort_texts) > 0
     for index, sort_text in enumerate(sort_texts):
-        assert sort_text == f"{index:04d}", f"expected sort_text '{index:04d}' at index {index}, got '{sort_text}'"
+        assert sort_text == f"{index:04d}", (
+            f"expected sort_text '{index:04d}' at index {index}, got '{sort_text}'"
+        )
 
 
 def test_completion_list_uses_review_field_scope() -> None:
-    completions = build_completion_list("question: Review\nreview:\n  - label: Name\n    field:\n      - ", 4, 8)
+    completions = build_completion_list(
+        "question: Review\nreview:\n  - label: Name\n    field:\n      - ", 4, 8
+    )
 
     labels = {item.label for item in completions.items}
     assert "set" in labels
@@ -830,7 +897,9 @@ def test_completion_list_uses_review_field_scope() -> None:
 
 
 def test_completion_list_uses_review_field_scope_for_shorthand_label_items() -> None:
-    completions = build_completion_list("question: Review\nreview:\n  - Name:\n      - ", 3, 8)
+    completions = build_completion_list(
+        "question: Review\nreview:\n  - Name:\n      - ", 3, 8
+    )
 
     labels = {item.label for item in completions.items}
     assert "set" in labels
@@ -840,7 +909,9 @@ def test_completion_list_uses_review_field_scope_for_shorthand_label_items() -> 
 
 
 def test_completion_list_uses_field_item_scope_for_choices_list_items() -> None:
-    completions = build_completion_list("question: Hi\nfields:\n  - field: user.favorite\n    choices:\n      - ", 4, 8)
+    completions = build_completion_list(
+        "question: Hi\nfields:\n  - field: user.favorite\n    choices:\n      - ", 4, 8
+    )
 
     labels = {item.label for item in completions.items}
     assert "default value" in labels
@@ -859,7 +930,9 @@ def test_completion_list_uses_field_item_scope_for_buttons_list_items() -> None:
 
 
 def test_completion_list_uses_field_item_scope_for_dropdown_object_form() -> None:
-    completions = build_completion_list("question: Phone\nfield: user.phone_country\ndropdown:\n  ", 3, 2)
+    completions = build_completion_list(
+        "question: Phone\nfield: user.phone_country\ndropdown:\n  ", 3, 2
+    )
 
     labels = {item.label for item in completions.items}
     assert "code" in labels
@@ -940,7 +1013,9 @@ def test_completion_list_uses_need_scope() -> None:
 
 
 def test_completion_list_uses_action_button_scope() -> None:
-    completions = build_completion_list("question: Hi\nfield: ready\naction buttons:\n  - ", 3, 4)
+    completions = build_completion_list(
+        "question: Hi\nfield: ready\naction buttons:\n  - ", 3, 4
+    )
 
     labels = {item.label for item in completions.items}
     assert "label/action" in labels
@@ -950,7 +1025,9 @@ def test_completion_list_uses_action_button_scope() -> None:
 
 
 def test_completion_list_uses_show_if_modifier_scope() -> None:
-    completions = build_completion_list("question: Hi\nfields:\n  - field: user.name\n    show if:\n      ", 4, 6)
+    completions = build_completion_list(
+        "question: Hi\nfields:\n  - field: user.name\n    show if:\n      ", 4, 6
+    )
 
     labels = {item.label for item in completions.items}
     assert "variable/is" in labels
@@ -960,15 +1037,21 @@ def test_completion_list_uses_show_if_modifier_scope() -> None:
 
 
 def test_completion_list_inserts_show_if_code_as_block_scalar() -> None:
-    completions = build_completion_list("question: Hi\nfields:\n  - field: user.name\n    show if:\n      ", 4, 6)
+    completions = build_completion_list(
+        "question: Hi\nfields:\n  - field: user.name\n    show if:\n      ", 4, 6
+    )
 
     code_items = [item for item in completions.items if item.label == "code"]
     assert code_items
     assert any(item.insert_text == "code: |\n  $0" for item in code_items)
-    assert any(item.insert_text_format == InsertTextFormat.Snippet for item in code_items)
+    assert any(
+        item.insert_text_format == InsertTextFormat.Snippet for item in code_items
+    )
 
 
-def test_completion_list_suggests_on_screen_variables_for_show_if_variable_value() -> None:
+def test_completion_list_suggests_on_screen_variables_for_show_if_variable_value() -> (
+    None
+):
     completions = build_completion_list(
         "question: Hi\nfields:\n  - Are the fruits taxed?: fruits_taxed_yn\n    datatype: yesnoradio\n  - Taste: fruit_taste\n    show if:\n      variable: fru",
         6,
@@ -1006,8 +1089,12 @@ def test_document_symbols_use_document_facts() -> None:
 def test_workspace_symbols_include_event_and_definition_names(tmp_path) -> None:
     package_dir = tmp_path / "docassemble" / "demo" / "data" / "questions"
     package_dir.mkdir(parents=True)
-    (package_dir / "events.yml").write_text("event: library_event\nquestion: From library\n", encoding="utf-8")
-    (package_dir / "defs.yml").write_text("def: explainer_text\ncode: |\n  return 'hello'\n", encoding="utf-8")
+    (package_dir / "events.yml").write_text(
+        "event: library_event\nquestion: From library\n", encoding="utf-8"
+    )
+    (package_dir / "defs.yml").write_text(
+        "def: explainer_text\ncode: |\n  return 'hello'\n", encoding="utf-8"
+    )
 
     symbols = build_workspace_symbols("", workspace_paths=[str(tmp_path)])
 
@@ -1020,29 +1107,43 @@ def test_workspace_symbols_include_event_and_definition_names(tmp_path) -> None:
 def test_workspace_symbols_filter_by_query(tmp_path) -> None:
     package_dir = tmp_path / "docassemble" / "demo" / "data" / "questions"
     package_dir.mkdir(parents=True)
-    (package_dir / "events.yml").write_text("event: library_event\nquestion: From library\n", encoding="utf-8")
-    (package_dir / "defs.yml").write_text("def: explainer_text\ncode: |\n  return 'hello'\n", encoding="utf-8")
+    (package_dir / "events.yml").write_text(
+        "event: library_event\nquestion: From library\n", encoding="utf-8"
+    )
+    (package_dir / "defs.yml").write_text(
+        "def: explainer_text\ncode: |\n  return 'hello'\n", encoding="utf-8"
+    )
 
     symbols = build_workspace_symbols("event", workspace_paths=[str(tmp_path)])
 
-    assert [(symbol.name, symbol.kind.name) for symbol in symbols] == [("library_event", "Event")]
+    assert [(symbol.name, symbol.kind.name) for symbol in symbols] == [
+        ("library_event", "Event")
+    ]
 
 
 def test_workspace_symbols_accept_workspace_index(tmp_path) -> None:
     package_dir = tmp_path / "docassemble" / "demo" / "data" / "questions"
     package_dir.mkdir(parents=True)
-    (package_dir / "events.yml").write_text("event: library_event\nquestion: From library\n", encoding="utf-8")
+    (package_dir / "events.yml").write_text(
+        "event: library_event\nquestion: From library\n", encoding="utf-8"
+    )
 
-    symbols = build_workspace_symbols("event", workspace_index=_workspace_index_for_tests(tmp_path))
+    symbols = build_workspace_symbols(
+        "event", workspace_index=_workspace_index_for_tests(tmp_path)
+    )
 
-    assert [(symbol.name, symbol.kind.name) for symbol in symbols] == [("library_event", "Event")]
+    assert [(symbol.name, symbol.kind.name) for symbol in symbols] == [
+        ("library_event", "Event")
+    ]
 
 
 def test_completion_list_in_code_block_includes_python_symbols(tmp_path) -> None:
     package_dir = tmp_path / "docassemble" / "demo"
     questions_dir = package_dir / "data" / "questions"
     questions_dir.mkdir(parents=True)
-    (package_dir / "helpers.py").write_text("def plus_one(value):\n    return value + 1\n", encoding="utf-8")
+    (package_dir / "helpers.py").write_text(
+        "def plus_one(value):\n    return value + 1\n", encoding="utf-8"
+    )
     source_path = questions_dir / "main.yml"
     source = "modules:\n  - .helpers\n---\ncode: |\n  plu\n"
 
@@ -1062,7 +1163,9 @@ def test_completion_list_in_if_value_includes_python_symbols(tmp_path) -> None:
     package_dir = tmp_path / "docassemble" / "demo"
     questions_dir = package_dir / "data" / "questions"
     questions_dir.mkdir(parents=True)
-    (package_dir / "helpers.py").write_text("def eligible(user):\n    return True\n", encoding="utf-8")
+    (package_dir / "helpers.py").write_text(
+        "def eligible(user):\n    return True\n", encoding="utf-8"
+    )
     source_path = questions_dir / "main.yml"
     source = "modules:\n  - .helpers\n---\nif: eli\nquestion: Hi\n"
 
@@ -1082,7 +1185,9 @@ def test_completion_list_in_need_list_item_includes_python_symbols(tmp_path) -> 
     package_dir = tmp_path / "docassemble" / "demo"
     questions_dir = package_dir / "data" / "questions"
     questions_dir.mkdir(parents=True)
-    (package_dir / "helpers.py").write_text("def eligible(user):\n    return True\n", encoding="utf-8")
+    (package_dir / "helpers.py").write_text(
+        "def eligible(user):\n    return True\n", encoding="utf-8"
+    )
     source_path = questions_dir / "main.yml"
     source = "modules:\n  - .helpers\n---\nneed:\n  - eli\nquestion: Hi\n"
 
@@ -1104,7 +1209,9 @@ def test_completion_list_in_list_collect_enable_includes_python_symbols(
     package_dir = tmp_path / "docassemble" / "demo"
     questions_dir = package_dir / "data" / "questions"
     questions_dir.mkdir(parents=True)
-    (package_dir / "helpers.py").write_text("def eligible(user):\n    return True\n", encoding="utf-8")
+    (package_dir / "helpers.py").write_text(
+        "def eligible(user):\n    return True\n", encoding="utf-8"
+    )
     source_path = questions_dir / "main.yml"
     source = "modules:\n  - .helpers\n---\nquestion: Hi\nfields:\n  - field: user.name\nlist collect:\n  enable: eli\n"
 
@@ -1126,7 +1233,9 @@ def test_completion_list_in_field_validate_value_includes_python_symbols(
     package_dir = tmp_path / "docassemble" / "demo"
     questions_dir = package_dir / "data" / "questions"
     questions_dir.mkdir(parents=True)
-    (package_dir / "helpers.py").write_text("def eligible(user):\n    return True\n", encoding="utf-8")
+    (package_dir / "helpers.py").write_text(
+        "def eligible(user):\n    return True\n", encoding="utf-8"
+    )
     source_path = questions_dir / "main.yml"
     source = "modules:\n  - .helpers\n---\nquestion: Hi\nfields:\n  - field: user.name\n    validate: eli\n"
 
@@ -1148,7 +1257,9 @@ def test_completion_list_in_field_show_if_code_value_includes_python_symbols(
     package_dir = tmp_path / "docassemble" / "demo"
     questions_dir = package_dir / "data" / "questions"
     questions_dir.mkdir(parents=True)
-    (package_dir / "helpers.py").write_text("def eligible(user):\n    return True\n", encoding="utf-8")
+    (package_dir / "helpers.py").write_text(
+        "def eligible(user):\n    return True\n", encoding="utf-8"
+    )
     source_path = questions_dir / "main.yml"
     source = "modules:\n  - .helpers\n---\nquestion: Hi\nfields:\n  - field: user.name\n    show if:\n      code: eli\n"
 
@@ -1173,7 +1284,9 @@ def test_completion_list_in_attachment_field_code_value_includes_python_symbols(
     questions_dir.mkdir(parents=True)
     template_dir.mkdir(parents=True)
     (template_dir / "letter.docx").write_text("placeholder", encoding="utf-8")
-    (package_dir / "helpers.py").write_text("def eligible(user):\n    return True\n", encoding="utf-8")
+    (package_dir / "helpers.py").write_text(
+        "def eligible(user):\n    return True\n", encoding="utf-8"
+    )
     source_path = questions_dir / "main.yml"
     source = (
         "modules:\n"
@@ -1203,7 +1316,9 @@ def test_completion_list_in_on_change_value_includes_python_symbols(tmp_path) ->
     package_dir = tmp_path / "docassemble" / "demo"
     questions_dir = package_dir / "data" / "questions"
     questions_dir.mkdir(parents=True)
-    (package_dir / "helpers.py").write_text("def eligible(user):\n    return True\n", encoding="utf-8")
+    (package_dir / "helpers.py").write_text(
+        "def eligible(user):\n    return True\n", encoding="utf-8"
+    )
     source_path = questions_dir / "main.yml"
     source = "modules:\n  - .helpers\n---\non change:\n  user.name: eli\n"
 
@@ -1256,7 +1371,9 @@ def test_build_code_actions_suggest_known_key_replacement_for_unknown_key() -> N
     assert text_edits[0].range.start.line == 1
 
 
-def test_build_code_actions_returns_no_quick_fix_without_unknown_key_diagnostic() -> None:
+def test_build_code_actions_returns_no_quick_fix_without_unknown_key_diagnostic() -> (
+    None
+):
     source = "---\nquestion: Hi\n"
     diagnostics = build_lsp_diagnostics("file:///sample.yml", source)
 
@@ -1266,12 +1383,16 @@ def test_build_code_actions_returns_no_quick_fix_without_unknown_key_diagnostic(
 
 
 def test_build_code_actions_adds_missing_field_key_for_e414() -> None:
-    source = "question: |\n  How's the weather?\nfields:\n  - label: This is the label\n"
+    source = (
+        "question: |\n  How's the weather?\nfields:\n  - label: This is the label\n"
+    )
     diagnostics = build_lsp_diagnostics("file:///sample.yml", source)
 
     actions = build_code_actions("file:///sample.yml", source, 3, diagnostics)
 
-    assert [a.title for a in actions if "Add missing" in a.title] == ["Add missing 'field' key"]
+    assert [a.title for a in actions if "Add missing" in a.title] == [
+        "Add missing 'field' key"
+    ]
     e414_fix = next(a for a in actions if a.title == "Add missing 'field' key")
     assert e414_fix.edit is not None and e414_fix.edit.changes is not None
     text_edits = e414_fix.edit.changes["file:///sample.yml"]
@@ -1283,7 +1404,9 @@ def test_build_code_actions_adds_missing_field_key_for_e414() -> None:
     assert "field: " in last_line
     # The field key must be indented 4 spaces — inside the list item, aligned
     # with "label", not at the same level as the "- " marker.
-    assert last_line == "    field: ", f"Expected field key indented inside the list item, got: {last_line!r}"
+    assert last_line == "    field: ", (
+        f"Expected field key indented inside the list item, got: {last_line!r}"
+    )
 
 
 def test_build_code_actions_adds_missing_label_key_for_e415() -> None:
@@ -1292,7 +1415,9 @@ def test_build_code_actions_adds_missing_label_key_for_e415() -> None:
 
     actions = build_code_actions("file:///sample.yml", source, 2, diagnostics)
 
-    assert [a.title for a in actions if "Add missing" in a.title] == ["Add missing 'label' key"]
+    assert [a.title for a in actions if "Add missing" in a.title] == [
+        "Add missing 'label' key"
+    ]
     e415_fix = next(a for a in actions if a.title == "Add missing 'label' key")
     assert e415_fix.edit is not None and e415_fix.edit.changes is not None
     text_edits = e415_fix.edit.changes["file:///sample.yml"]
@@ -1303,7 +1428,9 @@ def test_build_code_actions_adds_missing_label_key_for_e415() -> None:
     last_line = new_text.split("\n")[-1]
     # The label key must be indented 4 spaces — inside the list item, aligned
     # with "field", not at the same level as the "- " marker.
-    assert last_line == "    label: ", f"Expected label key indented inside the list item, got: {last_line!r}"
+    assert last_line == "    label: ", (
+        f"Expected label key indented inside the list item, got: {last_line!r}"
+    )
 
 
 def test_build_code_actions_adds_missing_table_keys_for_e921() -> None:
@@ -1312,7 +1439,9 @@ def test_build_code_actions_adds_missing_table_keys_for_e921() -> None:
 
     actions = build_code_actions("file:///sample.yml", source, 0, diagnostics)
 
-    assert [a.title for a in actions if "Add missing table keys" in a.title] == ["Add missing table keys: columns"]
+    assert [a.title for a in actions if "Add missing table keys" in a.title] == [
+        "Add missing table keys: columns"
+    ]
     e921_fix = next(a for a in actions if a.title == "Add missing table keys: columns")
     assert e921_fix.edit is not None and e921_fix.edit.changes is not None
     text_edits = e921_fix.edit.changes["file:///sample.yml"]
@@ -1476,7 +1605,9 @@ def test_document_links_resolve_template_from_package_templates_dir(tmp_path) ->
     templates_dir.mkdir(parents=True)
     letter = templates_dir / "letter.docx"
     letter.write_text("placeholder", encoding="utf-8")
-    (tmp_path / "pyproject.toml").write_text("[project]\nname = 'demo'\n", encoding="utf-8")
+    (tmp_path / "pyproject.toml").write_text(
+        "[project]\nname = 'demo'\n", encoding="utf-8"
+    )
     (pkg_root / "__init__.py").write_text("", encoding="utf-8")
 
     source = "attachment:\n  - docx template file: letter.docx\n"
@@ -1495,7 +1626,9 @@ def test_document_links_resolve_package_qualified_include_shorthand(tmp_path) ->
     questions.mkdir(parents=True)
     shared = questions / "shared.yml"
     shared.write_text("question: Shared\n", encoding="utf-8")
-    (tmp_path / "pyproject.toml").write_text("[project]\nname = 'demo'\n", encoding="utf-8")
+    (tmp_path / "pyproject.toml").write_text(
+        "[project]\nname = 'demo'\n", encoding="utf-8"
+    )
     (pkg_root / "__init__.py").write_text("", encoding="utf-8")
     source = "include:\n  - docassemble.demo:shared.yml\n"
     uri = (questions / "interview.yml").as_uri()
@@ -1515,7 +1648,9 @@ def test_document_links_resolve_package_qualified_include_fully_qualified(
     questions.mkdir(parents=True)
     shared = questions / "shared.yml"
     shared.write_text("question: Shared\n", encoding="utf-8")
-    (tmp_path / "pyproject.toml").write_text("[project]\nname = 'demo'\n", encoding="utf-8")
+    (tmp_path / "pyproject.toml").write_text(
+        "[project]\nname = 'demo'\n", encoding="utf-8"
+    )
     (pkg_root / "__init__.py").write_text("", encoding="utf-8")
     source = "include:\n  - docassemble.demo:data/questions/shared.yml\n"
     uri = (questions / "interview.yml").as_uri()
@@ -1535,7 +1670,9 @@ def test_document_links_resolve_package_qualified_module_not_normalized(
     questions.mkdir(parents=True)
     module_path = pkg_root / "external.py"
     module_path.write_text("def helper():\n    return 42\n", encoding="utf-8")
-    (tmp_path / "pyproject.toml").write_text("[project]\nname = 'demo'\n", encoding="utf-8")
+    (tmp_path / "pyproject.toml").write_text(
+        "[project]\nname = 'demo'\n", encoding="utf-8"
+    )
     (pkg_root / "__init__.py").write_text("", encoding="utf-8")
     source = "modules:\n  - docassemble.demo:external.py\n"
     uri = (questions / "interview.yml").as_uri()
@@ -1557,7 +1694,9 @@ def test_document_links_resolve_template_from_package_templates_dir_fallback_laz
     templates_dir.mkdir(parents=True)
     letter = templates_dir / "letter.docx"
     letter.write_text("placeholder", encoding="utf-8")
-    (tmp_path / "pyproject.toml").write_text("[project]\nname = 'demo'\n", encoding="utf-8")
+    (tmp_path / "pyproject.toml").write_text(
+        "[project]\nname = 'demo'\n", encoding="utf-8"
+    )
     (pkg_root / "__init__.py").write_text("", encoding="utf-8")
 
     from docassemble_lsp.core.document_links import resolve_document_link_targets
@@ -1688,7 +1827,9 @@ def test_definition_locations_resolve_usedefs_to_def(tmp_path) -> None:
     source = "---\ndef: my_explanation\ncode: |\n  return 'hello'\n---\nusedefs:\n  - my_explanation\nmandatory: True\n"
     uri = (tmp_path / "interview.yml").as_uri()
 
-    locations = build_definition_locations(uri, source, 6, len("  - my_explanation") - 2)
+    locations = build_definition_locations(
+        uri, source, 6, len("  - my_explanation") - 2
+    )
 
     assert len(locations) == 1
     assert locations[0].target_uri == (tmp_path / "interview.yml").as_uri()
@@ -1708,7 +1849,9 @@ def test_definition_locations_resolve_action_to_event(tmp_path) -> None:
     )
     uri = (tmp_path / "interview.yml").as_uri()
 
-    locations = build_definition_locations(uri, source, 3, len("    action: wordlist") - 2)
+    locations = build_definition_locations(
+        uri, source, 3, len("    action: wordlist") - 2
+    )
 
     assert len(locations) == 1
     assert locations[0].target_uri == uri
@@ -1716,10 +1859,14 @@ def test_definition_locations_resolve_action_to_event(tmp_path) -> None:
 
 
 def test_definition_locations_resolve_error_action_to_event(tmp_path) -> None:
-    source = "metadata:\n  error action: on_error\n---\nevent: on_error\nquestion: Sorry\n"
+    source = (
+        "metadata:\n  error action: on_error\n---\nevent: on_error\nquestion: Sorry\n"
+    )
     uri = (tmp_path / "interview.yml").as_uri()
 
-    locations = build_definition_locations(uri, source, 1, len("  error action: on_error") - 2)
+    locations = build_definition_locations(
+        uri, source, 1, len("  error action: on_error") - 2
+    )
 
     assert len(locations) == 1
     assert locations[0].target_uri == uri
@@ -1737,7 +1884,9 @@ def test_definition_locations_resolve_action_to_event_across_workspace(
         encoding="utf-8",
     )
     library = package_dir / "library.yml"
-    library.write_text("event: library_event\nquestion: From library\n", encoding="utf-8")
+    library.write_text(
+        "event: library_event\nquestion: From library\n", encoding="utf-8"
+    )
 
     locations = build_definition_locations(
         main.as_uri(),
@@ -1747,9 +1896,10 @@ def test_definition_locations_resolve_action_to_event_across_workspace(
         workspace_paths=[str(tmp_path)],
     )
 
-    assert [(location.target_uri, location.target_range.start.line) for location in locations] == [
-        (library.as_uri(), 0)
-    ]
+    assert [
+        (location.target_uri, location.target_range.start.line)
+        for location in locations
+    ] == [(library.as_uri(), 0)]
 
 
 def test_reference_locations_resolve_event_references(tmp_path) -> None:
@@ -1788,7 +1938,9 @@ def test_reference_locations_resolve_event_references_across_workspace(
         encoding="utf-8",
     )
     library = package_dir / "library.yml"
-    library.write_text("event: library_event\nquestion: From library\n", encoding="utf-8")
+    library.write_text(
+        "event: library_event\nquestion: From library\n", encoding="utf-8"
+    )
 
     locations = build_reference_locations(
         library.as_uri(),
@@ -1814,7 +1966,9 @@ def test_reference_locations_resolve_include_references_across_workspace(
     first = package_dir / "first.yml"
     first.write_text("include:\n  - shared.yml\n", encoding="utf-8")
     second = package_dir / "second.yml"
-    second.write_text("attachment options:\n  initial yaml:\n    - shared.yml\n", encoding="utf-8")
+    second.write_text(
+        "attachment options:\n  initial yaml:\n    - shared.yml\n", encoding="utf-8"
+    )
 
     locations = build_reference_locations(
         first.as_uri(),
@@ -1838,9 +1992,13 @@ def test_definition_locations_resolve_modules_symbol_to_python_function(
     questions_dir = package_dir / "data" / "questions"
     questions_dir.mkdir(parents=True)
     (package_dir / "__init__.py").write_text("", encoding="utf-8")
-    (tmp_path / "pyproject.toml").write_text("[project]\nname = 'demo'\n", encoding="utf-8")
+    (tmp_path / "pyproject.toml").write_text(
+        "[project]\nname = 'demo'\n", encoding="utf-8"
+    )
     helper_path = package_dir / "helpers.py"
-    helper_path.write_text("def plus_one(value):\n    return value + 1\n", encoding="utf-8")
+    helper_path.write_text(
+        "def plus_one(value):\n    return value + 1\n", encoding="utf-8"
+    )
     source_path = questions_dir / "main.yml"
     source = "modules:\n  - .helpers\n---\nquestion: |\n  Result: ${ plus_one(3) }\n"
 
@@ -1852,9 +2010,10 @@ def test_definition_locations_resolve_modules_symbol_to_python_function(
         workspace_paths=[str(tmp_path)],
     )
 
-    assert [(location.target_uri, location.target_range.start.line) for location in locations] == [
-        (helper_path.as_uri(), 0)
-    ]
+    assert [
+        (location.target_uri, location.target_range.start.line)
+        for location in locations
+    ] == [(helper_path.as_uri(), 0)]
 
 
 def test_reference_locations_resolve_python_symbol_across_yaml_namespaces(
@@ -1864,7 +2023,9 @@ def test_reference_locations_resolve_python_symbol_across_yaml_namespaces(
     questions_dir = package_dir / "data" / "questions"
     questions_dir.mkdir(parents=True)
     helper_path = package_dir / "helpers.py"
-    helper_path.write_text("def plus_one(value):\n    return value + 1\n", encoding="utf-8")
+    helper_path.write_text(
+        "def plus_one(value):\n    return value + 1\n", encoding="utf-8"
+    )
     source_path = questions_dir / "main.yml"
     source = "modules:\n  - .helpers\n---\nquestion: |\n  Result: ${ plus_one(3) }\n"
     (questions_dir / "second.yml").write_text(
@@ -1934,11 +2095,11 @@ def test_definition_locations_resolve_import_alias_symbol_to_python_function(
     questions_dir = package_dir / "data" / "questions"
     questions_dir.mkdir(parents=True)
     helper_path = package_dir / "helpers.py"
-    helper_path.write_text("def plus_one(value):\n    return value + 1\n", encoding="utf-8")
-    source_path = questions_dir / "main.yml"
-    source = (
-        "imports:\n  - from docassemble.demo.helpers import plus_one as add_one\n---\ncode: |\n  result = add_one(3)\n"
+    helper_path.write_text(
+        "def plus_one(value):\n    return value + 1\n", encoding="utf-8"
     )
+    source_path = questions_dir / "main.yml"
+    source = "imports:\n  - from docassemble.demo.helpers import plus_one as add_one\n---\ncode: |\n  result = add_one(3)\n"
 
     locations = build_definition_locations(
         source_path.as_uri(),
@@ -2021,10 +2182,16 @@ def test_definition_locations_resolve_modules_symbol_through_include_bindings(
     questions_dir = package_dir / "data" / "questions"
     questions_dir.mkdir(parents=True)
     (package_dir / "__init__.py").write_text("", encoding="utf-8")
-    (tmp_path / "pyproject.toml").write_text("[project]\nname = 'demo'\n", encoding="utf-8")
+    (tmp_path / "pyproject.toml").write_text(
+        "[project]\nname = 'demo'\n", encoding="utf-8"
+    )
     helper_path = package_dir / "helpers.py"
-    helper_path.write_text("def plus_one(value):\n    return value + 1\n", encoding="utf-8")
-    (questions_dir / "library.yml").write_text("modules:\n  - .helpers\n", encoding="utf-8")
+    helper_path.write_text(
+        "def plus_one(value):\n    return value + 1\n", encoding="utf-8"
+    )
+    (questions_dir / "library.yml").write_text(
+        "modules:\n  - .helpers\n", encoding="utf-8"
+    )
     source_path = questions_dir / "main.yml"
     source = "modules:\n  - .helpers\n---\nquestion: |\n  Result: ${ plus_one(3) }\n"
 
@@ -2036,9 +2203,10 @@ def test_definition_locations_resolve_modules_symbol_through_include_bindings(
         workspace_paths=[str(tmp_path)],
     )
 
-    assert [(location.target_uri, location.target_range.start.line) for location in locations] == [
-        (helper_path.as_uri(), 0)
-    ]
+    assert [
+        (location.target_uri, location.target_range.start.line)
+        for location in locations
+    ] == [(helper_path.as_uri(), 0)]
 
 
 def test_definition_locations_resolve_import_symbol_through_include_bindings(
@@ -2048,10 +2216,16 @@ def test_definition_locations_resolve_import_symbol_through_include_bindings(
     questions_dir = package_dir / "data" / "questions"
     questions_dir.mkdir(parents=True)
     (package_dir / "__init__.py").write_text("", encoding="utf-8")
-    (tmp_path / "pyproject.toml").write_text("[project]\nname = 'demo'\n", encoding="utf-8")
+    (tmp_path / "pyproject.toml").write_text(
+        "[project]\nname = 'demo'\n", encoding="utf-8"
+    )
     helper_path = package_dir / "helpers.py"
-    helper_path.write_text("def plus_one(value):\n    return value + 1\n", encoding="utf-8")
-    (questions_dir / "library.yml").write_text("imports:\n  - docassemble.demo.helpers\n", encoding="utf-8")
+    helper_path.write_text(
+        "def plus_one(value):\n    return value + 1\n", encoding="utf-8"
+    )
+    (questions_dir / "library.yml").write_text(
+        "imports:\n  - docassemble.demo.helpers\n", encoding="utf-8"
+    )
     source_path = questions_dir / "main.yml"
     source = "imports:\n  - docassemble.demo.helpers\n---\ncode: |\n  result = helpers.plus_one(3)\n"
 
@@ -2063,9 +2237,10 @@ def test_definition_locations_resolve_import_symbol_through_include_bindings(
         workspace_paths=[str(tmp_path)],
     )
 
-    assert [(location.target_uri, location.target_range.start.line) for location in locations] == [
-        (helper_path.as_uri(), 0)
-    ]
+    assert [
+        (location.target_uri, location.target_range.start.line)
+        for location in locations
+    ] == [(helper_path.as_uri(), 0)]
 
 
 def test_definition_locations_resolve_child_yaml_symbol_through_parent_import_bindings(
@@ -2075,7 +2250,9 @@ def test_definition_locations_resolve_child_yaml_symbol_through_parent_import_bi
     questions_dir = package_dir / "data" / "questions"
     questions_dir.mkdir(parents=True)
     helper_path = package_dir / "helpers.py"
-    helper_path.write_text("def plus_one(value):\n    return value + 1\n", encoding="utf-8")
+    helper_path.write_text(
+        "def plus_one(value):\n    return value + 1\n", encoding="utf-8"
+    )
     (questions_dir / "main_include.yml").write_text(
         "imports:\n  - docassemble.demo.helpers\ninclude:\n  - child.yml\n",
         encoding="utf-8",
@@ -2092,9 +2269,10 @@ def test_definition_locations_resolve_child_yaml_symbol_through_parent_import_bi
         workspace_paths=[str(tmp_path)],
     )
 
-    assert [(location.target_uri, location.target_range.start.line) for location in locations] == [
-        (helper_path.as_uri(), 0)
-    ]
+    assert [
+        (location.target_uri, location.target_range.start.line)
+        for location in locations
+    ] == [(helper_path.as_uri(), 0)]
 
 
 def test_formatting_edits_replace_whole_document() -> None:
@@ -2156,8 +2334,12 @@ def test_on_type_formatting_preserves_wider_fields_indent() -> None:
 def test_hover_shows_event_value_definition() -> None:
     """Cursor on the value of ``event: my_event`` shows its definition."""
     source = "event: my_event\nquestion: Test\n"
-    index = build_workspace_index([Path.cwd()], current_path=Path("/tmp/test.yml"), current_source=source)
-    hover = build_hover(source, 0, 9, uri_or_path="/tmp/test.yml", workspace_index=index)
+    index = build_workspace_index(
+        [Path.cwd()], current_path=Path("/tmp/test.yml"), current_source=source
+    )
+    hover = build_hover(
+        source, 0, 9, uri_or_path="/tmp/test.yml", workspace_index=index
+    )
     assert hover is not None
     assert isinstance(hover.contents, MarkupContent)
     assert "event" in hover.contents.value
@@ -2167,8 +2349,12 @@ def test_hover_shows_event_value_definition() -> None:
 def test_hover_shows_def_value_definition() -> None:
     """Cursor on the value of ``def: my_func`` shows its definition."""
     source = "def: my_func\ncode: |\n  pass\n"
-    index = build_workspace_index([Path.cwd()], current_path=Path("/tmp/test.yml"), current_source=source)
-    hover = build_hover(source, 0, 10, uri_or_path="/tmp/test.yml", workspace_index=index)
+    index = build_workspace_index(
+        [Path.cwd()], current_path=Path("/tmp/test.yml"), current_source=source
+    )
+    hover = build_hover(
+        source, 0, 10, uri_or_path="/tmp/test.yml", workspace_index=index
+    )
     assert hover is not None
     assert isinstance(hover.contents, MarkupContent)
     assert "def" in hover.contents.value
@@ -2190,7 +2376,9 @@ def test_hover_shows_unknown_def_value() -> None:
     """Cursor on a def value not in the workspace shows 'not defined'."""
     source = "usedefs: nonexistent_func\n"
     index = WorkspaceIndex.empty()
-    hover = build_hover(source, 0, 11, uri_or_path="/tmp/test.yml", workspace_index=index)
+    hover = build_hover(
+        source, 0, 11, uri_or_path="/tmp/test.yml", workspace_index=index
+    )
     assert hover is not None
     assert isinstance(hover.contents, MarkupContent)
     assert "not defined" in hover.contents.value
@@ -2199,8 +2387,12 @@ def test_hover_shows_unknown_def_value() -> None:
 def test_hover_shows_field_var_value_definition() -> None:
     """Cursor on a ``field: my_var`` value shows its declaration site."""
     source = "question: Test\nfields:\n  - field: my_var\n    datatype: text\n"
-    index = build_workspace_index([Path.cwd()], current_path=Path("/tmp/test.yml"), current_source=source)
-    hover = build_hover(source, 2, 12, uri_or_path="/tmp/test.yml", workspace_index=index)
+    index = build_workspace_index(
+        [Path.cwd()], current_path=Path("/tmp/test.yml"), current_source=source
+    )
+    hover = build_hover(
+        source, 2, 12, uri_or_path="/tmp/test.yml", workspace_index=index
+    )
     assert hover is not None
     assert isinstance(hover.contents, MarkupContent)
     assert "field" in hover.contents.value
@@ -2220,8 +2412,12 @@ def test_hover_shows_field_var_condition_reference() -> None:
         "      variable: show_details\n"
         "      is: True\n"
     )
-    index = build_workspace_index([Path.cwd()], current_path=Path("/tmp/test.yml"), current_source=source)
-    hover = build_hover(source, 6, 17, uri_or_path="/tmp/test.yml", workspace_index=index)
+    index = build_workspace_index(
+        [Path.cwd()], current_path=Path("/tmp/test.yml"), current_source=source
+    )
+    hover = build_hover(
+        source, 6, 17, uri_or_path="/tmp/test.yml", workspace_index=index
+    )
     assert hover is not None
     assert isinstance(hover.contents, MarkupContent)
     assert "field" in hover.contents.value
@@ -2233,7 +2429,9 @@ def test_hover_shows_unknown_field_var_value() -> None:
     """Cursor on a field_var not in the workspace shows 'not declared'."""
     source = "question: Test\nfields:\n  - field: mystery_var\n"
     index = WorkspaceIndex.empty()
-    hover = build_hover(source, 2, 15, uri_or_path="/tmp/test.yml", workspace_index=index)
+    hover = build_hover(
+        source, 2, 15, uri_or_path="/tmp/test.yml", workspace_index=index
+    )
     assert hover is not None
     assert isinstance(hover.contents, MarkupContent)
     assert "not declared" in hover.contents.value
@@ -2335,7 +2533,9 @@ def test_on_type_formatting_indents_action_buttons_empty_item() -> None:
     assert edits[0].new_text == "    "
 
 
-def test_on_type_formatting_indents_action_buttons_empty_item_with_existing_entry() -> None:
+def test_on_type_formatting_indents_action_buttons_empty_item_with_existing_entry() -> (
+    None
+):
     edits = build_on_type_formatting_edits(
         "---\naction buttons:\n  - label: Visit\n    action: url\n  - \n  \n---\n",
         5,

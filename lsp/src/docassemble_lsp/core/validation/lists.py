@@ -38,9 +38,15 @@ class NeedDirective:
 
         for item in x:
             if isinstance(item, Mapping):
-                item_keys = {key for key in item.keys() if isinstance(key, str) and not _is_internal_metadata_key(key)}
+                item_keys = {
+                    key
+                    for key in item.keys()
+                    if isinstance(key, str) and not _is_internal_metadata_key(key)
+                }
                 if not item_keys or not item_keys.issubset({"pre", "post"}):
-                    self.errors.append(_validator_error(MessageCode.NEED_DICT_KEYS, _lc_line(item)))
+                    self.errors.append(
+                        _validator_error(MessageCode.NEED_DICT_KEYS, _lc_line(item))
+                    )
                     continue
                 for phase in ("pre", "post"):
                     if phase not in item:
@@ -97,7 +103,11 @@ class ActionButtonsDirective:
     def __init__(self, x):
         self.errors = []
         if isinstance(x, Mapping):
-            content_keys = {key for key in x.keys() if isinstance(key, str) and not _is_internal_metadata_key(key)}
+            content_keys = {
+                key
+                for key in x.keys()
+                if isinstance(key, str) and not _is_internal_metadata_key(key)
+            }
             if content_keys == {"code"}:
                 return
             self.errors = [_validator_error(MessageCode.ACTION_BUTTONS_TYPE)]
@@ -108,7 +118,9 @@ class ActionButtonsDirective:
 
         for item in x:
             if not isinstance(item, Mapping):
-                self.errors.append(_validator_error(MessageCode.ACTION_BUTTON_ITEM_TYPE))
+                self.errors.append(
+                    _validator_error(MessageCode.ACTION_BUTTON_ITEM_TYPE)
+                )
                 continue
 
             action = item.get("action")
@@ -122,7 +134,11 @@ class ActionButtonsDirective:
             forget_prior = item.get("forget prior", False)
 
             if not isinstance(action, str):
-                self.errors.append(_validator_error(MessageCode.ACTION_BUTTON_ACTION_TYPE, _lc_line(item)))
+                self.errors.append(
+                    _validator_error(
+                        MessageCode.ACTION_BUTTON_ACTION_TYPE, _lc_line(item)
+                    )
+                )
             if target is not None and not isinstance(target, (bool, str)):
                 self.errors.append(
                     _validator_error(
@@ -150,7 +166,11 @@ class ActionButtonsDirective:
                         )
                     )
             if not isinstance(label, str):
-                self.errors.append(_validator_error(MessageCode.ACTION_BUTTON_LABEL_TYPE, _lc_line(item)))
+                self.errors.append(
+                    _validator_error(
+                        MessageCode.ACTION_BUTTON_LABEL_TYPE, _lc_line(item)
+                    )
+                )
             if not isinstance(color, str):
                 self.errors.append(
                     _validator_error(
@@ -199,17 +219,27 @@ class TranslationsDirective:
 
         for index, item in enumerate(x, start=2):
             if not isinstance(item, str):
-                self.errors.append(_validator_error(MessageCode.TRANSLATIONS_ITEM_TYPE, index))
+                self.errors.append(
+                    _validator_error(MessageCode.TRANSLATIONS_ITEM_TYPE, index)
+                )
                 continue
             if not item.endswith((".xlsx", ".xlf", ".xliff")):
-                self.errors.append(_validator_error(MessageCode.TRANSLATIONS_SUFFIX, index, item=item))
+                self.errors.append(
+                    _validator_error(MessageCode.TRANSLATIONS_SUFFIX, index, item=item)
+                )
                 continue
             parts = item.split(":")
             if len(parts) == 1:
                 continue
-            if len(parts) == 2 and parts[0].startswith("docassemble.") and parts[1].startswith("data/sources/"):
+            if (
+                len(parts) == 2
+                and parts[0].startswith("docassemble.")
+                and parts[1].startswith("data/sources/")
+            ):
                 continue
-            self.errors.append(_validator_error(MessageCode.TRANSLATIONS_PATH, index, item=item))
+            self.errors.append(
+                _validator_error(MessageCode.TRANSLATIONS_PATH, index, item=item)
+            )
 
 
 class IfDirective:
@@ -259,7 +289,9 @@ class AutoTermsDirective:
             return
         for index, item in enumerate(x, start=2):
             if not isinstance(item, Mapping):
-                self.errors.append(_validator_error(MessageCode.AUTO_TERMS_ITEM_TYPE, index))
+                self.errors.append(
+                    _validator_error(MessageCode.AUTO_TERMS_ITEM_TYPE, index)
+                )
 
 
 class PythonBool:
@@ -269,7 +301,9 @@ class PythonBool:
         self.errors = []
         if isinstance(x, (bool, str)):
             return
-        self.errors = [_validator_error(MessageCode.PYTHON_BOOL_TYPE, value_type=type(x).__name__)]
+        self.errors = [
+            _validator_error(MessageCode.PYTHON_BOOL_TYPE, value_type=type(x).__name__)
+        ]
 
 
 class IncludeDirective:
@@ -287,7 +321,9 @@ class IncludeDirective:
             return
         for index, item in enumerate(x, start=2):
             if not isinstance(item, str):
-                self.errors.append(_validator_error(MessageCode.INCLUDE_ITEM_TYPE, index))
+                self.errors.append(
+                    _validator_error(MessageCode.INCLUDE_ITEM_TYPE, index)
+                )
 
 
 class ModulesDirective:
@@ -302,7 +338,9 @@ class ModulesDirective:
             return
         for index, item in enumerate(x, start=2):
             if not isinstance(item, str):
-                self.errors.append(_validator_error(MessageCode.MODULES_ITEM_TYPE, index))
+                self.errors.append(
+                    _validator_error(MessageCode.MODULES_ITEM_TYPE, index)
+                )
 
 
 class ImportsDirective:
@@ -317,7 +355,9 @@ class ImportsDirective:
             return
         for index, item in enumerate(x, start=2):
             if not isinstance(item, str):
-                self.errors.append(_validator_error(MessageCode.IMPORTS_ITEM_TYPE, index))
+                self.errors.append(
+                    _validator_error(MessageCode.IMPORTS_ITEM_TYPE, index)
+                )
 
 
 class MetadataDirective:
@@ -361,9 +401,17 @@ class SetsDirective:
         stripped = varname.strip()
         top_level_var = stripped.split(".")[0].split("[")[0].strip()
         if top_level_var.startswith("_"):
-            self.errors.append(_validator_error(MessageCode.FIELD_TARGET_UNDERSCORE, value_repr=repr(varname)))
+            self.errors.append(
+                _validator_error(
+                    MessageCode.FIELD_TARGET_UNDERSCORE, value_repr=repr(varname)
+                )
+            )
         elif _is_docassemble_reserved_name(stripped):
-            self.errors.append(_validator_error(MessageCode.RESERVED_DA_NAME, value_repr=repr(varname), context=""))
+            self.errors.append(
+                _validator_error(
+                    MessageCode.RESERVED_DA_NAME, value_repr=repr(varname), context=""
+                )
+            )
 
 
 class EventDirective:
@@ -393,7 +441,9 @@ class ReconsiderDirective:
             return
         for index, item in enumerate(x, start=2):
             if not isinstance(item, str):
-                self.errors.append(_validator_error(MessageCode.RECONSIDER_ITEM_TYPE, index))
+                self.errors.append(
+                    _validator_error(MessageCode.RECONSIDER_ITEM_TYPE, index)
+                )
 
 
 class UndefineDirective:
@@ -408,7 +458,9 @@ class UndefineDirective:
             return
         for index, item in enumerate(x, start=2):
             if not isinstance(item, str):
-                self.errors.append(_validator_error(MessageCode.UNDEFINE_ITEM_TYPE, index))
+                self.errors.append(
+                    _validator_error(MessageCode.UNDEFINE_ITEM_TYPE, index)
+                )
 
 
 class SupersedesDirective:
@@ -423,7 +475,9 @@ class SupersedesDirective:
             return
         for index, item in enumerate(x, start=2):
             if not isinstance(item, str):
-                self.errors.append(_validator_error(MessageCode.SUPERSEDES_ITEM_TYPE, index))
+                self.errors.append(
+                    _validator_error(MessageCode.SUPERSEDES_ITEM_TYPE, index)
+                )
 
 
 class DependsOnDirective:
@@ -438,7 +492,9 @@ class DependsOnDirective:
             return
         for index, item in enumerate(x, start=2):
             if not isinstance(item, str):
-                self.errors.append(_validator_error(MessageCode.DEPENDS_ON_ITEM_TYPE, index))
+                self.errors.append(
+                    _validator_error(MessageCode.DEPENDS_ON_ITEM_TYPE, index)
+                )
 
 
 class RoleDirective:

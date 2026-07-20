@@ -115,7 +115,9 @@ def _map_rendered_lines_to_source_lines(
     if not rendered_lines:
         return {}
     if not source_lines:
-        return {line_no: source_start_line for line_no in range(1, len(rendered_lines) + 1)}
+        return {
+            line_no: source_start_line for line_no in range(1, len(rendered_lines) + 1)
+        }
 
     line_map: dict[int, int] = {}
     matcher = SequenceMatcher(a=source_lines, b=rendered_lines, autojunk=False)
@@ -129,9 +131,13 @@ def _map_rendered_lines_to_source_lines(
         if tag == "replace":
             unmatched_source_by_text: dict[str, list[int]] = {}
             for source_index in range(i1, i2):
-                unmatched_source_by_text.setdefault(source_lines[source_index], []).append(source_index)
+                unmatched_source_by_text.setdefault(
+                    source_lines[source_index], []
+                ).append(source_index)
             for rendered_index in range(j1, j2):
-                candidates = unmatched_source_by_text.get(rendered_lines[rendered_index])
+                candidates = unmatched_source_by_text.get(
+                    rendered_lines[rendered_index]
+                )
                 if candidates:
                     line_map[rendered_index + 1] = source_start_line + candidates.pop(0)
 
@@ -205,7 +211,9 @@ def _format_yaml_parse_error(err: MarkedYAMLError) -> str:
     else:
         message = str(err).strip().splitlines()[0]
 
-    snippet_mark = getattr(err, "context_mark", None) or getattr(err, "problem_mark", None)
+    snippet_mark = getattr(err, "context_mark", None) or getattr(
+        err, "problem_mark", None
+    )
     if snippet_mark is None:
         return message
 
@@ -216,7 +224,9 @@ def _format_yaml_parse_error(err: MarkedYAMLError) -> str:
     return f"{message}\n{snippet}"
 
 
-def _format_missing_jinja_header_error(source_code: str, *, line_number: int) -> str | None:
+def _format_missing_jinja_header_error(
+    source_code: str, *, line_number: int
+) -> str | None:
     lines = source_code.splitlines()
     if not (1 <= line_number <= len(lines)):
         return None
@@ -658,7 +668,11 @@ _SIGNATURE_ONLY_TOP_LEVEL_KEYS = frozenset({"required", "pen color"})
 
 
 def _lowercase_key_map(mapping: dict[Any, Any]) -> dict[str, str]:
-    return {key.lower(): key for key in mapping.keys() if isinstance(key, str) and not _is_internal_metadata_key(key)}
+    return {
+        key.lower(): key
+        for key in mapping.keys()
+        if isinstance(key, str) and not _is_internal_metadata_key(key)
+    }
 
 
 def _allowed_top_level_keys(doc_keys_lower: dict[str, str]) -> set[str]:
@@ -668,7 +682,9 @@ def _allowed_top_level_keys(doc_keys_lower: dict[str, str]) -> set[str]:
     return allowed_keys
 
 
-def _get_case_insensitive(mapping: dict[Any, Any], key: str, default: Any = None) -> Any:
+def _get_case_insensitive(
+    mapping: dict[Any, Any], key: str, default: Any = None
+) -> Any:
     original_key = _lowercase_key_map(mapping).get(key.lower())
     if original_key is None:
         return default
@@ -695,14 +711,22 @@ def _with_line_metadata(value: Any) -> Any:
                     key_info = key_getter(key)
                 except (AttributeError, KeyError, TypeError):
                     key_info = None
-                if isinstance(key_info, tuple) and len(key_info) >= 1 and isinstance(key_info[0], int):
+                if (
+                    isinstance(key_info, tuple)
+                    and len(key_info) >= 1
+                    and isinstance(key_info[0], int)
+                ):
                     key_lines[key] = key_info[0] + 1
             if callable(value_getter):
                 try:
                     value_info = value_getter(key)
                 except (AttributeError, KeyError, TypeError):
                     value_info = None
-                if isinstance(value_info, tuple) and len(value_info) >= 1 and isinstance(value_info[0], int):
+                if (
+                    isinstance(value_info, tuple)
+                    and len(value_info) >= 1
+                    and isinstance(value_info[0], int)
+                ):
                     value_lines[key] = value_info[0] + 1
         converted["__line__"] = value.lc.line + 1
         if key_lines:
@@ -773,7 +797,9 @@ def _contains_interview_order_marker(value: Any) -> bool:
 
 def _is_interview_order_style_block(doc: dict[str, Any]) -> bool:
     mandatory = _get_case_insensitive(doc, "mandatory")
-    mandatory_true = mandatory is True or (isinstance(mandatory, str) and mandatory.strip().lower() == "true")
+    mandatory_true = mandatory is True or (
+        isinstance(mandatory, str) and mandatory.strip().lower() == "true"
+    )
     if mandatory_true:
         return True
     if _contains_interview_order_marker(_get_case_insensitive(doc, "id")):
@@ -897,7 +923,9 @@ def _guard_candidates_for_modifier(modifier_key: str, modifier_value: Any) -> li
     return [guard for guard in guards if guard]
 
 
-def _extract_conditional_fields_from_doc(doc: dict[str, Any], line_number: int) -> list[dict[str, Any]]:
+def _extract_conditional_fields_from_doc(
+    doc: dict[str, Any], line_number: int
+) -> list[dict[str, Any]]:
     fields = _get_case_insensitive(doc, "fields")
     if not isinstance(fields, list):
         return []
@@ -919,7 +947,9 @@ def _extract_conditional_fields_from_doc(doc: dict[str, Any], line_number: int) 
                 {
                     "field_var": field_var,
                     "guards": guards,
-                    "line_number": _absolute_document_line(line_number, _lc_line(field_item)),
+                    "line_number": _absolute_document_line(
+                        line_number, _lc_line(field_item)
+                    ),
                 }
             )
     return conditional_fields
@@ -938,7 +968,9 @@ def _statement_span(stmts: list[ast.stmt]) -> Optional[tuple[int, int]]:
     if not stmts:
         return None
     starts = [getattr(stmt, "lineno", None) for stmt in stmts]
-    ends = [getattr(stmt, "end_lineno", getattr(stmt, "lineno", None)) for stmt in stmts]
+    ends = [
+        getattr(stmt, "end_lineno", getattr(stmt, "lineno", None)) for stmt in stmts
+    ]
     valid_starts = [x for x in starts if isinstance(x, int)]
     valid_ends = [x for x in ends if isinstance(x, int)]
     if not valid_starts or not valid_ends:
@@ -1020,7 +1052,10 @@ def _find_unmatched_interview_order_references(
             active_guards = guards_by_line.get(ref_line, [])
             if _has_showifdef_guard(active_guards, field_var):
                 continue
-            if not any(_has_matching_guard(active_guards, expected_guards) for expected_guards in expected_guard_sets):
+            if not any(
+                _has_matching_guard(active_guards, expected_guards)
+                for expected_guards in expected_guard_sets
+            ):
                 unmatched.append((field_var, ref_line))
     return unmatched
 
@@ -1030,7 +1065,11 @@ def _max_screen_visibility_nesting_depth(doc: dict[str, Any]) -> tuple[int, int 
     if not isinstance(fields, list):
         return (0, None)
 
-    screen_vars = {field_var for field_var in (_extract_field_var_name(item) for item in fields) if field_var}
+    screen_vars = {
+        field_var
+        for field_var in (_extract_field_var_name(item) for item in fields)
+        if field_var
+    }
     if not screen_vars:
         return (0, None)
 
@@ -1046,7 +1085,9 @@ def _max_screen_visibility_nesting_depth(doc: dict[str, Any]) -> tuple[int, int 
         for modifier_key in ("show if", "hide if"):
             if modifier_key not in field_item:
                 continue
-            controllers = _extract_controller_vars_for_field_modifier(field_item[modifier_key])
+            controllers = _extract_controller_vars_for_field_modifier(
+                field_item[modifier_key]
+            )
             for controller in controllers:
                 if controller in screen_vars:
                     adjacency.setdefault(controller, set()).add(target_var)
@@ -1064,7 +1105,9 @@ def _max_screen_visibility_nesting_depth(doc: dict[str, Any]) -> tuple[int, int 
         for child in adjacency.get(var_name, set()):
             child_depth, child_line = depth(child)
             candidate_depth = 1 + child_depth
-            candidate_line = child_line if child_line is not None else field_lines.get(child)
+            candidate_line = (
+                child_line if child_line is not None else field_lines.get(child)
+            )
             if candidate_depth > max_result[0]:
                 max_result = (candidate_depth, candidate_line)
         visiting.remove(var_name)

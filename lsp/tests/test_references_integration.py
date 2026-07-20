@@ -12,8 +12,12 @@ from docassemble_lsp.lsp.server import (
     build_reference_locations as core_build_reference_locations,
 )
 
-FIXTURE_PACKAGE_ROOT = Path(__file__).resolve().parent / "fixtures" / "reference_package"
-FIXTURE_QUESTIONS_ROOT = FIXTURE_PACKAGE_ROOT / "docassemble" / "demo" / "data" / "questions"
+FIXTURE_PACKAGE_ROOT = (
+    Path(__file__).resolve().parent / "fixtures" / "reference_package"
+)
+FIXTURE_QUESTIONS_ROOT = (
+    FIXTURE_PACKAGE_ROOT / "docassemble" / "demo" / "data" / "questions"
+)
 DEMO_FIXTURE_ROOT = Path(__file__).resolve().parent / "fixtures" / "demo_package"
 DEMO_QUESTIONS_ROOT = DEMO_FIXTURE_ROOT / "docassemble" / "demo" / "data" / "questions"
 DEMO_WORKFLOW_PATH = DEMO_FIXTURE_ROOT / "docassemble" / "demo" / "workflow.py"
@@ -35,7 +39,9 @@ def _workspace_index_from_test_args(
     )
 
 
-def build_definition_locations(uri: str, source: str, line: int, character: int, **kwargs: Any) -> Any:
+def build_definition_locations(
+    uri: str, source: str, line: int, character: int, **kwargs: Any
+) -> Any:
     workspace_paths = kwargs.pop("workspace_paths", None)
     workspace_index = kwargs.pop("workspace_index", None)
     return core_build_definition_locations(
@@ -43,12 +49,16 @@ def build_definition_locations(uri: str, source: str, line: int, character: int,
         source,
         line,
         character,
-        workspace_index=_workspace_index_from_test_args(source, uri, workspace_paths, workspace_index),
+        workspace_index=_workspace_index_from_test_args(
+            source, uri, workspace_paths, workspace_index
+        ),
         **kwargs,
     )
 
 
-def build_reference_locations(uri: str, source: str, line: int, character: int, **kwargs: Any) -> Any:
+def build_reference_locations(
+    uri: str, source: str, line: int, character: int, **kwargs: Any
+) -> Any:
     workspace_paths = kwargs.pop("workspace_paths", None)
     workspace_index = kwargs.pop("workspace_index", None)
     return core_build_reference_locations(
@@ -56,21 +66,29 @@ def build_reference_locations(uri: str, source: str, line: int, character: int, 
         source,
         line,
         character,
-        workspace_index=_workspace_index_from_test_args(source, uri, workspace_paths, workspace_index),
+        workspace_index=_workspace_index_from_test_args(
+            source, uri, workspace_paths, workspace_index
+        ),
         **kwargs,
     )
 
 
 def _line_index(source: str, needle: str) -> int:
-    return next(index for index, line in enumerate(source.splitlines()) if needle in line)
+    return next(
+        index for index, line in enumerate(source.splitlines()) if needle in line
+    )
 
 
 def _nth_line_index(source: str, needle: str, occurrence: int) -> int:
-    matches = [index for index, line in enumerate(source.splitlines()) if needle in line]
+    matches = [
+        index for index, line in enumerate(source.splitlines()) if needle in line
+    ]
     return matches[occurrence - 1]
 
 
-def test_reference_locations_fixture_package_resolves_yaml_targets_from_reference_values() -> None:
+def test_reference_locations_fixture_package_resolves_yaml_targets_from_reference_values() -> (
+    None
+):
     source_path = FIXTURE_QUESTIONS_ROOT / "main.yml"
     source = source_path.read_text(encoding="utf-8")
     source_lines = source.splitlines()
@@ -83,10 +101,17 @@ def test_reference_locations_fixture_package_resolves_yaml_targets_from_referenc
         workspace_paths=[str(FIXTURE_PACKAGE_ROOT)],
     )
 
-    secondary_source = (FIXTURE_QUESTIONS_ROOT / "secondary.yml").read_text(encoding="utf-8")
-    cross_ref_source = (FIXTURE_QUESTIONS_ROOT / "cross_ref.yml").read_text(encoding="utf-8")
+    secondary_source = (FIXTURE_QUESTIONS_ROOT / "secondary.yml").read_text(
+        encoding="utf-8"
+    )
+    cross_ref_source = (FIXTURE_QUESTIONS_ROOT / "cross_ref.yml").read_text(
+        encoding="utf-8"
+    )
 
-    assert [(Path(location.uri.removeprefix("file://")).name, location.range.start.line) for location in locations] == [
+    assert [
+        (Path(location.uri.removeprefix("file://")).name, location.range.start.line)
+        for location in locations
+    ] == [
         ("main.yml", _line_index(source, "shared.yml")),
         ("main.yml", _nth_line_index(source, "shared.yml", 2)),
         ("cross_ref.yml", _line_index(cross_ref_source, "shared.yml")),
@@ -99,8 +124,12 @@ def test_reference_locations_fixture_package_resolves_yaml_targets_from_referenc
 def test_reference_locations_fixture_package_resolves_asset_targets() -> None:
     docx_target = FIXTURE_QUESTIONS_ROOT / "templates" / "letter.docx"
     main_source = (FIXTURE_QUESTIONS_ROOT / "main.yml").read_text(encoding="utf-8")
-    secondary_source = (FIXTURE_QUESTIONS_ROOT / "secondary.yml").read_text(encoding="utf-8")
-    cross_ref_source = (FIXTURE_QUESTIONS_ROOT / "cross_ref.yml").read_text(encoding="utf-8")
+    secondary_source = (FIXTURE_QUESTIONS_ROOT / "secondary.yml").read_text(
+        encoding="utf-8"
+    )
+    cross_ref_source = (FIXTURE_QUESTIONS_ROOT / "cross_ref.yml").read_text(
+        encoding="utf-8"
+    )
     docx_locations = build_reference_locations(
         docx_target.as_uri(),
         docx_target.read_text(encoding="utf-8"),
@@ -109,7 +138,8 @@ def test_reference_locations_fixture_package_resolves_asset_targets() -> None:
         workspace_paths=[str(FIXTURE_PACKAGE_ROOT)],
     )
     assert [
-        (Path(location.uri.removeprefix("file://")).name, location.range.start.line) for location in docx_locations
+        (Path(location.uri.removeprefix("file://")).name, location.range.start.line)
+        for location in docx_locations
     ] == [
         ("cross_ref.yml", _line_index(cross_ref_source, "letter.docx")),
         ("main.yml", _line_index(main_source, "templates/letter.docx")),
@@ -126,7 +156,8 @@ def test_reference_locations_fixture_package_resolves_asset_targets() -> None:
         workspace_paths=[str(FIXTURE_PACKAGE_ROOT)],
     )
     assert [
-        (Path(location.uri.removeprefix("file://")).name, location.range.start.line) for location in pdf_locations
+        (Path(location.uri.removeprefix("file://")).name, location.range.start.line)
+        for location in pdf_locations
     ] == [
         ("main.yml", _line_index(main_source, "forms/notice.pdf")),
         ("notice.pdf", 0),
@@ -141,7 +172,8 @@ def test_reference_locations_fixture_package_resolves_asset_targets() -> None:
         workspace_paths=[str(FIXTURE_PACKAGE_ROOT)],
     )
     assert [
-        (Path(location.uri.removeprefix("file://")).name, location.range.start.line) for location in markdown_locations
+        (Path(location.uri.removeprefix("file://")).name, location.range.start.line)
+        for location in markdown_locations
     ] == [
         ("cross_ref.yml", _line_index(cross_ref_source, "disclaimer.md")),
         ("main.yml", _line_index(main_source, "content/disclaimer.md")),
@@ -170,7 +202,9 @@ def test_reference_locations_fixture_package_resolves_asset_targets() -> None:
     ]
 
 
-def test_definition_locations_fixture_package_qualified_include_resolves_to_shared_yml() -> None:
+def test_definition_locations_fixture_package_qualified_include_resolves_to_shared_yml() -> (
+    None
+):
     cross_ref_path = FIXTURE_QUESTIONS_ROOT / "cross_ref.yml"
     source = cross_ref_path.read_text(encoding="utf-8")
     source_lines = source.splitlines()
@@ -190,7 +224,9 @@ def test_definition_locations_fixture_package_qualified_include_resolves_to_shar
     assert locations[0].target_range.start.line == 0
 
 
-def test_definition_locations_fixture_package_qualified_template_file_resolves_to_docx() -> None:
+def test_definition_locations_fixture_package_qualified_template_file_resolves_to_docx() -> (
+    None
+):
     cross_ref_path = FIXTURE_QUESTIONS_ROOT / "cross_ref.yml"
     source = cross_ref_path.read_text(encoding="utf-8")
     source_lines = source.splitlines()
@@ -213,7 +249,9 @@ def test_definition_locations_demo_package_resolves_modules_symbol() -> None:
     source_path = DEMO_QUESTIONS_ROOT / "main.yml"
     source = source_path.read_text(encoding="utf-8")
     source_lines = source.splitlines()
-    target_line = next(index for index, line in enumerate(source_lines) if "case_title(" in line)
+    target_line = next(
+        index for index, line in enumerate(source_lines) if "case_title(" in line
+    )
 
     locations = build_definition_locations(
         source_path.as_uri(),
@@ -234,10 +272,14 @@ def test_definition_locations_demo_package_resolves_modules_symbol() -> None:
     ]
 
 
-def test_reference_locations_demo_package_resolves_method_across_include_stack() -> None:
+def test_reference_locations_demo_package_resolves_method_across_include_stack() -> (
+    None
+):
     workflow_source = DEMO_WORKFLOW_PATH.read_text(encoding="utf-8")
     workflow_lines = workflow_source.splitlines()
-    status_label_line = next(index for index, line in enumerate(workflow_lines) if "def status_label" in line)
+    status_label_line = next(
+        index for index, line in enumerate(workflow_lines) if "def status_label" in line
+    )
     locations = build_reference_locations(
         DEMO_WORKFLOW_PATH.as_uri(),
         workflow_source,
@@ -249,11 +291,17 @@ def test_reference_locations_demo_package_resolves_method_across_include_stack()
     assert locations == []
 
 
-def test_definition_locations_demo_package_resolves_child_include_python_binding() -> None:
+def test_definition_locations_demo_package_resolves_child_include_python_binding() -> (
+    None
+):
     source_path = DEMO_QUESTIONS_ROOT / "x_events.yml"
     source = source_path.read_text(encoding="utf-8")
     source_lines = source.splitlines()
-    target_line = next(index for index, line in enumerate(source_lines) if "workflow.case_title" in line)
+    target_line = next(
+        index
+        for index, line in enumerate(source_lines)
+        if "workflow.case_title" in line
+    )
 
     locations = build_definition_locations(
         source_path.as_uri(),
@@ -280,7 +328,11 @@ def test_definition_locations_demo_package_resolves_url_action_event() -> None:
     source_lines = source.splitlines()
     event_source = (DEMO_QUESTIONS_ROOT / "x_events.yml").read_text(encoding="utf-8")
     event_lines = event_source.splitlines()
-    target_line = next(index for index, line in enumerate(source_lines) if 'url_action("workflow_reset")' in line)
+    target_line = next(
+        index
+        for index, line in enumerate(source_lines)
+        if 'url_action("workflow_reset")' in line
+    )
 
     locations = build_definition_locations(
         source_path.as_uri(),
@@ -299,7 +351,11 @@ def test_definition_locations_demo_package_resolves_url_action_event() -> None:
     ] == [
         (
             "x_events.yml",
-            next(index for index, line in enumerate(event_lines) if line.startswith("event: workflow_reset")),
+            next(
+                index
+                for index, line in enumerate(event_lines)
+                if line.startswith("event: workflow_reset")
+            ),
         ),
     ]
 
@@ -308,9 +364,15 @@ def test_definition_locations_demo_package_resolves_action_menu_item_event() -> 
     source_path = DEMO_QUESTIONS_ROOT / "x_events.yml"
     source = source_path.read_text(encoding="utf-8")
     source_lines = source.splitlines()
-    event_line = next(index for index, line in enumerate(source_lines) if line.startswith("event: workflow_reset"))
+    event_line = next(
+        index
+        for index, line in enumerate(source_lines)
+        if line.startswith("event: workflow_reset")
+    )
     target_line = next(
-        index for index, line in enumerate(source_lines) if '"workflow_reset"' in line and index < event_line
+        index
+        for index, line in enumerate(source_lines)
+        if '"workflow_reset"' in line and index < event_line
     )
 
     locations = build_definition_locations(
@@ -338,9 +400,15 @@ def test_reference_locations_demo_package_include_url_action_event_references() 
     source_lines = source.splitlines()
     main_source = (DEMO_QUESTIONS_ROOT / "main.yml").read_text(encoding="utf-8")
     main_lines = main_source.splitlines()
-    event_line = next(index for index, line in enumerate(source_lines) if line.startswith("event: workflow_reset"))
+    event_line = next(
+        index
+        for index, line in enumerate(source_lines)
+        if line.startswith("event: workflow_reset")
+    )
     helper_line = next(
-        index for index, line in enumerate(source_lines) if '"workflow_reset"' in line and index < event_line
+        index
+        for index, line in enumerate(source_lines)
+        if '"workflow_reset"' in line and index < event_line
     )
 
     locations = build_reference_locations(
@@ -351,15 +419,26 @@ def test_reference_locations_demo_package_include_url_action_event_references() 
         workspace_paths=[str(DEMO_FIXTURE_ROOT)],
     )
 
-    assert [(Path(location.uri.removeprefix("file://")).name, location.range.start.line) for location in locations] == [
+    assert [
+        (Path(location.uri.removeprefix("file://")).name, location.range.start.line)
+        for location in locations
+    ] == [
         ("x_events.yml", helper_line),
         ("x_events.yml", event_line),
         (
             "main.yml",
-            next(index for index, line in enumerate(main_lines) if 'url_action("workflow_reset")' in line),
+            next(
+                index
+                for index, line in enumerate(main_lines)
+                if 'url_action("workflow_reset")' in line
+            ),
         ),
         (
             "main.yml",
-            next(index for index, line in enumerate(main_lines) if "action: workflow_reset" in line),
+            next(
+                index
+                for index, line in enumerate(main_lines)
+                if "action: workflow_reset" in line
+            ),
         ),
     ]

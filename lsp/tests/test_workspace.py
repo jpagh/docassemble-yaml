@@ -17,7 +17,9 @@ def test_detect_docassemble_package_valid_structure(tmp_path) -> None:
     """detect_docassemble_package returns root for valid docassemble package."""
     pkg_dir = tmp_path / "docassemble" / "demo"
     pkg_dir.mkdir(parents=True)
-    (tmp_path / "pyproject.toml").write_text("[project]\nname = 'demo'\n", encoding="utf-8")
+    (tmp_path / "pyproject.toml").write_text(
+        "[project]\nname = 'demo'\n", encoding="utf-8"
+    )
     (pkg_dir / "__init__.py").write_text("", encoding="utf-8")
     (pkg_dir / "data").mkdir()
 
@@ -44,7 +46,9 @@ def test_detect_docassemble_package_missing_init(tmp_path) -> None:
     """detect_docassemble_package returns None without __init__.py."""
     pkg_dir = tmp_path / "docassemble" / "demo"
     pkg_dir.mkdir(parents=True)
-    (tmp_path / "pyproject.toml").write_text("[project]\nname = 'demo'\n", encoding="utf-8")
+    (tmp_path / "pyproject.toml").write_text(
+        "[project]\nname = 'demo'\n", encoding="utf-8"
+    )
     (pkg_dir / "data").mkdir()
 
     result = detect_docassemble_package(pkg_dir / "data")
@@ -55,7 +59,9 @@ def test_detect_docassemble_package_missing_data_dir(tmp_path) -> None:
     """detect_docassemble_package returns None without data/ directory."""
     pkg_dir = tmp_path / "docassemble" / "demo"
     pkg_dir.mkdir(parents=True)
-    (tmp_path / "pyproject.toml").write_text("[project]\nname = 'demo'\n", encoding="utf-8")
+    (tmp_path / "pyproject.toml").write_text(
+        "[project]\nname = 'demo'\n", encoding="utf-8"
+    )
     (pkg_dir / "__init__.py").write_text("", encoding="utf-8")
 
     result = detect_docassemble_package(pkg_dir)
@@ -64,7 +70,9 @@ def test_detect_docassemble_package_missing_data_dir(tmp_path) -> None:
 
 def test_detect_docassemble_package_non_docassemble_dir(tmp_path) -> None:
     """detect_docassemble_package returns None for a plain directory."""
-    (tmp_path / "pyproject.toml").write_text("[project]\nname = 'test'\n", encoding="utf-8")
+    (tmp_path / "pyproject.toml").write_text(
+        "[project]\nname = 'test'\n", encoding="utf-8"
+    )
     (tmp_path / "some_file.yml").write_text("question: Hi\n", encoding="utf-8")
 
     result = detect_docassemble_package(tmp_path / "some_file.yml")
@@ -81,7 +89,9 @@ def test_workspace_yaml_sources_overlay_current_document(tmp_path) -> None:
         current_source="question: Unsaved\n",
     )
 
-    assert sources.as_candidate_pairs() == [(source_path.resolve(), "question: Unsaved\n")]
+    assert sources.as_candidate_pairs() == [
+        (source_path.resolve(), "question: Unsaved\n")
+    ]
     assert sources.as_source_dict() == {source_path.resolve(): "question: Unsaved\n"}
 
 
@@ -102,7 +112,9 @@ def test_workspace_yaml_sources_can_rebuild_from_source_dict(tmp_path) -> None:
 
     sources = WorkspaceYamlSources.from_source_dict(source_cache)
 
-    assert sources.as_candidate_pairs() == [(source_path.resolve(), "question: Cached\n")]
+    assert sources.as_candidate_pairs() == [
+        (source_path.resolve(), "question: Cached\n")
+    ]
 
 
 def test_workspace_index_bundles_sources(tmp_path) -> None:
@@ -126,7 +138,9 @@ def test_workspace_index_can_represent_single_current_document(tmp_path) -> None
         "question: Unsaved\n",
     )
 
-    assert index.as_candidate_pairs() == [(source_path.resolve(), "question: Unsaved\n")]
+    assert index.as_candidate_pairs() == [
+        (source_path.resolve(), "question: Unsaved\n")
+    ]
     assert index.search_roots == ()
     assert index.document_facts(source_path)[0].name == "Unsaved"
 
@@ -144,7 +158,9 @@ def test_workspace_index_can_overlay_current_document(tmp_path) -> None:
     )
 
     assert index.as_candidate_pairs() == [(source_path.resolve(), "question: Saved\n")]
-    assert updated_index.as_candidate_pairs() == [(source_path.resolve(), "question: Unsaved\n")]
+    assert updated_index.as_candidate_pairs() == [
+        (source_path.resolve(), "question: Unsaved\n")
+    ]
     assert updated_index.search_roots == (tmp_path.resolve(),)
     assert index.document_facts(source_path)[0].name == "Saved"
     assert updated_index.document_facts(source_path)[0].name == "Unsaved"
@@ -159,7 +175,9 @@ def test_detect_not_cached_none(tmp_path) -> None:
     # Now create the package structure.
     pkg_dir = tmp_path / "docassemble" / "demo"
     pkg_dir.mkdir(parents=True)
-    (tmp_path / "pyproject.toml").write_text("[project]\nname = 'demo'\n", encoding="utf-8")
+    (tmp_path / "pyproject.toml").write_text(
+        "[project]\nname = 'demo'\n", encoding="utf-8"
+    )
     (pkg_dir / "__init__.py").write_text("", encoding="utf-8")
     (pkg_dir / "data").mkdir()
 
@@ -221,7 +239,9 @@ def test_discover_templates_dir(tmp_path) -> None:
     """discover_templates_dir finds data/templates/ under a known package root."""
     pkg_dir = tmp_path / "docassemble" / "demo"
     pkg_dir.mkdir(parents=True)
-    (tmp_path / "pyproject.toml").write_text("[project]\nname = 'demo'\n", encoding="utf-8")
+    (tmp_path / "pyproject.toml").write_text(
+        "[project]\nname = 'demo'\n", encoding="utf-8"
+    )
     (pkg_dir / "__init__.py").write_text("", encoding="utf-8")
     template_dir = pkg_dir / "data" / "templates"
     template_dir.mkdir(parents=True)
@@ -234,7 +254,9 @@ def test_discover_templates_dir_none_when_no_templates(tmp_path) -> None:
     """discover_templates_dir returns None when no data/templates/ exists."""
     pkg_dir = tmp_path / "docassemble" / "demo"
     pkg_dir.mkdir(parents=True)
-    (tmp_path / "pyproject.toml").write_text("[project]\nname = 'demo'\n", encoding="utf-8")
+    (tmp_path / "pyproject.toml").write_text(
+        "[project]\nname = 'demo'\n", encoding="utf-8"
+    )
     (pkg_dir / "__init__.py").write_text("", encoding="utf-8")
     # Create data/ but not data/templates/
     (pkg_dir / "data" / "questions").mkdir(parents=True)
@@ -254,11 +276,15 @@ def test_collect_template_file_names(tmp_path) -> None:
     (tmp_path / "letter.docx").write_text("", encoding="utf-8")
     (tmp_path / "form.pdf").write_text("", encoding="utf-8")
     (tmp_path / "reference.docx").write_text("", encoding="utf-8")
-    (tmp_path / ".DS_Store").write_text("", encoding="utf-8")  # dotfiles are regular files, included
+    (tmp_path / ".DS_Store").write_text(
+        "", encoding="utf-8"
+    )  # dotfiles are regular files, included
     (tmp_path / "subdir").mkdir()  # directories are excluded
 
     names = collect_template_file_names(tmp_path)
-    assert names == frozenset({"letter.docx", "form.pdf", "reference.docx", ".DS_Store"})
+    assert names == frozenset(
+        {"letter.docx", "form.pdf", "reference.docx", ".DS_Store"}
+    )
 
 
 def test_collect_template_file_names_empty(tmp_path) -> None:
@@ -276,13 +302,17 @@ def test_workspace_index_templates_dir_populated(tmp_path) -> None:
     template_dir.mkdir(parents=True)
     (template_dir / "letter.docx").write_text("placeholder", encoding="utf-8")
     (template_dir / "form.pdf").write_text("placeholder", encoding="utf-8")
-    (tmp_path / "pyproject.toml").write_text("[project]\nname = 'demo'\n", encoding="utf-8")
+    (tmp_path / "pyproject.toml").write_text(
+        "[project]\nname = 'demo'\n", encoding="utf-8"
+    )
     (pkg_dir / "__init__.py").write_text("", encoding="utf-8")
 
     source_path = questions_dir / "main.yml"
     source_path.write_text("question: Hi\n", encoding="utf-8")
 
-    index = build_workspace_index([tmp_path], current_path=source_path, current_source="question: Hi\n")
+    index = build_workspace_index(
+        [tmp_path], current_path=source_path, current_source="question: Hi\n"
+    )
 
     assert index.package_root == tmp_path
     assert tmp_path.resolve() in index.package_templates_dirs
@@ -296,13 +326,17 @@ def test_workspace_index_templates_dir_none_when_no_templates(tmp_path) -> None:
     pkg_dir = tmp_path / "docassemble" / "demo"
     questions_dir = pkg_dir / "data" / "questions"
     questions_dir.mkdir(parents=True)
-    (tmp_path / "pyproject.toml").write_text("[project]\nname = 'demo'\n", encoding="utf-8")
+    (tmp_path / "pyproject.toml").write_text(
+        "[project]\nname = 'demo'\n", encoding="utf-8"
+    )
     (pkg_dir / "__init__.py").write_text("", encoding="utf-8")
 
     source_path = questions_dir / "main.yml"
     source_path.write_text("question: Hi\n", encoding="utf-8")
 
-    index = build_workspace_index([tmp_path], current_path=source_path, current_source="question: Hi\n")
+    index = build_workspace_index(
+        [tmp_path], current_path=source_path, current_source="question: Hi\n"
+    )
 
     assert index.package_root == tmp_path
     assert index.package_templates_dirs == {}
@@ -317,13 +351,17 @@ def test_workspace_index_templates_propagate_through_with_overlays(tmp_path) -> 
     questions_dir.mkdir(parents=True)
     template_dir.mkdir(parents=True)
     (template_dir / "letter.docx").write_text("placeholder", encoding="utf-8")
-    (tmp_path / "pyproject.toml").write_text("[project]\nname = 'demo'\n", encoding="utf-8")
+    (tmp_path / "pyproject.toml").write_text(
+        "[project]\nname = 'demo'\n", encoding="utf-8"
+    )
     (pkg_dir / "__init__.py").write_text("", encoding="utf-8")
 
     source_path = questions_dir / "main.yml"
     source_path.write_text("question: Saved\n", encoding="utf-8")
 
-    index = build_workspace_index([tmp_path], current_path=source_path, current_source="question: Saved\n")
+    index = build_workspace_index(
+        [tmp_path], current_path=source_path, current_source="question: Saved\n"
+    )
     overlaid = index.with_overlays({source_path: "question: Overlaid\n"})
 
     assert tmp_path.resolve() in overlaid.package_templates_dirs
@@ -341,7 +379,9 @@ def test_workspace_index_templates_propagate_through_with_current_document(
     questions_dir.mkdir(parents=True)
     template_dir.mkdir(parents=True)
     (template_dir / "letter.docx").write_text("placeholder", encoding="utf-8")
-    (tmp_path / "pyproject.toml").write_text("[project]\nname = 'demo'\n", encoding="utf-8")
+    (tmp_path / "pyproject.toml").write_text(
+        "[project]\nname = 'demo'\n", encoding="utf-8"
+    )
     (pkg_dir / "__init__.py").write_text("", encoding="utf-8")
 
     source_path = questions_dir / "main.yml"
@@ -384,7 +424,9 @@ def test_templates_dir_fallback_still_works(tmp_path) -> None:
     questions_dir.mkdir(parents=True)
     template_dir.mkdir(parents=True)
     (template_dir / "letter.docx").write_text("placeholder", encoding="utf-8")
-    (tmp_path / "pyproject.toml").write_text("[project]\nname = 'demo'\n", encoding="utf-8")
+    (tmp_path / "pyproject.toml").write_text(
+        "[project]\nname = 'demo'\n", encoding="utf-8"
+    )
     (pkg_dir / "__init__.py").write_text("", encoding="utf-8")
 
     yaml_path = questions_dir / "main.yml"
@@ -401,7 +443,9 @@ def test_discover_package_roots_mtime(tmp_path) -> None:
     # Create a valid package inside tmp_path.
     pkg_dir = tmp_path / "docassemble" / "demo"
     pkg_dir.mkdir(parents=True)
-    (tmp_path / "pyproject.toml").write_text("[project]\nname = 'demo'\n", encoding="utf-8")
+    (tmp_path / "pyproject.toml").write_text(
+        "[project]\nname = 'demo'\n", encoding="utf-8"
+    )
     (pkg_dir / "__init__.py").write_text("", encoding="utf-8")
     (pkg_dir / "data").mkdir()
 
@@ -428,7 +472,9 @@ def test_workspace_index_templates_multi_package(tmp_path) -> None:
     alpha_questions.mkdir(parents=True)
     alpha_templates.mkdir(parents=True)
     (alpha_templates / "alpha_form.docx").write_text("alpha", encoding="utf-8")
-    (alpha_root / "pyproject.toml").write_text("[project]\nname = 'alpha'\n", encoding="utf-8")
+    (alpha_root / "pyproject.toml").write_text(
+        "[project]\nname = 'alpha'\n", encoding="utf-8"
+    )
     (alpha_pkg / "__init__.py").write_text("", encoding="utf-8")
 
     # Package B: docassemble/beta
@@ -440,7 +486,9 @@ def test_workspace_index_templates_multi_package(tmp_path) -> None:
     beta_templates.mkdir(parents=True)
     (beta_templates / "beta_form.docx").write_text("beta", encoding="utf-8")
     (beta_templates / "shared.docx").write_text("shared", encoding="utf-8")
-    (beta_root / "pyproject.toml").write_text("[project]\nname = 'beta'\n", encoding="utf-8")
+    (beta_root / "pyproject.toml").write_text(
+        "[project]\nname = 'beta'\n", encoding="utf-8"
+    )
     (beta_pkg / "__init__.py").write_text("", encoding="utf-8")
 
     # Workspace root is the parent directory containing both packages.
@@ -455,7 +503,9 @@ def test_workspace_index_templates_multi_package(tmp_path) -> None:
     # Both package roots should be in the mapping.
     assert alpha_root.resolve() in index.package_templates_dirs
     assert beta_root.resolve() in index.package_templates_dirs
-    assert index.package_templates_dirs[alpha_root.resolve()] == alpha_templates.resolve()
+    assert (
+        index.package_templates_dirs[alpha_root.resolve()] == alpha_templates.resolve()
+    )
     assert index.package_templates_dirs[beta_root.resolve()] == beta_templates.resolve()
 
     # templates_dir_for should resolve each file to its own package.
@@ -463,7 +513,9 @@ def test_workspace_index_templates_multi_package(tmp_path) -> None:
     assert index.templates_dir_for(beta_source) == beta_templates.resolve()
 
     # Aggregated template names include files from both packages.
-    assert index.template_file_names == frozenset({"alpha_form.docx", "beta_form.docx", "shared.docx"})
+    assert index.template_file_names == frozenset(
+        {"alpha_form.docx", "beta_form.docx", "shared.docx"}
+    )
 
 
 def test_workspace_index_from_yaml_roots_sets_package_root(tmp_path) -> None:

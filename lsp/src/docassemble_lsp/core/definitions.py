@@ -94,7 +94,9 @@ def _match_value_context_with_range(
     list_match = _LIST_ITEM_VALUE_RE.match(text)
     if list_match is not None:
         raw_value = list_match.group(2)
-        value, start, end = _clean_value_and_range(raw_value, list_match.start(2), list_match.end(2))
+        value, start, end = _clean_value_and_range(
+            raw_value, list_match.start(2), list_match.end(2)
+        )
         if value and ":" in value and start <= character <= end:
             ancestors = _ancestor_keys(source, line)
             parent = ancestors[0] if ancestors else None
@@ -104,7 +106,9 @@ def _match_value_context_with_range(
     key_match = _KEY_VALUE_RE.match(text)
     if key_match is not None:
         raw_value = key_match.group(3)
-        value, start, end = _clean_value_and_range(raw_value, key_match.start(3), key_match.end(3))
+        value, start, end = _clean_value_and_range(
+            raw_value, key_match.start(3), key_match.end(3)
+        )
         if value and value not in _BLOCK_SCALAR_MARKERS:
             # Check for a package-qualified list item: ``- docassemble.pkg:file.path``
             # KEY_VALUE_RE splits it as key=``docassemble.pkg``, value=``file.path``.
@@ -126,7 +130,9 @@ def _match_value_context_with_range(
     list_match = _LIST_ITEM_VALUE_RE.match(text)
     if list_match is not None and ":" not in list_match.group(2):
         raw_value = list_match.group(2)
-        value, start, end = _clean_value_and_range(raw_value, list_match.start(2), list_match.end(2))
+        value, start, end = _clean_value_and_range(
+            raw_value, list_match.start(2), list_match.end(2)
+        )
         if value:
             if start <= character <= end:
                 ancestors = _ancestor_keys(source, line)
@@ -136,8 +142,12 @@ def _match_value_context_with_range(
     return (None, None, 0, 0)
 
 
-def _match_value_context(source: str, line: int, character: int) -> tuple[str | None, str | None]:
-    key_or_parent, value, _start, _end = _match_value_context_with_range(source, line, character)
+def _match_value_context(
+    source: str, line: int, character: int
+) -> tuple[str | None, str | None]:
+    key_or_parent, value, _start, _end = _match_value_context_with_range(
+        source, line, character
+    )
     return (key_or_parent, value)
 
 
@@ -349,7 +359,9 @@ def _load_vendored_stubs() -> _VendoredStubData:
             vendored_paths.append(vendored_path)
             vendored_index = load_python_module_index(vendored_path)
             class_names |= collect_class_names(vendored_index)
-            non_exception_class_names |= collect_non_exception_class_names(vendored_index)
+            non_exception_class_names |= collect_non_exception_class_names(
+                vendored_index
+            )
             custom_datatype_names |= vendored_index.custom_datatype_names
             for name, sym in vendored_index.symbols.items():
                 if sym.target is not None:
@@ -379,10 +391,15 @@ def build_workspace_index(
 
     resolved_search_roots = tuple(root.resolve() for root in search_roots)
     if existing_sources is not None:
-        sources = existing_sources.with_overlays(overlays) if overlays else existing_sources
+        sources = (
+            existing_sources.with_overlays(overlays) if overlays else existing_sources
+        )
         index = WorkspaceIndex(
             yaml_sources=sources,
-            facts_by_path={source.path: tuple(build_document_facts(source.text)) for source in sources.sources},
+            facts_by_path={
+                source.path: tuple(build_document_facts(source.text))
+                for source in sources.sources
+            },
             search_roots=resolved_search_roots,
         )
     else:
@@ -394,7 +411,9 @@ def build_workspace_index(
         )
 
     detect_path = current_path or (search_roots[0] if search_roots else None)
-    package_root = detect_docassemble_package(detect_path) if detect_path is not None else None
+    package_root = (
+        detect_docassemble_package(detect_path) if detect_path is not None else None
+    )
 
     # Collect ALL package roots in the workspace.
     all_package_roots: list[Path] = []
@@ -495,7 +514,9 @@ def build_workspace_index(
 
     if package_root is not None:
         workspace_module_paths = _collect_python_modules(package_root)
-        cross_module_paths = _discover_cross_package_modules(index.yaml_sources, package_root, index.search_roots)
+        cross_module_paths = _discover_cross_package_modules(
+            index.yaml_sources, package_root, index.search_roots
+        )
         workspace_module_paths = workspace_module_paths | cross_module_paths
         (
             workspace_class_names,
@@ -508,7 +529,9 @@ def build_workspace_index(
     vendored = _load_vendored_stubs()
 
     all_class_names = workspace_class_names | vendored.class_names
-    all_non_exception_class_names = workspace_non_exception | vendored.non_exception_class_names
+    all_non_exception_class_names = (
+        workspace_non_exception | vendored.non_exception_class_names
+    )
     all_custom_datatype_names = workspace_custom_dt | vendored.custom_datatype_names
 
     final_registry: dict[str, frozenset[DefinitionTarget]] = {}
@@ -597,21 +620,31 @@ def _event_helper_occurrences(text: str) -> list[EventHelperOccurrence]:
         if argument_index is None or len(node.args) <= argument_index:
             continue
         argument = node.args[argument_index]
-        if not isinstance(argument, ast.Constant) or not isinstance(argument.value, str):
+        if not isinstance(argument, ast.Constant) or not isinstance(
+            argument.value, str
+        ):
             continue
         line_number = getattr(argument, "lineno", None)
         end_col_offset = getattr(argument, "end_col_offset", None)
         if line_number is None or end_col_offset is None:
             continue
-        start_character = argument.col_offset + (first_line_offset if line_number == 1 else 0)
+        start_character = argument.col_offset + (
+            first_line_offset if line_number == 1 else 0
+        )
         end_character = end_col_offset + (first_line_offset if line_number == 1 else 0)
         literal_line = (
-            parse_text.splitlines()[line_number - 1] if line_number - 1 < len(parse_text.splitlines()) else ""
+            parse_text.splitlines()[line_number - 1]
+            if line_number - 1 < len(parse_text.splitlines())
+            else ""
         )
         literal_text = literal_line[argument.col_offset : end_col_offset]
         value_offset = literal_text.find(argument.value)
         if value_offset != -1:
-            start_character = argument.col_offset + value_offset + (first_line_offset if line_number == 1 else 0)
+            start_character = (
+                argument.col_offset
+                + value_offset
+                + (first_line_offset if line_number == 1 else 0)
+            )
             end_character = start_character + len(argument.value)
         occurrences.append(
             EventHelperOccurrence(
@@ -632,21 +665,30 @@ def _event_helper_occurrences(text: str) -> list[EventHelperOccurrence]:
     return occurrences
 
 
-def _event_helper_request_in_text(text: str, line: int, character: int) -> ReferenceRequest | None:
+def _event_helper_request_in_text(
+    text: str, line: int, character: int
+) -> ReferenceRequest | None:
     for occurrence in _event_helper_occurrences(text):
         if occurrence.line != line:
             continue
-        if occurrence.start_character <= character <= occurrence.end_character and ":" not in occurrence.name:
+        if (
+            occurrence.start_character <= character <= occurrence.end_character
+            and ":" not in occurrence.name
+        ):
             return ReferenceRequest(kind="event", name=occurrence.name)
     return None
 
 
-def _event_helper_request_at_position(source: str, line: int, character: int) -> ReferenceRequest | None:
+def _event_helper_request_at_position(
+    source: str, line: int, character: int
+) -> ReferenceRequest | None:
     region = _enclosing_block_scalar_region(source, line)
     if region is not None and region.key_name in _PYTHON_BLOCK_KEYS:
         local_line = line - region.content_start_line
         local_character = max(character - region.content_indent, 0)
-        request = _event_helper_request_in_text(region.text, local_line, local_character)
+        request = _event_helper_request_in_text(
+            region.text, local_line, local_character
+        )
         if request is not None:
             return request
 
@@ -657,21 +699,29 @@ def _event_helper_request_at_position(source: str, line: int, character: int) ->
     for mako_region in _iter_mako_block_regions(source):
         if mako_region.is_expression:
             continue
-        if not (mako_region.content_start_offset <= cursor_offset < mako_region.content_end_offset):
+        if not (
+            mako_region.content_start_offset
+            <= cursor_offset
+            < mako_region.content_end_offset
+        ):
             continue
         local_offset = cursor_offset - mako_region.content_start_offset
         code_before = mako_region.code_text[:local_offset]
         local_line = code_before.count("\n")
         last_nl = code_before.rfind("\n")
         local_char = local_offset - last_nl - 1 if last_nl != -1 else local_offset
-        request = _event_helper_request_in_text(mako_region.code_text, local_line, local_char)
+        request = _event_helper_request_in_text(
+            mako_region.code_text, local_line, local_char
+        )
         if request is not None:
             return request
 
     for match in _MAKO_EXPRESSION_RE.finditer(text):
         if not (match.start(1) <= character <= match.end(1)):
             continue
-        request = _event_helper_request_in_text(match.group(1), 0, character - match.start(1))
+        request = _event_helper_request_in_text(
+            match.group(1), 0, character - match.start(1)
+        )
         if request is not None:
             return request
 
@@ -683,7 +733,9 @@ def _event_helper_request_at_position(source: str, line: int, character: int) ->
     statement = text[percent_index + 1 :].lstrip()
     if not statement:
         return None
-    statement_start = percent_index + 1 + len(text[percent_index + 1 :]) - len(statement)
+    statement_start = (
+        percent_index + 1 + len(text[percent_index + 1 :]) - len(statement)
+    )
     if character < statement_start:
         return None
     return _event_helper_request_in_text(statement, 0, character - statement_start)
@@ -711,7 +763,11 @@ def _iter_event_helper_occurrences(source: str) -> list[EventHelperOccurrence]:
         content_before = source[: mako_region.content_start_offset]
         base_line = content_before.count("\n")
         last_nl = content_before.rfind("\n")
-        base_col = mako_region.content_start_offset - last_nl - 1 if last_nl != -1 else mako_region.content_start_offset
+        base_col = (
+            mako_region.content_start_offset - last_nl - 1
+            if last_nl != -1
+            else mako_region.content_start_offset
+        )
         for occurrence in _event_helper_occurrences(mako_region.code_text):
             occurrences.append(
                 EventHelperOccurrence(
@@ -741,7 +797,9 @@ def _iter_event_helper_occurrences(source: str) -> list[EventHelperOccurrence]:
         statement = text[percent_index + 1 :].lstrip()
         if not statement:
             continue
-        statement_start = percent_index + 1 + len(text[percent_index + 1 :]) - len(statement)
+        statement_start = (
+            percent_index + 1 + len(text[percent_index + 1 :]) - len(statement)
+        )
         for occurrence in _event_helper_occurrences(statement):
             occurrences.append(
                 EventHelperOccurrence(
@@ -767,7 +825,9 @@ def _enclosing_block_scalar_region(source: str, line: int) -> BlockScalarRegion 
         raw_value = match.group(3).strip()
         if raw_value not in _BLOCK_SCALAR_MARKERS:
             continue
-        region = _block_scalar_region_from_key_line(lines, key_line, match.group(2).strip(), len(match.group(1)))
+        region = _block_scalar_region_from_key_line(
+            lines, key_line, match.group(2).strip(), len(match.group(1))
+        )
         if region.content_start_line <= line <= region.end_line:
             return region
     return None
@@ -787,7 +847,9 @@ def _iter_block_scalar_regions(source: str) -> list[BlockScalarRegion]:
         if raw_value not in _BLOCK_SCALAR_MARKERS:
             line_index += 1
             continue
-        region = _block_scalar_region_from_key_line(lines, line_index, match.group(2).strip(), len(match.group(1)))
+        region = _block_scalar_region_from_key_line(
+            lines, line_index, match.group(2).strip(), len(match.group(1))
+        )
         regions.append(region)
         line_index = max(region.end_line + 1, line_index + 1)
     return regions
@@ -805,24 +867,38 @@ def _resolve_local_file_reference(
         return []
 
     if ":" in target:
-        resolved = resolve_package_qualified_path_with_base(target, list(search_roots), relative_base)
+        resolved = resolve_package_qualified_path_with_base(
+            target, list(search_roots), relative_base
+        )
         if resolved is not None:
-            return [DefinitionTarget(path=resolved, line=0, start_character=0, end_character=0)]
+            return [
+                DefinitionTarget(
+                    path=resolved, line=0, start_character=0, end_character=0
+                )
+            ]
         return []
 
     resolved = (current_path.parent / target).resolve()
     if resolved.exists():
-        return [DefinitionTarget(path=resolved, line=0, start_character=0, end_character=0)]
+        return [
+            DefinitionTarget(path=resolved, line=0, start_character=0, end_character=0)
+        ]
 
     if templates_dir is not None:
         template_path = (templates_dir / target).resolve()
         if template_path.exists():
-            return [DefinitionTarget(path=template_path, line=0, start_character=0, end_character=0)]
+            return [
+                DefinitionTarget(
+                    path=template_path, line=0, start_character=0, end_character=0
+                )
+            ]
 
     return []
 
 
-def _symbol_request(source: str, line: int, character: int, current_path: Path | None) -> ReferenceRequest | None:
+def _symbol_request(
+    source: str, line: int, character: int, current_path: Path | None
+) -> ReferenceRequest | None:
     key_or_parent, value = _match_value_context(source, line, character)
     if key_or_parent is not None and value is not None:
         if key_or_parent in {"def", "usedefs"}:
@@ -854,7 +930,9 @@ def _symbol_request(source: str, line: int, character: int, current_path: Path |
                 name=value,
                 target_path=(current_path.parent / value).resolve(),
             )
-        if parent == "fields" and (key_or_parent == "field" or key_or_parent not in FIELD_ITEM_KNOWN_KEYS):
+        if parent == "fields" and (
+            key_or_parent == "field" or key_or_parent not in FIELD_ITEM_KNOWN_KEYS
+        ):
             if value and ":" not in value:
                 return ReferenceRequest(kind="field_var", name=value)
         if key_or_parent == "variable" and parent in _FIELD_CONDITION_KEYS:
@@ -865,8 +943,14 @@ def _symbol_request(source: str, line: int, character: int, current_path: Path |
     if helper_request is not None:
         return helper_request
 
-    if current_path is not None and not _is_yaml_path(current_path) and not _is_python_path(current_path):
-        return ReferenceRequest(kind="file", name=current_path.name, target_path=current_path.resolve())
+    if (
+        current_path is not None
+        and not _is_yaml_path(current_path)
+        and not _is_python_path(current_path)
+    ):
+        return ReferenceRequest(
+            kind="file", name=current_path.name, target_path=current_path.resolve()
+        )
 
     return None
 
@@ -924,10 +1008,14 @@ def resolve_reference_targets(
     # For file references, resolve the target path if it wasn't set (package-qualified).
     effective_request = request
     if request.kind == "file" and request.target_path is None:
-        resolved = resolve_package_qualified_path_with_base(request.name, list(workspace_index.search_roots), None)
+        resolved = resolve_package_qualified_path_with_base(
+            request.name, list(workspace_index.search_roots), None
+        )
         if resolved is None:
             return []
-        effective_request = ReferenceRequest(kind="file", name=request.name, target_path=resolved)
+        effective_request = ReferenceRequest(
+            kind="file", name=request.name, target_path=resolved
+        )
 
     target_path = effective_request.target_path
     if target_path is None:
@@ -968,12 +1056,16 @@ def resolve_python_hover(
 
     # Determine the symbol kind from the module index (still cached).
     kind_str: str = "symbol"
-    module_index = load_python_module_index(first_target.path, workspace_index=workspace_index)
+    module_index = load_python_module_index(
+        first_target.path, workspace_index=workspace_index
+    )
     sym = module_index.symbols.get(symbol_name)
     if sym is not None:
         kind_str = sym.kind
 
-    kind_icon = {"function": "def", "class": "class", "symbol": "symbol"}.get(kind_str, "symbol")
+    kind_icon = {"function": "def", "class": "class", "symbol": "symbol"}.get(
+        kind_str, "symbol"
+    )
     lines: list[str] = []
     lines.append(f"**{kind_icon}** `{symbol_name}`")
     lines.append("")
@@ -981,7 +1073,9 @@ def resolve_python_hover(
     if doc:
         lines.append(doc)
     lines.append("")
-    lines.append(f"*Defined in `{first_target.path.name}:{first_target.line + 1}` — click to navigate*")
+    lines.append(
+        f"*Defined in `{first_target.path.name}:{first_target.line + 1}` — click to navigate*"
+    )
     return HoverInfo(contents="\n".join(lines))
 
 
@@ -1028,11 +1122,19 @@ def resolve_definition_targets(
 
     key_or_parent, value = _match_value_context(source, line, character)
 
-    if current_path is not None and key_or_parent in _STATIC_FILE_PARENT_KEYS and value is not None:
+    if (
+        current_path is not None
+        and key_or_parent in _STATIC_FILE_PARENT_KEYS
+        and value is not None
+    ):
         target_path = resolve_static_target(current_path, value)
         if target_path is None:
             return []
-        return [DefinitionTarget(path=target_path, line=0, start_character=0, end_character=0)]
+        return [
+            DefinitionTarget(
+                path=target_path, line=0, start_character=0, end_character=0
+            )
+        ]
 
     # Flat-model go-to-def: look up symbol by name directly in the registry.
     if workspace_index.symbol_registry and current_path is not None:
@@ -1077,8 +1179,14 @@ def resolve_definition_targets(
         )
 
     if key_or_parent in _FILE_REFERENCE_KEYS:
-        relative_base = "data/questions" if key_or_parent in _NON_ATTACHMENT_FILE_KEYS else None
-        tdir = workspace_index.templates_dir_for(current_path) if current_path is not None else None
+        relative_base = (
+            "data/questions" if key_or_parent in _NON_ATTACHMENT_FILE_KEYS else None
+        )
+        tdir = (
+            workspace_index.templates_dir_for(current_path)
+            if current_path is not None
+            else None
+        )
         return _resolve_local_file_reference(
             current_path,
             value,
@@ -1088,8 +1196,14 @@ def resolve_definition_targets(
         )
 
     if key_or_parent in _FILE_REFERENCE_LIST_PARENTS:
-        relative_base = "data/questions" if key_or_parent in _NON_ATTACHMENT_FILE_KEYS else None
-        tdir = workspace_index.templates_dir_for(current_path) if current_path is not None else None
+        relative_base = (
+            "data/questions" if key_or_parent in _NON_ATTACHMENT_FILE_KEYS else None
+        )
+        tdir = (
+            workspace_index.templates_dir_for(current_path)
+            if current_path is not None
+            else None
+        )
         return _resolve_local_file_reference(
             current_path,
             value,
@@ -1099,7 +1213,11 @@ def resolve_definition_targets(
         )
 
     if parent == "objects from file":
-        tdir = workspace_index.templates_dir_for(current_path) if current_path is not None else None
+        tdir = (
+            workspace_index.templates_dir_for(current_path)
+            if current_path is not None
+            else None
+        )
         return _resolve_local_file_reference(
             current_path,
             value,
@@ -1107,16 +1225,18 @@ def resolve_definition_targets(
             tdir,
         )
 
-    if parent == "fields" and (key_or_parent == "field" or key_or_parent not in FIELD_ITEM_KNOWN_KEYS):
+    if parent == "fields" and (
+        key_or_parent == "field" or key_or_parent not in FIELD_ITEM_KNOWN_KEYS
+    ):
         if value and ":" not in value:
-            return _workspace_navigation_service(workspace_index).field_var_declarations(
-                ReferenceRequest(kind="field_var", name=value)
-            )
+            return _workspace_navigation_service(
+                workspace_index
+            ).field_var_declarations(ReferenceRequest(kind="field_var", name=value))
 
     if key_or_parent == "variable" and parent in _FIELD_CONDITION_KEYS:
         if value and ":" not in value:
-            return _workspace_navigation_service(workspace_index).field_var_declarations(
-                ReferenceRequest(kind="field_var", name=value)
-            )
+            return _workspace_navigation_service(
+                workspace_index
+            ).field_var_declarations(ReferenceRequest(kind="field_var", name=value))
 
     return []

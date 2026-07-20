@@ -33,7 +33,9 @@ class ReviewBlockDirective:
 
         for item in items:
             if not isinstance(item, Mapping):
-                self.errors.append(_validator_error(MessageCode.REVIEW_ITEM_TYPE, _lc_line(item)))
+                self.errors.append(
+                    _validator_error(MessageCode.REVIEW_ITEM_TYPE, _lc_line(item))
+                )
                 continue
             self._validate_item(item)
 
@@ -43,19 +45,35 @@ class ReviewBlockDirective:
         is_presentation = any(k in item for k in ("note", "html", "raw html"))
 
         if has_label and not has_field and not is_presentation:
-            self.errors.append(_validator_error(MessageCode.REVIEW_LABEL_REQUIRES_FIELD, _lc_key_line(item, "label")))
+            self.errors.append(
+                _validator_error(
+                    MessageCode.REVIEW_LABEL_REQUIRES_FIELD, _lc_key_line(item, "label")
+                )
+            )
 
         if has_field and not has_label:
-            self.errors.append(_validator_error(MessageCode.REVIEW_FIELD_REQUIRES_LABEL, _lc_line(item)))
+            self.errors.append(
+                _validator_error(
+                    MessageCode.REVIEW_FIELD_REQUIRES_LABEL, _lc_line(item)
+                )
+            )
 
         for pk in ("note", "html", "raw html"):
             if pk in item and not isinstance(item[pk], str):
-                self.errors.append(_validator_error(MessageCode.REVIEW_NOTE_TYPE, _lc_key_line(item, pk)))
+                self.errors.append(
+                    _validator_error(
+                        MessageCode.REVIEW_NOTE_TYPE, _lc_key_line(item, pk)
+                    )
+                )
 
         if "show if" in item:
             show_if_val = item["show if"]
             if not isinstance(show_if_val, (str, list)):
-                self.errors.append(_validator_error(MessageCode.REVIEW_SHOW_IF_TYPE, _lc_key_line(item, "show if")))
+                self.errors.append(
+                    _validator_error(
+                        MessageCode.REVIEW_SHOW_IF_TYPE, _lc_key_line(item, "show if")
+                    )
+                )
             elif isinstance(show_if_val, list):
                 for sub_idx, sub_item in enumerate(show_if_val):
                     if not isinstance(sub_item, str):
@@ -67,13 +85,29 @@ class ReviewBlockDirective:
                         )
 
         if "help" in item and not isinstance(item["help"], str):
-            self.errors.append(_validator_error(MessageCode.REVIEW_HELP_TYPE, _lc_key_line(item, "help")))
+            self.errors.append(
+                _validator_error(
+                    MessageCode.REVIEW_HELP_TYPE, _lc_key_line(item, "help")
+                )
+            )
 
         if "action" in item and not isinstance(item["action"], str):
-            self.errors.append(_validator_error(MessageCode.REVIEW_ACTION_TYPE, _lc_key_line(item, "action")))
+            self.errors.append(
+                _validator_error(
+                    MessageCode.REVIEW_ACTION_TYPE, _lc_key_line(item, "action")
+                )
+            )
 
         if "button" in item and not isinstance(item["button"], str):
-            self.errors.append(_validator_error(MessageCode.REVIEW_BUTTON_TYPE, _lc_key_line(item, "button")))
+            self.errors.append(
+                _validator_error(
+                    MessageCode.REVIEW_BUTTON_TYPE, _lc_key_line(item, "button")
+                )
+            )
 
         if "css class" in item and not isinstance(item["css class"], str):
-            self.errors.append(_validator_error(MessageCode.REVIEW_CSS_CLASS_TYPE, _lc_key_line(item, "css class")))
+            self.errors.append(
+                _validator_error(
+                    MessageCode.REVIEW_CSS_CLASS_TYPE, _lc_key_line(item, "css class")
+                )
+            )

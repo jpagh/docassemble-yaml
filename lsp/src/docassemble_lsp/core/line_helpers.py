@@ -30,7 +30,9 @@ _INTERNAL_METADATA_KEYS = frozenset({"__line__", "__key_lines__", "__value_lines
 # ---------------------------------------------------------------------------
 
 
-def _safe_ast_parse(source: str, filename: str = "<unknown>", mode: str = "exec") -> Any:
+def _safe_ast_parse(
+    source: str, filename: str = "<unknown>", mode: str = "exec"
+) -> Any:
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", SyntaxWarning)
         return ast.parse(source, filename=filename, mode=mode)
@@ -94,7 +96,9 @@ def _lc_value_line(obj: Any, key: Any) -> int:
     return _lc_key_line(obj, key)
 
 
-def _relative_value_line(mapping: Mapping[Any, Any], key: Any, code_line: int = 1) -> int:
+def _relative_value_line(
+    mapping: Mapping[Any, Any], key: Any, code_line: int = 1
+) -> int:
     """Return the line number for a value offset within a mapping entry."""
     key_line = _lc_key_line(mapping, key)
     value = mapping.get(key)

@@ -79,7 +79,10 @@ class TestValidationPublicSurface:
             _normalize_validator_error,
         )
 
-        assert all(x is not None for x in [DAFields, DAPythonVar, MakoText, PythonText, ValidationCode])
+        assert all(
+            x is not None
+            for x in [DAFields, DAPythonVar, MakoText, PythonText, ValidationCode]
+        )
         assert callable(_normalize_validator_error)
 
     def test_submodule_direct_import(self) -> None:

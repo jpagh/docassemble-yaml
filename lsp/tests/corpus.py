@@ -84,17 +84,23 @@ def example_corpus_roots() -> tuple[Path, ...]:
 def installed_example_corpus_roots() -> tuple[Path, ...]:
     roots = tuple(
         root
-        for root in (_repo_root() / ".venv").glob("lib/python*/site-packages/docassemble/base/data/questions/examples")
+        for root in (_repo_root() / ".venv").glob(
+            "lib/python*/site-packages/docassemble/base/data/questions/examples"
+        )
         if root.exists()
     )
     return roots
 
 
 @lru_cache(maxsize=2)
-def example_documents(*, installed_only: bool = False) -> tuple[tuple[Path, dict[object, object]], ...]:
+def example_documents(
+    *, installed_only: bool = False
+) -> tuple[tuple[Path, dict[object, object]], ...]:
     yaml = YAML(typ="safe")
     documents: list[tuple[Path, dict[object, object]]] = []
-    roots = installed_example_corpus_roots() if installed_only else example_corpus_roots()
+    roots = (
+        installed_example_corpus_roots() if installed_only else example_corpus_roots()
+    )
     for root in roots:
         for path in root.rglob("*.yml"):
             try:
@@ -181,7 +187,11 @@ def standalone_installed_example_blocks() -> tuple[tuple[str, str, str], ...]:
 
     for path, document in example_documents(installed_only=True):
         document_string_keys = [key for key in document if isinstance(key, str)]
-        main_keys = [key for key in document_string_keys if key not in _STANDALONE_BLOCK_SUPPORT_KEYS]
+        main_keys = [
+            key
+            for key in document_string_keys
+            if key not in _STANDALONE_BLOCK_SUPPORT_KEYS
+        ]
         if len(main_keys) != 1:
             continue
         block_name = main_keys[0]
@@ -192,4 +202,7 @@ def standalone_installed_example_blocks() -> tuple[tuple[str, str, str], ...]:
             render_yaml_document(document),
         )
 
-    return tuple((block_name, path, source) for block_name, (path, source) in sorted(examples_by_block.items()))
+    return tuple(
+        (block_name, path, source)
+        for block_name, (path, source) in sorted(examples_by_block.items())
+    )

@@ -25,7 +25,9 @@ def test_analyze_text_surfaces_unknown_keys() -> None:
 
 
 def test_analyze_text_reports_signature_only_top_level_keys_without_signature() -> None:
-    diagnostics = analyze_text("question: Sign here\nrequired: False\npen color: blue\n", path="sample.yml")
+    diagnostics = analyze_text(
+        "question: Sign here\nrequired: False\npen color: blue\n", path="sample.yml"
+    )
 
     e301 = next(diagnostic for diagnostic in diagnostics if diagnostic.code == "E301")
     assert "required" in e301.message
@@ -640,7 +642,11 @@ def test_language_modifier_accepts_plain_string() -> None:
 
 
 def test_validator_known_top_level_keys_cover_installed_example_corpus() -> None:
-    missing = installed_example_top_level_keys() - set(all_dict_keys) - {"required", "pen color"}
+    missing = (
+        installed_example_top_level_keys()
+        - set(all_dict_keys)
+        - {"required", "pen color"}
+    )
 
     assert not missing
 
@@ -662,7 +668,9 @@ def test_example_corpus_has_no_error_diagnostics() -> None:
     for path in sorted(repo_example_corpus_root().rglob("*.yml")):
         text = path.read_text(encoding="utf-8")
         runtime_options = RuntimeOptions(show_warnings=False)
-        diagnostics = analyze_text(text, path=str(path), runtime_options=runtime_options)
+        diagnostics = analyze_text(
+            text, path=str(path), runtime_options=runtime_options
+        )
         errors = [d for d in diagnostics if d.code and d.code.startswith("E")]
         for error in errors:
             failures.append(f"{path}:{error.line}: {error.code} {error.message}")
@@ -731,7 +739,9 @@ def test_yaml_parse_error_anchors_to_problem_line() -> None:
 
     e102 = next(diagnostic for diagnostic in diagnostics if diagnostic.code == "E102")
     assert e102.line == 4
-    assert e102.message.startswith("while parsing a flow sequence: expected ',' or ']', but got '<stream end>'")
+    assert e102.message.startswith(
+        "while parsing a flow sequence: expected ',' or ']', but got '<stream end>'"
+    )
     assert 'in "<unicode string>"' not in e102.message
     assert "bad: [unclosed" in e102.message
 
@@ -833,13 +843,17 @@ def test_large_invalid_fixture_documents_match_expected_codes() -> None:
     aggregate_only_ids = {"WHOLEFILE_W603_interview_order_unmatched_guard"}
     runtime_options = RuntimeOptions(enabled_conventions=frozenset({"C101", "C106"}))
 
-    for document_id, source in regression_fixture_documents("large_invalid_interview.yml"):
+    for document_id, source in regression_fixture_documents(
+        "large_invalid_interview.yml"
+    ):
         if document_id in aggregate_only_ids:
             continue
 
         codes = {
             diagnostic.code
-            for diagnostic in analyze_text(source, path=f"fixture:{document_id}", runtime_options=runtime_options)
+            for diagnostic in analyze_text(
+                source, path=f"fixture:{document_id}", runtime_options=runtime_options
+            )
             if diagnostic.code
         }
         expected = expected_codes_from_fixture_id(document_id)
@@ -2934,7 +2948,9 @@ def test_data_block_use_objects_valid_types_accepted() -> None:
             f"variable name: people\nuse objects: {val}\ndata:\n  object: Individual\n",
             path="sample.yml",
         )
-        assert "E930" not in {d.code for d in diagnostics}, f"E930 raised for use objects: {val}"
+        assert "E930" not in {d.code for d in diagnostics}, (
+            f"E930 raised for use objects: {val}"
+        )
 
 
 def test_data_block_without_variable_name_is_not_flagged() -> None:

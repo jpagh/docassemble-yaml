@@ -9,13 +9,21 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 TARGETS = {
-    "docassemble.base.util": REPO_ROOT / "src" / "docassemble_lsp" / "data" / "vendored_docassemble_base_util.pyi",
+    "docassemble.base.util": REPO_ROOT
+    / "src"
+    / "docassemble_lsp"
+    / "data"
+    / "vendored_docassemble_base_util.pyi",
     "docassemble.base.functions": REPO_ROOT
     / "src"
     / "docassemble_lsp"
     / "data"
     / "vendored_docassemble_base_functions.pyi",
-    "docassemble.base.error": REPO_ROOT / "src" / "docassemble_lsp" / "data" / "vendored_docassemble_base_error.pyi",
+    "docassemble.base.error": REPO_ROOT
+    / "src"
+    / "docassemble_lsp"
+    / "data"
+    / "vendored_docassemble_base_error.pyi",
 }
 
 
@@ -49,8 +57,14 @@ def _annotation_text(annotation: ast.expr | None, *, default: str = "Any") -> st
     return ast.unparse(annotation)
 
 
-def _render_arg(argument: ast.arg, *, defaulted: bool, allow_untyped_self: bool = False) -> str:
-    if allow_untyped_self and argument.arg in {"self", "cls"} and argument.annotation is None:
+def _render_arg(
+    argument: ast.arg, *, defaulted: bool, allow_untyped_self: bool = False
+) -> str:
+    if (
+        allow_untyped_self
+        and argument.arg in {"self", "cls"}
+        and argument.annotation is None
+    ):
         rendered = argument.arg
     else:
         rendered = f"{argument.arg}: {_annotation_text(argument.annotation)}"
@@ -62,7 +76,9 @@ def _render_arg(argument: ast.arg, *, defaulted: bool, allow_untyped_self: bool 
 def _render_arguments(arguments: ast.arguments, *, is_method: bool) -> str:
     parts: list[str] = []
     positional = [*arguments.posonlyargs, *arguments.args]
-    positional_defaults = [False] * (len(positional) - len(arguments.defaults)) + [True] * len(arguments.defaults)
+    positional_defaults = [False] * (len(positional) - len(arguments.defaults)) + [
+        True
+    ] * len(arguments.defaults)
 
     for index, argument in enumerate(arguments.posonlyargs):
         parts.append(
@@ -86,7 +102,9 @@ def _render_arguments(arguments: ast.arguments, *, is_method: bool) -> str:
         )
 
     if arguments.vararg is not None:
-        parts.append(f"*{arguments.vararg.arg}: {_annotation_text(arguments.vararg.annotation)}")
+        parts.append(
+            f"*{arguments.vararg.arg}: {_annotation_text(arguments.vararg.annotation)}"
+        )
     elif arguments.kwonlyargs:
         parts.append("*")
 
@@ -100,7 +118,9 @@ def _render_arguments(arguments: ast.arguments, *, is_method: bool) -> str:
         )
 
     if arguments.kwarg is not None:
-        parts.append(f"**{arguments.kwarg.arg}: {_annotation_text(arguments.kwarg.annotation)}")
+        parts.append(
+            f"**{arguments.kwarg.arg}: {_annotation_text(arguments.kwarg.annotation)}"
+        )
 
     return ", ".join(parts)
 
@@ -142,7 +162,11 @@ def _render_function(
 
 def _render_class(node: ast.ClassDef) -> list[str]:
     bases = [ast.unparse(base) for base in node.bases]
-    bases.extend(f"{keyword.arg}={ast.unparse(keyword.value)}" for keyword in node.keywords if keyword.arg)
+    bases.extend(
+        f"{keyword.arg}={ast.unparse(keyword.value)}"
+        for keyword in node.keywords
+        if keyword.arg
+    )
     suffix = f"({', '.join(bases)})" if bases else ""
     lines = [f"class {node.name}{suffix}:"]
 
@@ -193,9 +217,13 @@ def _render_placeholder(name: str, detail: str) -> list[str]:
 def _render_stub(tree: ast.Module, *, module_name: str, module_path: Path) -> str:
     core_modules = _load_core_definitions()
     module_index = core_modules.load_python_module_index(module_path)
-    exported_names = dict.fromkeys(core_modules._python_module_public_names(module_index))
+    exported_names = dict.fromkeys(
+        core_modules._python_module_public_names(module_index)
+    )
     local_nodes = {
-        node.name: node for node in tree.body if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
+        node.name: node
+        for node in tree.body
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
     }
 
     body_lines: list[str] = []
@@ -211,7 +239,11 @@ def _render_stub(tree: ast.Module, *, module_name: str, module_path: Path) -> st
             body_lines.append("")
             continue
 
-        body_lines.extend(_render_placeholder(name, core_modules.python_module_symbol_detail(module_path, name)))
+        body_lines.extend(
+            _render_placeholder(
+                name, core_modules.python_module_symbol_detail(module_path, name)
+            )
+        )
         body_lines.append("")
 
     lines = [
@@ -237,7 +269,9 @@ def main() -> None:
         )
         targets.append(target)
 
-    subprocess.run(["uv", "run", "ruff", "check", "--fix", *map(str, targets)], check=True)
+    subprocess.run(
+        ["uv", "run", "ruff", "check", "--fix", *map(str, targets)], check=True
+    )
     subprocess.run(["uv", "run", "ruff", "format", *map(str, targets)], check=True)
 
 

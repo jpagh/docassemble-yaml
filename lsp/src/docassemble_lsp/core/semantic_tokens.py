@@ -51,7 +51,11 @@ def encode_semantic_tokens(spans: list[SemanticTokenSpan]) -> list[int]:
     prev_start = 0
     for span in spans:
         delta_line = span.line - prev_line
-        delta_start = span.start_character if delta_line > 0 else span.start_character - prev_start
+        delta_start = (
+            span.start_character
+            if delta_line > 0
+            else span.start_character - prev_start
+        )
         data.extend([delta_line, delta_start, span.length, span.token_type, 0])
         prev_line = span.line
         prev_start = span.start_character

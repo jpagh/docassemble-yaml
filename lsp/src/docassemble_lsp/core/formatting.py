@@ -184,25 +184,41 @@ def _collect_text_replacements_for_doc(
                     key_line = None
 
                 if key_line is not None:
-                    body_start, body_end, body_indent = _find_block_body_span(lines, key_line)
+                    body_start, body_end, body_indent = _find_block_body_span(
+                        lines, key_line
+                    )
 
                     if body_end >= body_start:
-                        formatted = format_python_code(value, config, original_indent=body_indent)
+                        formatted = format_python_code(
+                            value, config, original_indent=body_indent
+                        )
 
                         if _normalize_newlines(formatted) != _normalize_newlines(value):
-                            replacements.append((body_start, body_end, formatted, current_path))
+                            replacements.append(
+                                (body_start, body_end, formatted, current_path)
+                            )
             elif isinstance(value, (CommentedMap, CommentedSeq)):
-                replacements.extend(_collect_text_replacements_for_doc(value, lines, config, current_path))
+                replacements.extend(
+                    _collect_text_replacements_for_doc(
+                        value, lines, config, current_path
+                    )
+                )
 
     elif isinstance(doc, CommentedSeq):
         for idx, item in enumerate(doc):
-            replacements.extend(_collect_text_replacements_for_doc(item, lines, config, path + (str(idx),)))
+            replacements.extend(
+                _collect_text_replacements_for_doc(
+                    item, lines, config, path + (str(idx),)
+                )
+            )
 
     return replacements
 
 
 def _code_key_re(python_keys: set[str]) -> re.Pattern[str]:
-    alternatives = "|".join(re.escape(key) for key in sorted(python_keys, key=len, reverse=True))
+    alternatives = "|".join(
+        re.escape(key) for key in sorted(python_keys, key=len, reverse=True)
+    )
     return re.compile(rf"^([ \t]*)({alternatives}):\s*[|>]", re.MULTILINE)
 
 

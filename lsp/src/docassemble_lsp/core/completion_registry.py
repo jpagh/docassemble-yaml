@@ -30,7 +30,9 @@ _VALUE_RE = re.compile(r"^(\s*)(?:-\s*)?([\w/-][\w /-]*?)\s*:\s*([^\s#]*)$")
 
 ShowIfVariableCandidates = Callable[[str, int, str], list[CompletionCandidate]]
 ButtonCommandCandidates = Callable[[str, int, str], list[CompletionCandidate]]
-PropertyCandidateFilter = Callable[[list[CompletionCandidate], str, int, CompletionScope], list[CompletionCandidate]]
+PropertyCandidateFilter = Callable[
+    [list[CompletionCandidate], str, int, CompletionScope], list[CompletionCandidate]
+]
 ShorthandSuppression = Callable[[str, int, CompletionScope], bool]
 
 
@@ -114,7 +116,9 @@ def property_insert_text(prop_name: str, rule: PropertyRule) -> str:
     return f"{prop_name}: $0"
 
 
-def format_property_insert_text(prop_name: str, rule: PropertyRule, *, indent: str = "") -> str:
+def format_property_insert_text(
+    prop_name: str, rule: PropertyRule, *, indent: str = ""
+) -> str:
     """YAML key:value text for *rule*, with optional absolute *indent*.
 
     Unlike ``property_insert_text`` the result has no snippet placeholders,
@@ -207,7 +211,11 @@ def python_completion_provider(
                 context.character,
                 target.label,
             ),
-            display_kind="keyword" if target.detail == "keyword" else "class" if target.detail == "exception" else None,
+            display_kind="keyword"
+            if target.detail == "keyword"
+            else "class"
+            if target.detail == "exception"
+            else None,
             documentation=target.documentation,
             text_edit_range=target.text_edit_range,
         )
@@ -258,7 +266,9 @@ def value_completion_provider(
         )
         if show_if_variable_candidates:
             return show_if_variable_candidates
-        prop = scope_properties.get(key) or context.metadata.all_known_properties.get(key)
+        prop = scope_properties.get(key) or context.metadata.all_known_properties.get(
+            key
+        )
         if prop is not None:
             values = enum_values(prop)
             candidates: list[CompletionCandidate] = [
@@ -271,7 +281,9 @@ def value_completion_provider(
                 if partial_value.lower() in value.lower()
             ]
 
-            if _should_offer_block_scalar_pipe(prop, partial_value) and _value_supports_block_scalar(context, key):
+            if _should_offer_block_scalar_pipe(
+                prop, partial_value
+            ) and _value_supports_block_scalar(context, key):
                 candidates.append(
                     CompletionCandidate(
                         label="|",
@@ -293,7 +305,9 @@ def value_completion_provider(
             # For ``datatype:``, also include custom datatypes from
             # CustomDataType subclasses discovered during workspace indexing.
             if key == "datatype":
-                for custom_name in sorted(context.workspace_index.all_custom_datatype_names):
+                for custom_name in sorted(
+                    context.workspace_index.all_custom_datatype_names
+                ):
                     if partial_value.lower() in custom_name.lower() and not any(
                         c.label == custom_name for c in candidates
                     ):
@@ -308,7 +322,9 @@ def value_completion_provider(
             # For ``generic object:``, include DAObject subclass names from
             # workspace indexing.
             if key == "generic object":
-                for class_name in sorted(context.workspace_index.all_da_object_subclass_names):
+                for class_name in sorted(
+                    context.workspace_index.all_da_object_subclass_names
+                ):
                     if partial_value.lower() in class_name.lower() and not any(
                         c.label == class_name for c in candidates
                     ):
@@ -328,7 +344,9 @@ def value_completion_provider(
                 and context.current_field_datatype in BOOLEAN_DATATYPES
             ):
                 for value in ("True", "False"):
-                    if partial_value.lower() in value.lower() and not any(c.label == value for c in candidates):
+                    if partial_value.lower() in value.lower() and not any(
+                        c.label == value for c in candidates
+                    ):
                         candidates.append(
                             CompletionCandidate(
                                 label=value,
@@ -339,7 +357,9 @@ def value_completion_provider(
 
             return candidates
 
-        button_command_candidates = context.button_command_candidates(context.source, context.line, context.line_prefix)
+        button_command_candidates = context.button_command_candidates(
+            context.source, context.line, context.line_prefix
+        )
         if button_command_candidates:
             return button_command_candidates
     return None
@@ -348,9 +368,9 @@ def value_completion_provider(
 def property_completion_provider(
     context: CompletionContext,
 ) -> list[CompletionCandidate]:
-    if not re.fullmatch(r"\s*(?:-\s*)?[\w/.-][\w /.-]*", context.line_prefix) and not re.fullmatch(
-        r"\s*(?:-\s*)?", context.line_prefix
-    ):
+    if not re.fullmatch(
+        r"\s*(?:-\s*)?[\w/.-][\w /.-]*", context.line_prefix
+    ) and not re.fullmatch(r"\s*(?:-\s*)?", context.line_prefix):
         return []
 
     scope_properties = context.metadata.scoped_properties[context.scope]
@@ -360,7 +380,10 @@ def property_completion_provider(
             insert_text=property_insert_text(name, prop),
             documentation=property_documentation(name, prop),
             uses_snippet_text=True,
-            trigger_suggest=(bool(prop.enum_values) or ("string" in prop.value_types and prop.insert_kind == "scalar")),
+            trigger_suggest=(
+                bool(prop.enum_values)
+                or ("string" in prop.value_types and prop.insert_kind == "scalar")
+            ),
         )
         for name, prop in sorted(scope_properties.items())
     ]
@@ -372,11 +395,16 @@ def property_completion_provider(
     )
 
     shorthand_candidates: list[CompletionCandidate] = []
-    suppress_shorthand = context.should_suppress_shorthand(context.source, context.line, context.scope)
+    suppress_shorthand = context.should_suppress_shorthand(
+        context.source, context.line, context.scope
+    )
     if not suppress_shorthand and (
-        context.runtime_options is None or not context.runtime_options.convention_enabled("C102")
+        context.runtime_options is None
+        or not context.runtime_options.convention_enabled("C102")
     ):
-        shorthand_candidates = build_shorthand_candidates(context.scope, context.source, context.line)
+        shorthand_candidates = build_shorthand_candidates(
+            context.scope, context.source, context.line
+        )
 
     result = contextualize_completion_candidates(
         shorthand_candidates + property_candidates,
@@ -427,7 +455,9 @@ def _complete_file_paths(
     if ":" in partial:
         return None  # package-qualified — let the user type it manually
 
-    current_path = path_from_uri_or_path(context.uri_or_path) if context.uri_or_path else None
+    current_path = (
+        path_from_uri_or_path(context.uri_or_path) if context.uri_or_path else None
+    )
     current_dir = current_path.parent if current_path else None
 
     # Determine allowed extensions.
@@ -454,7 +484,9 @@ def _complete_file_paths(
         # Deduplicate by normalized path.
         if any(c.label == rel for c in candidates):
             continue
-        candidates.append(CompletionCandidate(label=rel, insert_text=rel, is_value=True))
+        candidates.append(
+            CompletionCandidate(label=rel, insert_text=rel, is_value=True)
+        )
 
     if candidates:
         candidates.sort(
@@ -491,7 +523,9 @@ def _complete_module_names(
         for mod in VENDORED_MODULE_NAMES:
             if match_partial.lower() in mod.lower() and mod not in seen:
                 seen.add(mod)
-                candidates.append(CompletionCandidate(label=mod, insert_text=mod, is_value=True))
+                candidates.append(
+                    CompletionCandidate(label=mod, insert_text=mod, is_value=True)
+                )
 
     # Workspace Python module paths.
     text_edit_range: tuple[int, int] | None = None
@@ -521,7 +555,11 @@ def _complete_module_names(
         key=lambda c: (
             0
             if c.label.lower().startswith(partial.lower())
-            or (match_partial and c.label.startswith(".") and c.label[1:].lower().startswith(match_partial.lower()))
+            or (
+                match_partial
+                and c.label.startswith(".")
+                and c.label[1:].lower().startswith(match_partial.lower())
+            )
             else 1,
             c.label,
         )
@@ -541,14 +579,20 @@ def _complete_variable_names(
             continue
         if partial.lower() in name.lower():
             seen.add(name)
-            candidates.append(CompletionCandidate(label=name, insert_text=name, is_value=True))
+            candidates.append(
+                CompletionCandidate(label=name, insert_text=name, is_value=True)
+            )
     for name in wi.all_def_names:
         if name in seen:
             continue
         if partial.lower() in name.lower():
             seen.add(name)
-            candidates.append(CompletionCandidate(label=name, insert_text=name, is_value=True))
-    candidates.sort(key=lambda c: (0 if c.label.lower().startswith(partial.lower()) else 1, c.label))
+            candidates.append(
+                CompletionCandidate(label=name, insert_text=name, is_value=True)
+            )
+    candidates.sort(
+        key=lambda c: (0 if c.label.lower().startswith(partial.lower()) else 1, c.label)
+    )
     return candidates if candidates else None
 
 
@@ -557,7 +601,9 @@ def _complete_block_ids(context: CompletionContext) -> list[CompletionCandidate]
     candidates: list[CompletionCandidate] = []
     for bid in context.workspace_index.all_block_ids:
         if partial.lower() in bid.lower():
-            candidates.append(CompletionCandidate(label=bid, insert_text=bid, is_value=True))
+            candidates.append(
+                CompletionCandidate(label=bid, insert_text=bid, is_value=True)
+            )
     if candidates:
         candidates.sort(
             key=lambda c: (
@@ -603,7 +649,9 @@ def _complete_attachment_template_paths(
         if valid_extensions is not None and not name.lower().endswith(valid_extensions):
             continue
         if partial_value.lower() in name.lower():
-            candidates.append(CompletionCandidate(label=name, insert_text=name, is_value=True))
+            candidates.append(
+                CompletionCandidate(label=name, insert_text=name, is_value=True)
+            )
 
     if candidates:
         candidates.sort(

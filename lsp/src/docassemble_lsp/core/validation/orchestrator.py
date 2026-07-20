@@ -108,19 +108,26 @@ def _validate_cross_document(
     if templates_dir is None:
         templates_dir = templates_dir_for_path(current_path)
     parents = _precompute_parent_keys(full_content)
-    own_package = docassemble_package_name(current_path) if current_path is not None else None
+    own_package = (
+        docassemble_package_name(current_path) if current_path is not None else None
+    )
 
     for line_index, text in enumerate(lines):
         key_match = _KEY_VALUE_RE.match(text)
         if key_match is not None:
             key_name = key_match.group(2).strip()
             raw_value = key_match.group(3)
-            value, _, _ = _clean_value_and_range(raw_value, key_match.start(3), key_match.end(3))
+            value, _, _ = _clean_value_and_range(
+                raw_value, key_match.start(3), key_match.end(3)
+            )
             if not value or ":" in value or value in _BLOCK_SCALAR_MARKERS:
                 continue
 
             if key_name in _EVENT_REFERENCE_KEYS:
-                if not _contains_mako_syntax(value) and value not in workspace_index.all_event_names:
+                if (
+                    not _contains_mako_syntax(value)
+                    and value not in workspace_index.all_event_names
+                ):
                     errors.append(
                         _yaml_error(
                             code=MessageCode.CROSS_DOC_UNDEFINED_EVENT,
@@ -146,7 +153,11 @@ def _validate_cross_document(
             if key_name in _PYTHON_MODULE_REFERENCE_KEYS:
                 if own_package is not None:
                     mname = normalize_module_name(value, current_path)
-                    if mname is not None and not mname.startswith(f"{own_package}.") and mname != own_package:
+                    if (
+                        mname is not None
+                        and not mname.startswith(f"{own_package}.")
+                        and mname != own_package
+                    ):
                         continue
                 if _module_path(value) is None:
                     errors.append(
@@ -159,12 +170,19 @@ def _validate_cross_document(
                     )
                 continue
 
-            if key_name in _FILE_REFERENCE_KEYS or key_name in _FILE_REFERENCE_LIST_PARENTS:
+            if (
+                key_name in _FILE_REFERENCE_KEYS
+                or key_name in _FILE_REFERENCE_LIST_PARENTS
+            ):
                 if key_name == "translations":
                     continue
                 if ":" not in value:
                     resolved = (current_path.parent / value).resolve()
-                    if not resolved.exists() and key_name in _ATTACHMENT_FILE_KEYS and templates_dir is not None:
+                    if (
+                        not resolved.exists()
+                        and key_name in _ATTACHMENT_FILE_KEYS
+                        and templates_dir is not None
+                    ):
                         resolved = (templates_dir / value).resolve()
                     if not resolved.exists():
                         code = (
@@ -185,7 +203,9 @@ def _validate_cross_document(
         list_match = _LIST_ITEM_VALUE_RE.match(text)
         if list_match is not None:
             raw_value = list_match.group(2)
-            value, _, _ = _clean_value_and_range(raw_value, list_match.start(2), list_match.end(2))
+            value, _, _ = _clean_value_and_range(
+                raw_value, list_match.start(2), list_match.end(2)
+            )
             if not value or ":" in value:
                 continue
             parent = parents[line_index]
@@ -203,7 +223,10 @@ def _validate_cross_document(
                 continue
 
             if parent in _EVENT_REFERENCE_KEYS:
-                if not _contains_mako_syntax(value) and value not in workspace_index.all_event_names:
+                if (
+                    not _contains_mako_syntax(value)
+                    and value not in workspace_index.all_event_names
+                ):
                     errors.append(
                         _yaml_error(
                             code=MessageCode.CROSS_DOC_UNDEFINED_EVENT,
@@ -217,7 +240,11 @@ def _validate_cross_document(
             if parent in _PYTHON_MODULE_REFERENCE_KEYS:
                 if own_package is not None:
                     mname = normalize_module_name(value, current_path)
-                    if mname is not None and not mname.startswith(f"{own_package}.") and mname != own_package:
+                    if (
+                        mname is not None
+                        and not mname.startswith(f"{own_package}.")
+                        and mname != own_package
+                    ):
                         continue
                 if _module_path(value) is None:
                     errors.append(
@@ -230,11 +257,18 @@ def _validate_cross_document(
                     )
                 continue
 
-            if parent in _FILE_REFERENCE_LIST_PARENTS or parent in _ATTACHMENT_FILE_KEYS:
+            if (
+                parent in _FILE_REFERENCE_LIST_PARENTS
+                or parent in _ATTACHMENT_FILE_KEYS
+            ):
                 if parent == "translations":
                     continue
                 resolved = (current_path.parent / value).resolve()
-                if not resolved.exists() and parent in _ATTACHMENT_FILE_KEYS and templates_dir is not None:
+                if (
+                    not resolved.exists()
+                    and parent in _ATTACHMENT_FILE_KEYS
+                    and templates_dir is not None
+                ):
                     resolved = (templates_dir / value).resolve()
                 if not resolved.exists():
                     code = (
@@ -345,7 +379,9 @@ def find_errors_from_string(
             if err.code == MessageCode.YAML_PARSE_ERROR:
                 problem_line = _extract_yaml_parse_problem_line(err.err_str)
                 if problem_line is not None:
-                    mapped_problem_line = rendered_line_map.get(problem_line, problem_line + 1)
+                    mapped_problem_line = rendered_line_map.get(
+                        problem_line, problem_line + 1
+                    )
                     err.line_number = mapped_problem_line
                     err.err_str = _rewrite_yaml_parse_error_lines(
                         err.err_str,
@@ -353,10 +389,16 @@ def find_errors_from_string(
                         new_line=mapped_problem_line,
                     )
                     continue
-            err.line_number = rendered_line_map.get(err.line_number, err.line_number + 1)
+            err.line_number = rendered_line_map.get(
+                err.line_number, err.line_number + 1
+            )
         return [error for error in errors if runtime_options.allows_code(error.code)]
 
-    exclusive_keys = [key for key in types_of_blocks.keys() if types_of_blocks[key].get("exclusive", True)]
+    exclusive_keys = [
+        key
+        for key in types_of_blocks.keys()
+        if types_of_blocks[key].get("exclusive", True)
+    ]
     yaml_parser = _make_yaml_parser()
     prior_conditional_fields: list[dict[str, Any]] = []
     line_number = 1
@@ -375,7 +417,9 @@ def find_errors_from_string(
             doc = _with_line_metadata(yaml_parser.load(source_code))
         except Exception as errMess:
             if isinstance(errMess, DuplicateKeyError):
-                key_match = re.match(r'found duplicate key "([^"]+)"', errMess.problem or "")
+                key_match = re.match(
+                    r'found duplicate key "([^"]+)"', errMess.problem or ""
+                )
                 key_name = key_match.group(1) if key_match else "unknown"
                 dup_line = line_number
                 if errMess.problem_mark is not None:
@@ -403,7 +447,9 @@ def find_errors_from_string(
                     problem_line = errMess.context_mark.line + 1
                 elif errMess.problem_mark is not None:
                     problem_line = errMess.problem_mark.line + 1
-                err_str = _format_missing_jinja_header_error(source_code, line_number=local_problem_line)
+                err_str = _format_missing_jinja_header_error(
+                    source_code, line_number=local_problem_line
+                )
                 if err_str is None:
                     err_str = _format_yaml_parse_error(errMess)
                 all_errors.append(
@@ -453,12 +499,18 @@ def find_errors_from_string(
 
         doc_keys_lower = _lowercase_key_map(doc)
         non_meta_keys_lower = {
-            key.lower() for key in doc.keys() if isinstance(key, str) and not _is_internal_metadata_key(key)
+            key.lower()
+            for key in doc.keys()
+            if isinstance(key, str) and not _is_internal_metadata_key(key)
         }
         if non_meta_keys_lower == {"comment"}:
             pass
         else:
-            any_types = [block for block in types_of_blocks.keys() if block in doc_keys_lower and block != "comment"]
+            any_types = [
+                block
+                for block in types_of_blocks.keys()
+                if block in doc_keys_lower and block != "comment"
+            ]
             if len(any_types) == 0:
                 all_errors.append(
                     _yaml_error(
@@ -470,7 +522,9 @@ def find_errors_from_string(
                 )
         posb_types = [block for block in exclusive_keys if block in doc_keys_lower]
         if len(posb_types) > 1:
-            if len(posb_types) == 2 and posb_types[1] in (types_of_blocks[posb_types[0]].get("partners") or []):
+            if len(posb_types) == 2 and posb_types[1] in (
+                types_of_blocks[posb_types[0]].get("partners") or []
+            ):
                 pass
             else:
                 all_errors.append(
@@ -504,7 +558,9 @@ def find_errors_from_string(
             all_errors.append(
                 _yaml_error(
                     code=MessageCode.ON_CHANGE_EXTRA_KEYS,
-                    line_number=_absolute_document_line(line_number, _lc_key_line(doc, doc_keys_lower["on change"])),
+                    line_number=_absolute_document_line(
+                        line_number, _lc_key_line(doc, doc_keys_lower["on change"])
+                    ),
                     file_name=input_file,
                 )
             )
@@ -516,7 +572,9 @@ def find_errors_from_string(
                     all_errors.append(
                         _yaml_error(
                             code=MessageCode.REQUIRE_ORELSE_MISSING,
-                            line_number=_absolute_document_line(line_number, _lc_key_line(doc, require_key)),
+                            line_number=_absolute_document_line(
+                                line_number, _lc_key_line(doc, require_key)
+                            ),
                             file_name=input_file,
                         )
                     )
@@ -526,11 +584,15 @@ def find_errors_from_string(
                         all_errors.append(
                             _yaml_error(
                                 code=MessageCode.REQUIRE_ORELSE_TYPE,
-                                line_number=_absolute_document_line(line_number, _lc_key_line(doc, orelse_key)),
+                                line_number=_absolute_document_line(
+                                    line_number, _lc_key_line(doc, orelse_key)
+                                ),
                                 file_name=input_file,
                             )
                         )
-        all_errors.extend(validate_table_block_in_doc(doc, doc_keys_lower, line_number, input_file))
+        all_errors.extend(
+            validate_table_block_in_doc(doc, doc_keys_lower, line_number, input_file)
+        )
 
         has_def = "def" in doc_keys_lower
         has_mako = "mako" in doc_keys_lower
@@ -540,7 +602,9 @@ def find_errors_from_string(
             all_errors.append(
                 _yaml_error(
                     code=MessageCode.DEF_MAKO_REQUIRED,
-                    line_number=_absolute_document_line(line_number, _lc_key_line(doc, doc_keys_lower[present_key])),
+                    line_number=_absolute_document_line(
+                        line_number, _lc_key_line(doc, doc_keys_lower[present_key])
+                    ),
                     file_name=input_file,
                     missing_key=missing_key,
                 )
@@ -548,15 +612,24 @@ def find_errors_from_string(
 
         from docassemble_lsp.core.validation.data import validate_data_block
 
-        all_errors.extend(validate_data_block(doc_keys_lower, doc, line_number, input_file))
+        all_errors.extend(
+            validate_data_block(doc_keys_lower, doc, line_number, input_file)
+        )
 
         from docassemble_lsp.core.validation.list_collect import (
             validate_list_collect_mako_labels,
         )
 
-        all_errors.extend(validate_list_collect_mako_labels(doc_keys_lower, doc, line_number, input_file))
+        all_errors.extend(
+            validate_list_collect_mako_labels(
+                doc_keys_lower, doc, line_number, input_file
+            )
+        )
 
-        _run_type_validators = _jinja_affected_sections is None or section_index not in _jinja_affected_sections
+        _run_type_validators = (
+            _jinja_affected_sections is None
+            or section_index not in _jinja_affected_sections
+        )
         if _run_type_validators:
             for key in doc.keys():
                 if not isinstance(key, str) or _is_internal_metadata_key(key):
@@ -564,14 +637,18 @@ def find_errors_from_string(
                 lower_key = key.lower()
                 if lower_key in big_dict and "type" in big_dict[lower_key]:
                     if lower_key == "fields":
-                        test = big_dict[lower_key]["type"](doc[key], runtime_options=runtime_options)
+                        test = big_dict[lower_key]["type"](
+                            doc[key], runtime_options=runtime_options
+                        )
                     else:
                         test = big_dict[lower_key]["type"](doc[key])
                     for err in test.errors:
                         err_msg, err_line, err_code = _normalize_validator_error(err)
                         mapped_line = _absolute_document_line(
                             line_number,
-                            _relative_top_level_error_line(doc, key, err_line, err_code, source_code=source_code),
+                            _relative_top_level_error_line(
+                                doc, key, err_line, err_code, source_code=source_code
+                            ),
                         )
                         all_errors.append(
                             _yaml_error(
@@ -582,12 +659,16 @@ def find_errors_from_string(
                             )
                         )
 
-        unmatched_refs = _find_unmatched_interview_order_references(doc, prior_conditional_fields)
+        unmatched_refs = _find_unmatched_interview_order_references(
+            doc, prior_conditional_fields
+        )
         for field_var, ref_line in unmatched_refs:
             all_errors.append(
                 _yaml_error(
                     code=MessageCode.INTERVIEW_ORDER_UNMATCHED_GUARD,
-                    line_number=_absolute_document_line(line_number, _relative_value_line(doc, "code", ref_line)),
+                    line_number=_absolute_document_line(
+                        line_number, _relative_value_line(doc, "code", ref_line)
+                    ),
                     file_name=input_file,
                     field_var=field_var,
                 )
@@ -608,7 +689,11 @@ def find_errors_from_string(
     if workspace_index is not None and input_file not in ("<memory>", "<string input>"):
         current_path = path_from_uri_or_path(input_file)
         if current_path and current_path.suffix in (".yml", ".yaml"):
-            all_errors.extend(_validate_cross_document(full_content, current_path, input_file, workspace_index))
+            all_errors.extend(
+                _validate_cross_document(
+                    full_content, current_path, input_file, workspace_index
+                )
+            )
 
     return [error for error in all_errors if runtime_options.allows_code(error.code)]
 

@@ -14,7 +14,9 @@ def _convert_snippet_indent(leading: str, indent_unit: str) -> str:
     return leading
 
 
-def contextualize_multiline_insert_text(insert_text: str, indent_unit: str = "  ") -> str:
+def contextualize_multiline_insert_text(
+    insert_text: str, indent_unit: str = "  "
+) -> str:
     if "\n" not in insert_text:
         return insert_text
 
@@ -23,7 +25,9 @@ def contextualize_multiline_insert_text(insert_text: str, indent_unit: str = "  
 
     for snippet_line in snippet_lines[1:]:
         leading = len(snippet_line) - len(snippet_line.lstrip())
-        adjusted_lines.append(f"{_convert_snippet_indent(snippet_line[:leading], indent_unit)}{snippet_line[leading:]}")
+        adjusted_lines.append(
+            f"{_convert_snippet_indent(snippet_line[:leading], indent_unit)}{snippet_line[leading:]}"
+        )
 
     return "\n".join(adjusted_lines)
 
@@ -34,7 +38,9 @@ def contextualize_completion_candidates(
     return [
         replace(
             candidate,
-            insert_text=contextualize_multiline_insert_text(candidate.insert_text, indent_unit=indent_unit),
+            insert_text=contextualize_multiline_insert_text(
+                candidate.insert_text, indent_unit=indent_unit
+            ),
         )
         if "\n" in candidate.insert_text
         else candidate

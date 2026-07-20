@@ -46,16 +46,28 @@ class AttachmentBlockDirective:
 
         for item in items:
             if not isinstance(item, Mapping):
-                self.errors.append(_validator_error(MessageCode.ATTACHMENT_ITEM_MUST_BE_DICT, _lc_line(item)))
+                self.errors.append(
+                    _validator_error(
+                        MessageCode.ATTACHMENT_ITEM_MUST_BE_DICT, _lc_line(item)
+                    )
+                )
                 continue
             self._validate_item(item)
 
     def _validate_item(self, item: Mapping) -> None:
         if "name" in item and not isinstance(item["name"], str):
-            self.errors.append(_validator_error(MessageCode.ATTACHMENT_NAME_TYPE, _lc_key_line(item, "name")))
+            self.errors.append(
+                _validator_error(
+                    MessageCode.ATTACHMENT_NAME_TYPE, _lc_key_line(item, "name")
+                )
+            )
 
         if "filename" in item and not isinstance(item["filename"], str):
-            self.errors.append(_validator_error(MessageCode.ATTACHMENT_FILENAME_TYPE, _lc_key_line(item, "filename")))
+            self.errors.append(
+                _validator_error(
+                    MessageCode.ATTACHMENT_FILENAME_TYPE, _lc_key_line(item, "filename")
+                )
+            )
 
         if "variable name" in item and not isinstance(item["variable name"], str):
             self.errors.append(
@@ -66,7 +78,11 @@ class AttachmentBlockDirective:
             )
 
         if "metadata" in item and not isinstance(item["metadata"], Mapping):
-            self.errors.append(_validator_error(MessageCode.ATTACHMENT_METADATA_TYPE, _lc_key_line(item, "metadata")))
+            self.errors.append(
+                _validator_error(
+                    MessageCode.ATTACHMENT_METADATA_TYPE, _lc_key_line(item, "metadata")
+                )
+            )
 
         if "metadata" in item and isinstance(item["metadata"], Mapping):
             for key, val in item["metadata"].items():
@@ -99,7 +115,11 @@ class AttachmentBlockDirective:
                             )
                         )
             elif isinstance(cf, Mapping):
-                content_keys = {k for k in cf if isinstance(k, str) and not _is_internal_metadata_key(k)}
+                content_keys = {
+                    k
+                    for k in cf
+                    if isinstance(k, str) and not _is_internal_metadata_key(k)
+                }
                 if not (content_keys == {"code"} and isinstance(cf.get("code"), str)):
                     self.errors.append(
                         _validator_error(
@@ -116,7 +136,11 @@ class AttachmentBlockDirective:
                 )
 
         if "code" in item and not isinstance(item["code"], str):
-            self.errors.append(_validator_error(MessageCode.ATTACHMENT_CODE_TYPE, _lc_key_line(item, "code")))
+            self.errors.append(
+                _validator_error(
+                    MessageCode.ATTACHMENT_CODE_TYPE, _lc_key_line(item, "code")
+                )
+            )
 
         for fv_key in ("field variables", "raw field variables"):
             if fv_key in item and not isinstance(item[fv_key], list):
@@ -134,7 +158,11 @@ class AttachmentBlockDirective:
             elif isinstance(vf, list):
                 pass
             elif isinstance(vf, Mapping):
-                content_keys = {k for k in vf if isinstance(k, str) and not _is_internal_metadata_key(k)}
+                content_keys = {
+                    k
+                    for k in vf
+                    if isinstance(k, str) and not _is_internal_metadata_key(k)
+                }
                 if not (content_keys == {"code"} and isinstance(vf.get("code"), str)):
                     self.errors.append(
                         _validator_error(

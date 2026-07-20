@@ -76,7 +76,9 @@ FIELDS_ITEM_FILE_COMPLEX_KEYS = ("allow privileges", "allow users")
 FIELDS_ITEM_FILE_BOOLEAN_KEYS = ("persistent", "private")
 
 # Datatypes that accept file-like upload fields
-FILE_LIKE_DATATYPES = frozenset({"file", "files", "camera", "user", "environment", "camcorder", "microphone"})
+FILE_LIKE_DATATYPES = frozenset(
+    {"file", "files", "camera", "user", "environment", "camcorder", "microphone"}
+)
 
 # Datatype values that are really input-type concerns (remapped by the parser at parse time)
 INPUT_TYPE_DATATYPES = frozenset(
@@ -141,7 +143,9 @@ DISABLE_OTHERS_BLOCKED_DTYPES = frozenset(
 )
 
 # Datatypes compatible with uncheck others / check others
-UNCHECK_CHECK_COMPATIBLE_DTYPES = frozenset({"yesno", "yesnowide", "noyes", "noyeswide"})
+UNCHECK_CHECK_COMPATIBLE_DTYPES = frozenset(
+    {"yesno", "yesnowide", "noyes", "noyeswide"}
+)
 
 # Field keys restricted to specific datatypes
 # Maps field key -> set of compatible datatype values

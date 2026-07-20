@@ -59,16 +59,22 @@ class TextSection:
 
 
 _MARKDOWN_IMAGE_RE = re.compile(r"!\[(.*?)\]\((.*?)\)")
-_FILE_TAG_RE = re.compile(r"\[FILE\s+([^,\]]+)(?:\s*,\s*([^,\]]+))?(?:\s*,\s*([^\]]+))?\]")
+_FILE_TAG_RE = re.compile(
+    r"\[FILE\s+([^,\]]+)(?:\s*,\s*([^,\]]+))?(?:\s*,\s*([^\]]+))?\]"
+)
 _IMG_TAG_RE = re.compile(r"<img\b[^>]*>", re.IGNORECASE)
 _MARKDOWN_HEADING_RE = re.compile(r"(?m)^\s*(#{1,6})\s+(.+?)\s*$")
-_HTML_HEADING_RE = re.compile(r"<h([1-6])\b[^>]*>(.*?)</h\1>", re.IGNORECASE | re.DOTALL)
+_HTML_HEADING_RE = re.compile(
+    r"<h([1-6])\b[^>]*>(.*?)</h\1>", re.IGNORECASE | re.DOTALL
+)
 _MARKDOWN_LINK_RE = re.compile(r"(?<!!)\[(.*?)\]\((.*?)\)")
 _HTML_LINK_RE = re.compile(r"<a\b([^>]*)>(.*?)</a>", re.IGNORECASE | re.DOTALL)
 _CSS_RULE_RE = re.compile(r"(?s)([^{}]+)\{([^{}]+)\}")
 _HEX_COLOR_RE = re.compile(r"^#([0-9a-f]{3}|[0-9a-f]{6})$", re.IGNORECASE)
 _RGB_COLOR_RE = re.compile(r"rgba?\(([^\)]+)\)", re.IGNORECASE)
-_VAR_COLOR_RE = re.compile(r"var\((--[a-zA-Z0-9\-_]+)(?:\s*,\s*([^\)]+))?\)", re.IGNORECASE)
+_VAR_COLOR_RE = re.compile(
+    r"var\((--[a-zA-Z0-9\-_]+)(?:\s*,\s*([^\)]+))?\)", re.IGNORECASE
+)
 # WCAG sources for the contrast algorithm and constants:
 # - Understanding SC 1.4.3: Contrast (Minimum)
 #   https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html
@@ -118,8 +124,14 @@ def find_accessibility_findings(
     options = options or AccessibilityLintOptions()
     findings: list[AccessibilityFinding] = []
     findings.extend(_check_multifield_no_label_usage(doc, document_start_line))
-    findings.extend(_check_combobox_usage(doc, source_code, document_start_line, options=options))
-    findings.extend(_check_tagged_pdf_for_docx(doc, source_code, document_start_line, options=options))
+    findings.extend(
+        _check_combobox_usage(doc, source_code, document_start_line, options=options)
+    )
+    findings.extend(
+        _check_tagged_pdf_for_docx(
+            doc, source_code, document_start_line, options=options
+        )
+    )
     findings.extend(
         _check_theme_css_contrast(
             doc,
@@ -129,11 +141,21 @@ def find_accessibility_findings(
         )
     )
     for section in _iter_text_sections(doc, source_code):
-        findings.extend(_check_missing_alt_text(section, source_code, document_start_line))
-        findings.extend(_check_empty_link_text(section, source_code, document_start_line))
-        findings.extend(_check_non_descriptive_link_text(section, source_code, document_start_line))
-        findings.extend(_check_markdown_heading_order(section, source_code, document_start_line))
-        findings.extend(_check_html_heading_order(section, source_code, document_start_line))
+        findings.extend(
+            _check_missing_alt_text(section, source_code, document_start_line)
+        )
+        findings.extend(
+            _check_empty_link_text(section, source_code, document_start_line)
+        )
+        findings.extend(
+            _check_non_descriptive_link_text(section, source_code, document_start_line)
+        )
+        findings.extend(
+            _check_markdown_heading_order(section, source_code, document_start_line)
+        )
+        findings.extend(
+            _check_html_heading_order(section, source_code, document_start_line)
+        )
     unique_findings: list[AccessibilityFinding] = []
     seen: set[tuple[str, str, int]] = set()
     for finding in findings:
@@ -177,7 +199,11 @@ def _check_combobox_usage(
         datatype = str(field_doc.get("datatype") or "").strip().lower()
         if datatype != "combobox":
             continue
-        field_label = _extract_field_label(field_doc) or _extract_field_variable(field_doc) or "<unknown field>"
+        field_label = (
+            _extract_field_label(field_doc)
+            or _extract_field_variable(field_doc)
+            or "<unknown field>"
+        )
         findings.append(
             AccessibilityFinding(
                 rule_id="combobox-not-accessible",
@@ -186,14 +212,18 @@ def _check_combobox_usage(
                     "Accessibility: field uses `datatype: combobox`, which is not allowed for accessibility reasons: "
                     f"{field_label}"
                 ),
-                line_number=document_start_line + field_doc.get("__line__", doc.get("__line__", 1)) - 1,
+                line_number=document_start_line
+                + field_doc.get("__line__", doc.get("__line__", 1))
+                - 1,
             )
         )
 
     return findings
 
 
-def _check_multifield_no_label_usage(doc: dict[str, Any], document_start_line: int) -> list[AccessibilityFinding]:
+def _check_multifield_no_label_usage(
+    doc: dict[str, Any], document_start_line: int
+) -> list[AccessibilityFinding]:
     fields = _iter_fields(doc)
     if len(fields) <= 1:
         return []
@@ -203,7 +233,9 @@ def _check_multifield_no_label_usage(doc: dict[str, Any], document_start_line: i
         if _is_code_only_field(field_doc):
             continue
 
-        field_line = document_start_line + field_doc.get("__line__", doc.get("__line__", 1)) - 1
+        field_line = (
+            document_start_line + field_doc.get("__line__", doc.get("__line__", 1)) - 1
+        )
         no_label_value = field_doc.get("no label")
         has_no_label = _is_truthy(no_label_value)
         explicit_label = str(field_doc.get("label") or "")
@@ -246,7 +278,9 @@ def _check_tagged_pdf_for_docx(
     if isinstance(features, dict) and "tagged pdf" in features:
         feature_tagged_pdf = _is_truthy(features["tagged pdf"])
     else:
-        feature_tagged_pdf = options.file_wide_tagged_pdf_enabled if options is not None else False
+        feature_tagged_pdf = (
+            options.file_wide_tagged_pdf_enabled if options is not None else False
+        )
 
     findings: list[AccessibilityFinding] = []
     for attachment in attachments:
@@ -257,7 +291,9 @@ def _check_tagged_pdf_for_docx(
         if feature_tagged_pdf or _is_truthy(attachment.get("tagged pdf")):
             continue
 
-        line_hint = _find_top_level_key_line(source_code, "attachments") or doc.get("__line__", 1)
+        line_hint = _find_top_level_key_line(source_code, "attachments") or doc.get(
+            "__line__", 1
+        )
         line_number = _absolute_line_number(
             source_code,
             document_start_line,
@@ -292,7 +328,9 @@ def _check_theme_css_contrast(
     theme_value = str(features.get("bootstrap theme") or "").strip()
     if not theme_value:
         return []
-    line_hint = _find_top_level_key_line(source_code, "features") or doc.get("__line__", 1)
+    line_hint = _find_top_level_key_line(source_code, "features") or doc.get(
+        "__line__", 1
+    )
     line_number = _absolute_line_number(
         source_code,
         document_start_line,
@@ -337,7 +375,8 @@ def _iter_text_sections(doc: dict[str, Any], source_code: str) -> list[TextSecti
                 TextSection(
                     location=key,
                     value=value,
-                    key_line=_find_top_level_key_line(source_code, key) or doc.get("__line__", 1),
+                    key_line=_find_top_level_key_line(source_code, key)
+                    or doc.get("__line__", 1),
                 )
             )
         elif isinstance(value, dict):
@@ -348,7 +387,8 @@ def _iter_text_sections(doc: dict[str, Any], source_code: str) -> list[TextSecti
                         TextSection(
                             location=f"{key}.{subkey}",
                             value=subvalue,
-                            key_line=_find_top_level_key_line(source_code, key) or doc.get("__line__", 1),
+                            key_line=_find_top_level_key_line(source_code, key)
+                            or doc.get("__line__", 1),
                         )
                     )
     return sections
@@ -366,7 +406,9 @@ def _check_missing_alt_text(
             AccessibilityFinding(
                 rule_id="image-missing-alt-text",
                 code=MessageCode.ACCESSIBILITY_IMAGE_MISSING_ALT_TEXT,
-                message=(f"Accessibility: markdown image in {section.location} is missing alt text: {snippet}"),
+                message=(
+                    f"Accessibility: markdown image in {section.location} is missing alt text: {snippet}"
+                ),
                 line_number=_absolute_line_number(
                     source_code,
                     document_start_line,
@@ -385,7 +427,9 @@ def _check_missing_alt_text(
             AccessibilityFinding(
                 rule_id="image-missing-alt-text",
                 code=MessageCode.ACCESSIBILITY_IMAGE_MISSING_ALT_TEXT,
-                message=(f"Accessibility: [FILE ...] image in {section.location} is missing alt text: {snippet}"),
+                message=(
+                    f"Accessibility: [FILE ...] image in {section.location} is missing alt text: {snippet}"
+                ),
                 line_number=_absolute_line_number(
                     source_code,
                     document_start_line,
@@ -403,7 +447,9 @@ def _check_missing_alt_text(
             AccessibilityFinding(
                 rule_id="image-missing-alt-text",
                 code=MessageCode.ACCESSIBILITY_IMAGE_MISSING_ALT_TEXT,
-                message=(f"Accessibility: HTML image in {section.location} is missing alt text: {img_tag.strip()}"),
+                message=(
+                    f"Accessibility: HTML image in {section.location} is missing alt text: {img_tag.strip()}"
+                ),
                 line_number=_absolute_line_number(
                     source_code,
                     document_start_line,
@@ -485,13 +531,17 @@ def _check_empty_link_text(
         visible_text = _normalize_human_text(link["text"])
         if visible_text:
             continue
-        if link["kind"] == "html" and (link["aria_label"].strip() or link["title"].strip()):
+        if link["kind"] == "html" and (
+            link["aria_label"].strip() or link["title"].strip()
+        ):
             continue
         findings.append(
             AccessibilityFinding(
                 rule_id="empty-link-text",
                 code=MessageCode.ACCESSIBILITY_EMPTY_LINK_TEXT,
-                message=(f"Accessibility: link in {section.location} has no accessible text: {link['snippet']}"),
+                message=(
+                    f"Accessibility: link in {section.location} has no accessible text: {link['snippet']}"
+                ),
                 line_number=_absolute_line_number(
                     source_code,
                     document_start_line,
@@ -537,14 +587,20 @@ def _find_top_level_key_line(source_code: str, key: str) -> Optional[int]:
     return source_code.count("\n", 0, match.start()) + 1
 
 
-def _absolute_line_number(source_code: str, document_start_line: int, section_key_line: int, snippet: str) -> int:
-    relative_line = _find_snippet_line(source_code, snippet, start_line=section_key_line)
+def _absolute_line_number(
+    source_code: str, document_start_line: int, section_key_line: int, snippet: str
+) -> int:
+    relative_line = _find_snippet_line(
+        source_code, snippet, start_line=section_key_line
+    )
     if relative_line is None:
         relative_line = section_key_line
     return document_start_line + relative_line - 1
 
 
-def _find_snippet_line(source_code: str, snippet: str, *, start_line: int = 1) -> Optional[int]:
+def _find_snippet_line(
+    source_code: str, snippet: str, *, start_line: int = 1
+) -> Optional[int]:
     normalized_snippet = re.sub(r"\s+", " ", snippet).strip()
     if not normalized_snippet:
         return None
@@ -631,7 +687,9 @@ def _attachment_uses_docx(attachment: dict[str, Any]) -> bool:
     return False
 
 
-def _load_bootstrap_theme_css(theme_value: str, *, input_file: Optional[str]) -> Optional[str]:
+def _load_bootstrap_theme_css(
+    theme_value: str, *, input_file: Optional[str]
+) -> Optional[str]:
     path = theme_value.strip().strip('"').strip("'")
     if not path or path.startswith(("http://", "https://")):
         return None
@@ -715,7 +773,9 @@ def _best_component_color_pair(
     return None
 
 
-def _resolve_css_color(value: Optional[str], variables: dict[str, str]) -> Optional[tuple[float, float, float]]:
+def _resolve_css_color(
+    value: Optional[str], variables: dict[str, str]
+) -> Optional[tuple[float, float, float]]:
     if not value:
         return None
     color_text = value.strip().lower()
@@ -815,7 +875,9 @@ def _relative_luminance(rgb: tuple[float, float, float]) -> float:
     )
 
 
-def _contrast_ratio(fg: tuple[float, float, float], bg: tuple[float, float, float]) -> float:
+def _contrast_ratio(
+    fg: tuple[float, float, float], bg: tuple[float, float, float]
+) -> float:
     # WCAG contrast is a ratio between the lighter and darker relative
     # luminance values. A result of 1.0 means no contrast; larger values mean
     # stronger separation. For normal text, WCAG AA requires at least 4.5:1.
@@ -847,7 +909,9 @@ def _extract_links_from_text(text: str) -> list[dict[str, str]]:
         )
     for attrs, inner in _HTML_LINK_RE.findall(text):
         href_match = re.search(r"\bhref\s*=\s*([\"'])(.*?)\1", attrs, re.IGNORECASE)
-        aria_label_match = re.search(r"\baria-label\s*=\s*([\"'])(.*?)\1", attrs, re.IGNORECASE)
+        aria_label_match = re.search(
+            r"\baria-label\s*=\s*([\"'])(.*?)\1", attrs, re.IGNORECASE
+        )
         title_match = re.search(r"\btitle\s*=\s*([\"'])(.*?)\1", attrs, re.IGNORECASE)
         snippet = re.sub(r"\s+", " ", f"<a{attrs}>{inner}</a>").strip()
         links.append(
@@ -855,7 +919,9 @@ def _extract_links_from_text(text: str) -> list[dict[str, str]]:
                 "kind": "html",
                 "text": str(inner),
                 "target": str(href_match.group(2) if href_match else ""),
-                "aria_label": str(aria_label_match.group(2) if aria_label_match else ""),
+                "aria_label": str(
+                    aria_label_match.group(2) if aria_label_match else ""
+                ),
                 "title": str(title_match.group(2) if title_match else ""),
                 "snippet": snippet,
             }

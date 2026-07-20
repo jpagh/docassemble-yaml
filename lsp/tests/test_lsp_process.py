@@ -150,13 +150,17 @@ class _LspSession:
                     process.kill()
                     process.wait(timeout=2.0)
 
-    def initialize(self, root_path: Path, *, capabilities: dict[str, Any] | None = None) -> dict[str, Any]:
+    def initialize(
+        self, root_path: Path, *, capabilities: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         result = self.request(
             "initialize",
             {
                 "processId": None,
                 "rootUri": root_path.resolve().as_uri(),
-                "workspaceFolders": [{"uri": root_path.resolve().as_uri(), "name": root_path.name}],
+                "workspaceFolders": [
+                    {"uri": root_path.resolve().as_uri(), "name": root_path.name}
+                ],
                 "capabilities": capabilities or {},
                 "clientInfo": {"name": "pytest"},
             },
@@ -170,7 +174,9 @@ class _LspSession:
             payload["params"] = params
         self._send(payload)
 
-    def request(self, method: str, params: dict[str, Any] | None, *, timeout: float = 5.0) -> Any:
+    def request(
+        self, method: str, params: dict[str, Any] | None, *, timeout: float = 5.0
+    ) -> Any:
         self._next_id += 1
         request_id = self._next_id
         payload: dict[str, Any] = {"jsonrpc": "2.0", "id": request_id, "method": method}
@@ -178,7 +184,9 @@ class _LspSession:
             payload["params"] = params
         self._send(payload)
 
-        message = self._wait_for(lambda candidate: candidate.get("id") == request_id, timeout=timeout)
+        message = self._wait_for(
+            lambda candidate: candidate.get("id") == request_id, timeout=timeout
+        )
         if "error" in message:
             raise AssertionError(f"LSP request {method} failed: {message['error']}")
         return message.get("result")
@@ -192,7 +200,8 @@ class _LspSession:
     ) -> dict[str, Any]:
         return self._wait_for(
             lambda candidate: (
-                candidate.get("method") == method and (predicate(candidate) if predicate is not None else True)
+                candidate.get("method") == method
+                and (predicate(candidate) if predicate is not None else True)
             ),
             timeout=timeout,
         )
@@ -218,8 +227,13 @@ class _LspSession:
             if remaining <= 0:
                 raise AssertionError(self._timeout_message())
 
-            if self._stdout_reader is not None and self._stdout_reader.error is not None:
-                raise AssertionError(f"LSP reader failed: {self._stdout_reader.error}") from self._stdout_reader.error
+            if (
+                self._stdout_reader is not None
+                and self._stdout_reader.error is not None
+            ):
+                raise AssertionError(
+                    f"LSP reader failed: {self._stdout_reader.error}"
+                ) from self._stdout_reader.error
 
             try:
                 candidate = self._messages.get(timeout=remaining)
@@ -272,7 +286,9 @@ def _did_open_params(path: Path, text: str) -> dict[str, Any]:
     }
 
 
-def _wait_for_stderr_contains(session: _LspSession, substrings: list[str], *, timeout: float = 5.0) -> str:
+def _wait_for_stderr_contains(
+    session: _LspSession, substrings: list[str], *, timeout: float = 5.0
+) -> str:
     deadline = time.monotonic() + timeout
 
     while True:
@@ -282,7 +298,9 @@ def _wait_for_stderr_contains(session: _LspSession, substrings: list[str], *, ti
 
         process = session._require_process()
         if process.poll() is not None:
-            raise AssertionError(f"LSP process exited before stderr contained expected text: {stderr}")
+            raise AssertionError(
+                f"LSP process exited before stderr contained expected text: {stderr}"
+            )
 
         remaining = deadline - time.monotonic()
         if remaining <= 0:
@@ -299,13 +317,19 @@ def test_lsp_process_publishes_and_clears_diagnostics_on_change(tmp_path: Path) 
 
     with _LspSession() as session:
         session.initialize(tmp_path)
-        session.notify("textDocument/didOpen", _did_open_params(source_path, invalid_source))
+        session.notify(
+            "textDocument/didOpen", _did_open_params(source_path, invalid_source)
+        )
 
         first_publish = session.wait_for_notification(
             "textDocument/publishDiagnostics",
-            predicate=lambda message: message["params"]["uri"] == source_path.resolve().as_uri(),
+            predicate=lambda message: (
+                message["params"]["uri"] == source_path.resolve().as_uri()
+            ),
         )
-        assert [diagnostic["code"] for diagnostic in first_publish["params"]["diagnostics"]] == ["E301"]
+        assert [
+            diagnostic["code"] for diagnostic in first_publish["params"]["diagnostics"]
+        ] == ["E301"]
 
         session.notify(
             "textDocument/didChange",
@@ -318,7 +342,8 @@ def test_lsp_process_publishes_and_clears_diagnostics_on_change(tmp_path: Path) 
         second_publish = session.wait_for_notification(
             "textDocument/publishDiagnostics",
             predicate=lambda message: (
-                message["params"]["uri"] == source_path.resolve().as_uri() and message["params"]["diagnostics"] == []
+                message["params"]["uri"] == source_path.resolve().as_uri()
+                and message["params"]["diagnostics"] == []
             ),
         )
         assert second_publish["params"]["diagnostics"] == []
@@ -367,7 +392,9 @@ def test_lsp_process_publishes_field_shorthand_convention_when_enabled(
 
         publish = session.wait_for_notification(
             "textDocument/publishDiagnostics",
-            predicate=lambda message: message["params"]["uri"] == source_path.resolve().as_uri(),
+            predicate=lambda message: (
+                message["params"]["uri"] == source_path.resolve().as_uri()
+            ),
         )
 
     diagnostics = publish["params"]["diagnostics"]
@@ -387,7 +414,9 @@ def test_lsp_process_offers_code_action_for_field_shorthand_convention(
 
         publish = session.wait_for_notification(
             "textDocument/publishDiagnostics",
-            predicate=lambda message: message["params"]["uri"] == source_path.resolve().as_uri(),
+            predicate=lambda message: (
+                message["params"]["uri"] == source_path.resolve().as_uri()
+            ),
         )
 
         actions = session.request(
@@ -407,7 +436,9 @@ def test_lsp_process_offers_code_action_for_field_shorthand_convention(
         "Fix all auto-fixable docassemble-lsp issues",
     ]
     text_edits = actions[0]["edit"]["changes"][source_path.resolve().as_uri()]
-    assert [text_edit["newText"] for text_edit in text_edits] == ["  - label: Name\n    field: user.name"]
+    assert [text_edit["newText"] for text_edit in text_edits] == [
+        "  - label: Name\n    field: user.name"
+    ]
 
 
 def test_lsp_process_offers_source_fix_all_for_field_shorthand_conventions(
@@ -423,7 +454,9 @@ def test_lsp_process_offers_source_fix_all_for_field_shorthand_conventions(
 
         publish = session.wait_for_notification(
             "textDocument/publishDiagnostics",
-            predicate=lambda message: message["params"]["uri"] == source_path.resolve().as_uri(),
+            predicate=lambda message: (
+                message["params"]["uri"] == source_path.resolve().as_uri()
+            ),
         )
 
         actions = session.request(
@@ -441,7 +474,9 @@ def test_lsp_process_offers_source_fix_all_for_field_shorthand_conventions(
             },
         )
 
-    assert [action["title"] for action in actions] == ["Fix all auto-fixable docassemble-lsp issues"]
+    assert [action["title"] for action in actions] == [
+        "Fix all auto-fixable docassemble-lsp issues"
+    ]
     text_edits = actions[0]["edit"]["changes"][source_path.resolve().as_uri()]
     assert [text_edit["newText"] for text_edit in text_edits] == [
         "  - label: Name\n    field: user.name",
@@ -465,7 +500,9 @@ def test_lsp_process_reads_conventions_from_pyproject(tmp_path: Path) -> None:
 
         publish = session.wait_for_notification(
             "textDocument/publishDiagnostics",
-            predicate=lambda message: message["params"]["uri"] == source_path.resolve().as_uri(),
+            predicate=lambda message: (
+                message["params"]["uri"] == source_path.resolve().as_uri()
+            ),
         )
 
     diagnostics = publish["params"]["diagnostics"]
@@ -532,9 +569,10 @@ def test_lsp_process_resolves_definition_across_fixture_workspace() -> None:
             },
         )
 
-    assert [(location["targetUri"], location["targetRange"]["start"]["line"]) for location in locations] == [
-        (WORKFLOW_PATH.resolve().as_uri(), 0)
-    ]
+    assert [
+        (location["targetUri"], location["targetRange"]["start"]["line"])
+        for location in locations
+    ] == [(WORKFLOW_PATH.resolve().as_uri(), 0)]
 
 
 def test_lsp_process_returns_workspace_symbols_from_fixture_workspace() -> None:
@@ -572,7 +610,8 @@ def test_lsp_process_returns_document_links_for_local_files(tmp_path: Path) -> N
                 },
                 "end": {
                     "line": 1,
-                    "character": source.splitlines()[1].index("included.yml") + len("included.yml"),
+                    "character": source.splitlines()[1].index("included.yml")
+                    + len("included.yml"),
                 },
             },
             "target": included.resolve().as_uri(),
@@ -589,7 +628,9 @@ def test_lsp_process_returns_document_links_for_modules_includes_and_static_file
     static = package_dir / "data" / "static"
     questions.mkdir(parents=True)
     static.mkdir(parents=True)
-    (tmp_path / "pyproject.toml").write_text("[project]\nname = 'demo'\n", encoding="utf-8")
+    (tmp_path / "pyproject.toml").write_text(
+        "[project]\nname = 'demo'\n", encoding="utf-8"
+    )
     (package_dir / "__init__.py").write_text("", encoding="utf-8")
     helper = package_dir / "helper.py"
     helper.write_text("def do_stuff():\n    return None\n", encoding="utf-8")
@@ -613,7 +654,10 @@ def test_lsp_process_returns_document_links_for_modules_includes_and_static_file
         )
 
     targets_by_text = {
-        source.splitlines()[link["range"]["start"]["line"]].strip().removeprefix("- "): link for link in links
+        source.splitlines()[link["range"]["start"]["line"]]
+        .strip()
+        .removeprefix("- "): link
+        for link in links
     }
     assert targets_by_text["included.yml"]["target"] == included.resolve().as_uri()
     assert targets_by_text[".helper"]["target"] == helper.resolve().as_uri()
@@ -764,7 +808,9 @@ def test_lsp_process_semantic_tokens_capability_and_response(tmp_path: Path) -> 
 
 def test_lsp_process_python_watched_file_updates_completions(tmp_path: Path) -> None:
     """Modifying a Python file and sending watched-file notification should update completions."""
-    (tmp_path / "pyproject.toml").write_text("[tool.docassemble-lsp]\n", encoding="utf-8")
+    (tmp_path / "pyproject.toml").write_text(
+        "[tool.docassemble-lsp]\n", encoding="utf-8"
+    )
     pkg_dir = tmp_path / "docassemble" / "mypkg"
     pkg_dir.mkdir(parents=True)
     (pkg_dir / "__init__.py").write_text("", encoding="utf-8")
@@ -795,7 +841,8 @@ def test_lsp_process_python_watched_file_updates_completions(tmp_path: Path) -> 
         assert "Person" in labels
 
         helper.write_text(
-            helper.read_text(encoding="utf-8") + "\nclass Employee(DAObject):\n    pass\n",
+            helper.read_text(encoding="utf-8")
+            + "\nclass Employee(DAObject):\n    pass\n",
             encoding="utf-8",
         )
 
@@ -825,7 +872,9 @@ def test_lsp_process_rebuilds_workspace_index_on_watched_file_change(
 
     with _LspSession() as session:
         session.initialize(tmp_path)
-        session.notify("textDocument/didOpen", _did_open_params(source_path, initial_content))
+        session.notify(
+            "textDocument/didOpen", _did_open_params(source_path, initial_content)
+        )
 
         session.wait_for_notification("textDocument/publishDiagnostics")
 
@@ -861,7 +910,9 @@ def test_lsp_process_unsaved_def_appears_in_workspace_symbols(tmp_path: Path) ->
 
     with _LspSession() as session:
         session.initialize(tmp_path)
-        session.notify("textDocument/didOpen", _did_open_params(source_path, unsaved_source))
+        session.notify(
+            "textDocument/didOpen", _did_open_params(source_path, unsaved_source)
+        )
 
         symbols = session.request("workspace/symbol", {"query": "unsaved_def"})
 
@@ -875,7 +926,9 @@ def test_lsp_process_unsaved_symbol_disappears_on_close(tmp_path: Path) -> None:
 
     with _LspSession() as session:
         session.initialize(tmp_path)
-        session.notify("textDocument/didOpen", _did_open_params(source_path, unsaved_source))
+        session.notify(
+            "textDocument/didOpen", _did_open_params(source_path, unsaved_source)
+        )
 
         symbols_open = session.request("workspace/symbol", {"query": "temp_def"})
         assert any(symbol["name"] == "temp_def" for symbol in symbols_open)
@@ -901,8 +954,12 @@ def test_lsp_process_unsaved_event_resolved_across_overlays(tmp_path: Path) -> N
 
     with _LspSession() as session:
         session.initialize(tmp_path)
-        session.notify("textDocument/didOpen", _did_open_params(trigger_path, trigger_source))
-        session.notify("textDocument/didOpen", _did_open_params(overlay_path, overlay_source))
+        session.notify(
+            "textDocument/didOpen", _did_open_params(trigger_path, trigger_source)
+        )
+        session.notify(
+            "textDocument/didOpen", _did_open_params(overlay_path, overlay_source)
+        )
 
         line, character = _position(trigger_source, "overlay_event")
         locations = session.request(
@@ -923,7 +980,9 @@ def test_lsp_process_formats_malformed_document_returns_empty(tmp_path: Path) ->
 
     with _LspSession() as session:
         session.initialize(tmp_path)
-        session.notify("textDocument/didOpen", _did_open_params(source_path, malformed_source))
+        session.notify(
+            "textDocument/didOpen", _did_open_params(source_path, malformed_source)
+        )
 
         edits = session.request(
             "textDocument/formatting",
@@ -943,7 +1002,9 @@ def test_lsp_process_formats_reader_error_returns_empty(tmp_path: Path) -> None:
 
     with _LspSession() as session:
         session.initialize(tmp_path)
-        session.notify("textDocument/didOpen", _did_open_params(source_path, malformed_source))
+        session.notify(
+            "textDocument/didOpen", _did_open_params(source_path, malformed_source)
+        )
 
         edits = session.request(
             "textDocument/formatting",
@@ -971,7 +1032,9 @@ def test_lsp_process_unsaved_modules_adds_external_completions(
     tmp_path: Path, tmp_path_factory: pytest.TempPathFactory
 ) -> None:
     """Adding modules: docassemble.external.helpers to an unsaved overlay should trigger cross-package discovery."""
-    (tmp_path / "pyproject.toml").write_text("[tool.docassemble-lsp]\n", encoding="utf-8")
+    (tmp_path / "pyproject.toml").write_text(
+        "[tool.docassemble-lsp]\n", encoding="utf-8"
+    )
     pkg_dir = tmp_path / "docassemble" / "mypkg"
     pkg_dir.mkdir(parents=True)
     (pkg_dir / "__init__.py").write_text("", encoding="utf-8")
@@ -982,12 +1045,16 @@ def test_lsp_process_unsaved_modules_adds_external_completions(
 
     yaml_path = tmp_path / "interview.yml"
     initial_source = "---\nobjects:\n  - person: \n"
-    updated_source = "---\nmodules:\n  - docassemble.external.helpers\n---\nobjects:\n  - person: \n"
+    updated_source = (
+        "---\nmodules:\n  - docassemble.external.helpers\n---\nobjects:\n  - person: \n"
+    )
     yaml_path.write_text(initial_source, encoding="utf-8")
 
     with _LspSession(extra_pythonpath=ext_dir) as session:
         session.initialize(tmp_path)
-        session.notify("textDocument/didOpen", _did_open_params(yaml_path, initial_source))
+        session.notify(
+            "textDocument/didOpen", _did_open_params(yaml_path, initial_source)
+        )
 
         completions_before = session.request(
             "textDocument/completion",
@@ -1023,7 +1090,9 @@ def test_lsp_process_unsaved_external_completions_survive_watched_file(
     tmp_path: Path, tmp_path_factory: pytest.TempPathFactory
 ) -> None:
     """External completions from unsaved overlays should survive a watched-file invalidation."""
-    (tmp_path / "pyproject.toml").write_text("[tool.docassemble-lsp]\n", encoding="utf-8")
+    (tmp_path / "pyproject.toml").write_text(
+        "[tool.docassemble-lsp]\n", encoding="utf-8"
+    )
     pkg_dir = tmp_path / "docassemble" / "mypkg"
     pkg_dir.mkdir(parents=True)
     (pkg_dir / "__init__.py").write_text("", encoding="utf-8")
@@ -1033,7 +1102,9 @@ def test_lsp_process_unsaved_external_completions_survive_watched_file(
     _create_ext_package(ext_dir)
 
     yaml_path = tmp_path / "interview.yml"
-    yaml_source = "---\nmodules:\n  - docassemble.external.helpers\n---\nobjects:\n  - person: \n"
+    yaml_source = (
+        "---\nmodules:\n  - docassemble.external.helpers\n---\nobjects:\n  - person: \n"
+    )
     yaml_path.write_text(yaml_source, encoding="utf-8")
 
     dummy_py = tmp_path / "dummy_module.py"

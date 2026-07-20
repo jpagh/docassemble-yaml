@@ -65,11 +65,15 @@ class WorkspaceNavigationService:
             )
         return targets
 
-    def file_references(self, request: ReferenceRequest, *, include_declaration: bool) -> list[DefinitionTarget]:
+    def file_references(
+        self, request: ReferenceRequest, *, include_declaration: bool
+    ) -> list[DefinitionTarget]:
         targets: list[DefinitionTarget] = []
         for candidate, source in self.workspace_index.as_candidate_pairs():
             targets.extend(
-                self._scan_symbol_occurrences(source, request, candidate.resolve(), include_declaration=True)
+                self._scan_symbol_occurrences(
+                    source, request, candidate.resolve(), include_declaration=True
+                )
             )
 
         if include_declaration and request.target_path is not None:
@@ -77,7 +81,9 @@ class WorkspaceNavigationService:
 
         return targets
 
-    def field_var_declarations(self, request: ReferenceRequest) -> list[DefinitionTarget]:
+    def field_var_declarations(
+        self, request: ReferenceRequest
+    ) -> list[DefinitionTarget]:
         """Return every fields-block declaration site for the named field variable."""
         targets: list[DefinitionTarget] = []
         for candidate, source in self.workspace_index.as_candidate_pairs():
@@ -98,8 +104,12 @@ class WorkspaceNavigationService:
                 if parent != "fields":
                     continue
                 if key_name == "field" or key_name not in FIELD_ITEM_KNOWN_KEYS:
-                    _append_reference_target(targets, candidate, line_index, start_character, end_character)
-        targets.sort(key=lambda t: (str(t.path), t.line, t.start_character, t.end_character))
+                    _append_reference_target(
+                        targets, candidate, line_index, start_character, end_character
+                    )
+        targets.sort(
+            key=lambda t: (str(t.path), t.line, t.start_character, t.end_character)
+        )
         return targets
 
     def _scan_symbol_occurrences(
@@ -130,9 +140,13 @@ class WorkspaceNavigationService:
                     and request.target_path is not None
                     and ":" in value
                 ):
-                    pkg_resolved = resolve_package_qualified_path(value, list(self.workspace_index.search_roots))
+                    pkg_resolved = resolve_package_qualified_path(
+                        value, list(self.workspace_index.search_roots)
+                    )
                     if pkg_resolved is not None and pkg_resolved == request.target_path:
-                        _append_reference_target(targets, path, line_index, start_character, end_character)
+                        _append_reference_target(
+                            targets, path, line_index, start_character, end_character
+                        )
                     continue
 
             key_match = _KEY_VALUE_RE.match(text)
@@ -144,7 +158,11 @@ class WorkspaceNavigationService:
                     key_match.start(3),
                     key_match.end(3),
                 )
-                if request.kind == "def" and key_name in {"def", "usedefs"} and value == request.name:
+                if (
+                    request.kind == "def"
+                    and key_name in {"def", "usedefs"}
+                    and value == request.name
+                ):
                     _append_symbol_occurrence(
                         targets,
                         path=path,
@@ -171,9 +189,15 @@ class WorkspaceNavigationService:
                         is_declaration=key_name == "event",
                     )
                     continue
-                if request.kind == "field_var" and value == request.name and ":" not in value:
+                if (
+                    request.kind == "field_var"
+                    and value == request.name
+                    and ":" not in value
+                ):
                     parent = parents[line_index]
-                    if parent == "fields" and (key_name == "field" or key_name not in FIELD_ITEM_KNOWN_KEYS):
+                    if parent == "fields" and (
+                        key_name == "field" or key_name not in FIELD_ITEM_KNOWN_KEYS
+                    ):
                         _append_symbol_occurrence(
                             targets,
                             path=path,
@@ -197,7 +221,10 @@ class WorkspaceNavigationService:
                         continue
                 if request.kind == "file":
                     parent = parents[line_index]
-                    if key_name in _FILE_REFERENCE_KEYS or parent == "objects from file":
+                    if (
+                        key_name in _FILE_REFERENCE_KEYS
+                        or parent == "objects from file"
+                    ):
                         if request.target_path is not None and value:
                             if ":" not in value:
                                 resolved = (path.parent / value).resolve()
@@ -213,7 +240,10 @@ class WorkspaceNavigationService:
                                 pkg_resolved = resolve_package_qualified_path(
                                     value, list(self.workspace_index.search_roots)
                                 )
-                                if pkg_resolved is not None and pkg_resolved == request.target_path:
+                                if (
+                                    pkg_resolved is not None
+                                    and pkg_resolved == request.target_path
+                                ):
                                     _append_reference_target(
                                         targets,
                                         path,
@@ -233,7 +263,10 @@ class WorkspaceNavigationService:
                             pkg_resolved = resolve_package_qualified_path(
                                 full_value, list(self.workspace_index.search_roots)
                             )
-                            if pkg_resolved is not None and pkg_resolved == request.target_path:
+                            if (
+                                pkg_resolved is not None
+                                and pkg_resolved == request.target_path
+                            ):
                                 _append_reference_target(
                                     targets,
                                     path,
@@ -264,9 +297,19 @@ class WorkspaceNavigationService:
                     is_declaration=False,
                 )
                 continue
-            if request.kind == "file" and parent in _FILE_REFERENCE_LIST_PARENTS and request.target_path is not None:
-                if value and ":" not in value and (path.parent / value).resolve() == request.target_path:
-                    _append_reference_target(targets, path, line_index, start_character, end_character)
+            if (
+                request.kind == "file"
+                and parent in _FILE_REFERENCE_LIST_PARENTS
+                and request.target_path is not None
+            ):
+                if (
+                    value
+                    and ":" not in value
+                    and (path.parent / value).resolve() == request.target_path
+                ):
+                    _append_reference_target(
+                        targets, path, line_index, start_character, end_character
+                    )
 
         if request.kind == "event":
             for occurrence in self.event_helper_occurrences(source):

@@ -160,7 +160,9 @@ def _resolve_non_schema_hover(
     from docassemble_lsp.core.definitions import _symbol_request
     from docassemble_lsp.core.python_paths import path_from_uri_or_path
 
-    current_path = path_from_uri_or_path(uri_or_path) if uri_or_path is not None else None
+    current_path = (
+        path_from_uri_or_path(uri_or_path) if uri_or_path is not None else None
+    )
     request = _symbol_request(source, line, character, current_path)
 
     if request is None:
@@ -170,32 +172,48 @@ def _resolve_non_schema_hover(
         decl = workspace_index.event_declarations.get(request.name)
         if decl is not None:
             location = f"`{decl.path.name}:{decl.line + 1}`"
-            return HoverInfo(contents=f"**event** `{request.name}`\n\nDefined in {location}")
+            return HoverInfo(
+                contents=f"**event** `{request.name}`\n\nDefined in {location}"
+            )
         if "${" in request.name:
             return HoverInfo(
                 contents=f"**event** `{request.name}` — dynamic Mako expression, cannot be statically resolved"
             )
-        return HoverInfo(contents=f"**event** `{request.name}` — not defined in the workspace")
+        return HoverInfo(
+            contents=f"**event** `{request.name}` — not defined in the workspace"
+        )
 
     if request.kind == "def":
         decl = workspace_index.def_declarations.get(request.name)
         if decl is not None:
             location = f"`{decl.path.name}:{decl.line + 1}`"
-            return HoverInfo(contents=f"**def** `{request.name}`\n\nDefined in {location}")
-        return HoverInfo(contents=f"**def** `{request.name}` — not defined in the workspace")
+            return HoverInfo(
+                contents=f"**def** `{request.name}`\n\nDefined in {location}"
+            )
+        return HoverInfo(
+            contents=f"**def** `{request.name}` — not defined in the workspace"
+        )
 
     if request.kind == "field_var":
         decl = workspace_index.field_var_declarations.get(request.name)
         if decl is not None:
             location = f"`{decl.path.name}:{decl.line + 1}`"
-            return HoverInfo(contents=f"**field** `{request.name}`\n\nDeclared in {location}")
-        return HoverInfo(contents=f"**field** `{request.name}` — not declared in the workspace")
+            return HoverInfo(
+                contents=f"**field** `{request.name}`\n\nDeclared in {location}"
+            )
+        return HoverInfo(
+            contents=f"**field** `{request.name}` — not declared in the workspace"
+        )
 
     if request.kind == "file":
         target_path = request.target_path
         if target_path is not None:
             if not target_path.exists():
-                templates_dir = workspace_index.templates_dir_for(current_path) if current_path is not None else None
+                templates_dir = (
+                    workspace_index.templates_dir_for(current_path)
+                    if current_path is not None
+                    else None
+                )
                 if templates_dir is None:
                     templates_dir = templates_dir_for_path(target_path)
                 if templates_dir is not None:

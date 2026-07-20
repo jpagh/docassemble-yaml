@@ -19,7 +19,11 @@ def configure_logging(*, level: int | str = _DEFAULT_LEVEL) -> None:
     if not logger.handlers:
         handler = logging.StreamHandler(sys.stderr)
         handler.setLevel(logging.DEBUG)
-        handler.setFormatter(logging.Formatter("[docassemble-lsp] %(levelname)-5s %(name)s:%(lineno)d %(message)s"))
+        handler.setFormatter(
+            logging.Formatter(
+                "[docassemble-lsp] %(levelname)-5s %(name)s:%(lineno)d %(message)s"
+            )
+        )
         logger.addHandler(handler)
     set_log_level(level, force=True)
     _configured = True

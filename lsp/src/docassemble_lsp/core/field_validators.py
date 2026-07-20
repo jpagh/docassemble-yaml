@@ -33,7 +33,9 @@ from docassemble_lsp.core.line_helpers import _safe_ast_parse
 from docassemble_lsp.core.messages import MessageCode, format_message
 
 
-def _validator_error(code: str, line_number: int = 1, **kwargs: Any) -> tuple[str, int, str]:
+def _validator_error(
+    code: str, line_number: int = 1, **kwargs: Any
+) -> tuple[str, int, str]:
     """Build a standard validator error 3-tuple."""
     return (format_message(code, **kwargs), line_number, code)
 
@@ -46,7 +48,9 @@ def _is_code_form(value: object) -> bool:
     """
     if not isinstance(value, dict):
         return False
-    content_keys = {k for k in value if isinstance(k, str) and not _is_internal_metadata_key(k)}
+    content_keys = {
+        k for k in value if isinstance(k, str) and not _is_internal_metadata_key(k)
+    }
     return len(content_keys) == 1 and "code" in content_keys
 
 
@@ -73,10 +77,17 @@ class FieldDatatypeValidator:
         self.errors: list[tuple[str, int, str]] = []
         datatype = field_item.get("datatype")
         input_type = field_item.get("input type")
-        datatype_normalized = datatype.strip().lower() if isinstance(datatype, str) else None
-        input_type_normalized = input_type.strip().lower() if isinstance(input_type, str) else None
+        datatype_normalized = (
+            datatype.strip().lower() if isinstance(datatype, str) else None
+        )
+        input_type_normalized = (
+            input_type.strip().lower() if isinstance(input_type, str) else None
+        )
 
-        if input_type_normalized == "hidden" and datatype_normalized in FILE_LIKE_DATATYPES:
+        if (
+            input_type_normalized == "hidden"
+            and datatype_normalized in FILE_LIKE_DATATYPES
+        ):
             self.errors.append(
                 _validator_error(
                     MessageCode.HIDDEN_FIELD_INVALID_DATATYPE,
@@ -85,7 +96,8 @@ class FieldDatatypeValidator:
             )
 
         if "object labeler" in field_item and not (
-            isinstance(datatype_normalized, str) and datatype_normalized.startswith("object")
+            isinstance(datatype_normalized, str)
+            and datatype_normalized.startswith("object")
         ):
             self.errors.append(
                 _validator_error(
@@ -111,10 +123,19 @@ class FieldDatatypeValidator:
                 )
 
         requires_choices = (
-            datatype_normalized in MULTIPLE_CHOICE_DATATYPES or input_type_normalized in MULTIPLE_CHOICE_INPUT_TYPES
+            datatype_normalized in MULTIPLE_CHOICE_DATATYPES
+            or input_type_normalized in MULTIPLE_CHOICE_INPUT_TYPES
         )
-        if requires_choices and "choices" not in field_item and "code" not in field_item:
-            anchor_key = "datatype" if datatype_normalized in MULTIPLE_CHOICE_DATATYPES else "input type"
+        if (
+            requires_choices
+            and "choices" not in field_item
+            and "code" not in field_item
+        ):
+            anchor_key = (
+                "datatype"
+                if datatype_normalized in MULTIPLE_CHOICE_DATATYPES
+                else "input type"
+            )
             self.errors.append(
                 _validator_error(
                     MessageCode.MULTIPLE_CHOICE_FIELD_MISSING_CHOICES,
@@ -122,7 +143,9 @@ class FieldDatatypeValidator:
                 )
             )
 
-        if datatype_normalized in BOOLEAN_DATATYPES and ("choices" in field_item or "code" in field_item):
+        if datatype_normalized in BOOLEAN_DATATYPES and (
+            "choices" in field_item or "code" in field_item
+        ):
             anchor_key = "choices" if "choices" in field_item else "code"
             self.errors.append(
                 _validator_error(
@@ -132,7 +155,9 @@ class FieldDatatypeValidator:
                 )
             )
 
-        if datatype_normalized == "range" and not ("min" in field_item and "max" in field_item):
+        if datatype_normalized == "range" and not (
+            "min" in field_item and "max" in field_item
+        ):
             self.errors.append(
                 _validator_error(
                     MessageCode.RANGE_MISSING_MIN_MAX,
@@ -140,7 +165,10 @@ class FieldDatatypeValidator:
                 )
             )
 
-        if datatype_normalized is not None and datatype_normalized not in FILE_LIKE_DATATYPES:
+        if (
+            datatype_normalized is not None
+            and datatype_normalized not in FILE_LIKE_DATATYPES
+        ):
             for file_key in self._FILE_SPECIFIC_KEYS:
                 if file_key in field_item:
                     self.errors.append(
@@ -163,7 +191,10 @@ class FieldDatatypeValidator:
                         )
                     )
 
-        if datatype_normalized in INPUT_TYPE_DATATYPES and input_type_normalized != datatype_normalized:
+        if (
+            datatype_normalized in INPUT_TYPE_DATATYPES
+            and input_type_normalized != datatype_normalized
+        ):
             self.errors.append(
                 _validator_error(
                     MessageCode.DATATYPE_PREFER_INPUT_TYPE,
@@ -198,7 +229,9 @@ class FieldChoiceValidator:
         self.errors: list[tuple[str, int, str]] = []
 
         datatype = field_item.get("datatype")
-        datatype_normalized = datatype.strip().lower() if isinstance(datatype, str) else None
+        datatype_normalized = (
+            datatype.strip().lower() if isinstance(datatype, str) else None
+        )
 
         # shuffle must be boolean
         if "shuffle" in field_item and not isinstance(field_item["shuffle"], bool):
@@ -211,7 +244,10 @@ class FieldChoiceValidator:
 
         # disable others
         if "disable others" in field_item:
-            if datatype_normalized is not None and datatype_normalized in DISABLE_OTHERS_BLOCKED_DTYPES:
+            if (
+                datatype_normalized is not None
+                and datatype_normalized in DISABLE_OTHERS_BLOCKED_DTYPES
+            ):
                 self.errors.append(
                     _validator_error(
                         MessageCode.DISABLE_OTHERS_INCOMPATIBLE_DATATYPE,
@@ -229,7 +265,10 @@ class FieldChoiceValidator:
 
         # uncheck others
         if "uncheck others" in field_item:
-            if datatype_normalized is not None and datatype_normalized not in UNCHECK_CHECK_COMPATIBLE_DTYPES:
+            if (
+                datatype_normalized is not None
+                and datatype_normalized not in UNCHECK_CHECK_COMPATIBLE_DTYPES
+            ):
                 self.errors.append(
                     _validator_error(
                         MessageCode.UNCHECK_OTHERS_REQUIRES_YESNO,
@@ -246,7 +285,10 @@ class FieldChoiceValidator:
 
         # check others
         if "check others" in field_item:
-            if datatype_normalized is not None and datatype_normalized not in UNCHECK_CHECK_COMPATIBLE_DTYPES:
+            if (
+                datatype_normalized is not None
+                and datatype_normalized not in UNCHECK_CHECK_COMPATIBLE_DTYPES
+            ):
                 self.errors.append(
                     _validator_error(
                         MessageCode.CHECK_OTHERS_REQUIRES_YESNO,
@@ -436,8 +478,12 @@ class FieldConditionValidator:
                     )
 
         # --- Visibility modifier cross-key conflicts (matching parse.py) ---
-        _NON_JS_VISIBILITY = frozenset({"show if", "hide if", "enable if", "disable if"})
-        _JS_VISIBILITY = frozenset({"js show if", "js hide if", "js enable if", "js disable if"})
+        _NON_JS_VISIBILITY = frozenset(
+            {"show if", "hide if", "enable if", "disable if"}
+        )
+        _JS_VISIBILITY = frozenset(
+            {"js show if", "js hide if", "js enable if", "js disable if"}
+        )
 
         present_keys = set(field_item)
         present_non_js = _NON_JS_VISIBILITY & present_keys
@@ -465,7 +511,9 @@ class FieldConditionValidator:
                     if key < other:  # each unordered pair once
                         if field_item[key] is None or field_item[other] is None:
                             continue  # value not yet set — can't determine code-ness
-                        if _is_code_form(field_item[key]) == _is_code_form(field_item[other]):
+                        if _is_code_form(field_item[key]) == _is_code_form(
+                            field_item[other]
+                        ):
                             self.errors.append(
                                 _validator_error(
                                     MessageCode.VISIBILITY_MODIFIER_CONFLICT,
