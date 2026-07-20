@@ -74,21 +74,27 @@ async function main(): Promise<void> {
     DOCASSEMBLE_LSP_PROJECT: lspProject,
   };
 
+  // Pass --headless on every platform by default, unless the user opts out
+  // with DOCASSEMBLE_LSP_SHOW_WINDOW=1.  Linux/Windows fully suppress the
+  // window; macOS ignores --headless (see microsoft/vscode-test#290).
+  const launchArgs: string[] =
+    process.env.DOCASSEMBLE_LSP_SHOW_WINDOW === "1" ? [] : ["--headless"];
+
   // Seed a temp workspace with docassemble package structure for real tests.
   let workspaceDir: string | undefined;
-  const launchArgs: string[] = [];
   if (process.env.DOCASSEMBLE_LSP_ENABLE_REAL_TEST === "1") {
     workspaceDir = seedTestWorkspace();
     launchArgs.push(workspaceDir);
     testEnv.DOCASSEMBLE_TEST_WORKSPACE = workspaceDir;
   }
 
-  // ELECTRON_RUN_AS_NODE forces the Electron binary into Node.js mode, which
-  // rejects unknown flags like --no-sandbox and --extensionTestsPath. Wrap
-  // the binary to unset it and ensure VS Code / Electron app mode.
-  const isMacArm = process.platform === "darwin" && process.arch === "arm64";
+  // On macOS, use a wrapper that strips ELECTRON_RUN_AS_NODE from the
+  // environment.  When that variable is set, the ARM64 Electron binary
+  // switches to Node.js mode and rejects VS Code flags like
+  // --no-sandbox and --extensionTestsPath.  The wrapper does nothing
+  // window-management-related.
   try {
-    if (isMacArm && process.env.ELECTRON_RUN_AS_NODE) {
+    if (process.platform === "darwin" && process.env.ELECTRON_RUN_AS_NODE) {
       const wrapper = path.resolve(__dirname, "../../scripts/vscode-test-wrapper.mjs");
       await runTests({
         extensionDevelopmentPath,

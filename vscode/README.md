@@ -101,7 +101,23 @@ does not need the bundle — only `//vscode:test:real-lsp` does.
 ## Validation
 
 - `mise run //vscode:test` runs the default extension-host smoke suite.
-- `mise run //vscode:test:real-lsp` runs the opt-in extension-host real-server smoke path.
+- `mise run //vscode:test:real-lsp` runs the opt-in extension-host real-server path.
 - The extension-host suite includes an Enter/on-type regression test
   that verifies the client sends `textDocument/onTypeFormatting` and
   applies the returned edit.
+
+### Headless tests
+
+Tests pass `--headless` on all platforms by default. On Linux and
+Windows the VS Code window is fully suppressed. On macOS the window
+still appears because headless extension tests are not supported there
+([microsoft/vscode-test#290](https://github.com/microsoft/vscode-test/issues/290)).
+
+To opt out and show the window for debugging, set:
+
+```sh
+DOCASSEMBLE_LSP_SHOW_WINDOW=1 mise run //vscode:test
+```
+
+This controls the `--headless` flag — useful on Linux/Windows for
+debugging; no visible effect on macOS (the window is already visible).

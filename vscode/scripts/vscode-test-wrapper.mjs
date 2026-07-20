@@ -1,10 +1,12 @@
 #!/usr/bin/env node
-// Wrapper for the VS Code macOS ARM64 test runner.
+// Wrapper for the VS Code macOS test runner.
+//
 // The Electron binary on macOS ARM64 switches to Node.js mode when
 // ELECTRON_RUN_AS_NODE=1 is set, rejecting Electron/VS Code CLI flags.
-// This wrapper spawns the binary with that variable removed.
+// This wrapper spawns the binary with that variable removed.  It does
+// nothing window-management-related.
 
-import { execFileSync } from "node:child_process";
+import { spawn } from "node:child_process";
 
 const bin = process.env.VSCODE_ELECTRON_BIN;
 if (!bin) {
@@ -12,13 +14,19 @@ if (!bin) {
   process.exit(1);
 }
 
-// Copy the environment but omit ELECTRON_RUN_AS_NODE so the binary starts in
-// VS Code / Electron app mode rather than Node.js mode.
 const env = { ...process.env };
 delete env.ELECTRON_RUN_AS_NODE;
 
-try {
-  execFileSync(bin, process.argv.slice(2), { stdio: "inherit", env });
-} catch (e) {
-  process.exit(e.status ?? 1);
-}
+const child = spawn(bin, process.argv.slice(2), {
+  stdio: "inherit",
+  env,
+});
+
+child.on("close", (code) => {
+  process.exit(code ?? 1);
+});
+
+child.on("error", (err) => {
+  console.error(err);
+  process.exit(1);
+});
