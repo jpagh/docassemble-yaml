@@ -357,6 +357,15 @@ def _build_flat_caches(
         for name, sym in index.symbols.items():
             if sym.target is not None:
                 registry.setdefault(name, set()).add(sym.target)
+            if sym.imported_name is None and sym.imported_module_path is not None:
+                registry.setdefault(name, set()).add(
+                    DefinitionTarget(
+                        path=sym.imported_module_path,
+                        line=0,
+                        start_character=0,
+                        end_character=0,
+                    )
+                )
             if sym.docstring is not None and name not in docstrings:
                 docstrings[name] = sym.docstring
             if sym.imported_name is not None and sym.imported_module_path is not None:

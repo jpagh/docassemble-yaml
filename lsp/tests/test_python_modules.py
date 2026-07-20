@@ -119,6 +119,102 @@ def test_resolve_python_symbol_chain_cross_module(tmp_path: Path) -> None:
     assert result[0].path == (pkg / "utils.py").resolve()
 
 
+def test_imported_module_alias_target_points_to_import_line(tmp_path: Path) -> None:
+    pkg = tmp_path / "docassemble" / "demo"
+    pkg.mkdir(parents=True)
+    (pkg / "__init__.py").write_text("")
+    (pkg / "utils.py").write_text("FOO = 1\n")
+    main = pkg / "main.py"
+    main.write_text("import docassemble.demo.utils as u\n")
+    idx = build_workspace_index([tmp_path])
+    index = load_python_module_index(main, workspace_index=idx)
+    sym = index.symbols["u"]
+    assert sym.target is not None
+    assert sym.target.path.resolve() == main.resolve()
+    assert sym.target.line == 0
+    assert sym.imported_module_path.resolve() == (pkg / "utils.py").resolve()
+
+
+def test_imported_module_no_alias_target_is_module_file(tmp_path: Path) -> None:
+    pkg = tmp_path / "docassemble" / "demo"
+    pkg.mkdir(parents=True)
+    (pkg / "__init__.py").write_text("")
+    mymod = tmp_path / "mymod.py"
+    mymod.write_text("BAR = 2\n")
+    main = pkg / "main.py"
+    main.write_text("import mymod\n")
+    idx = build_workspace_index([tmp_path])
+    index = load_python_module_index(main, workspace_index=idx)
+    sym = index.symbols["mymod"]
+    assert sym.target is not None
+    assert sym.target.path.resolve() == mymod.resolve()
+    assert sym.target.line == 0
+
+
+def test_relative_module_alias_target_points_to_import_line(tmp_path: Path) -> None:
+    pkg = tmp_path / "docassemble" / "demo"
+    pkg.mkdir(parents=True)
+    (pkg / "__init__.py").write_text("")
+    (pkg / "utils.py").write_text("FOO = 1\n")
+    main = pkg / "main.py"
+    main.write_text("from . import utils as u\n")
+    idx = build_workspace_index([tmp_path])
+    index = load_python_module_index(main, workspace_index=idx)
+    sym = index.symbols["u"]
+    assert sym.target is not None
+    assert sym.target.path.resolve() == main.resolve()
+    assert sym.target.line == 0
+
+
+def test_imported_symbol_target_is_none(tmp_path: Path) -> None:
+    pkg = tmp_path / "docassemble" / "demo"
+    pkg.mkdir(parents=True)
+    (pkg / "__init__.py").write_text("")
+    (pkg / "utils.py").write_text("FOO = 1\n")
+    main = pkg / "main.py"
+    main.write_text("from .utils import FOO\n")
+    idx = build_workspace_index([tmp_path])
+    index = load_python_module_index(main, workspace_index=idx)
+    sym = index.symbols["FOO"]
+    assert sym.target is None
+    assert sym.imported_module_path is not None
+    assert sym.imported_module_path.resolve() == (pkg / "utils.py").resolve()
+
+
+def test_imported_unresolved_module_alias_target_points_to_import_line(
+    tmp_path: Path,
+) -> None:
+    pkg = tmp_path / "docassemble" / "demo"
+    pkg.mkdir(parents=True)
+    (pkg / "__init__.py").write_text("")
+    main = pkg / "main.py"
+    main.write_text("import nonexistent_xyz_12345 as nonexistent\n")
+    idx = build_workspace_index([tmp_path])
+    index = load_python_module_index(main, workspace_index=idx)
+    sym = index.symbols["nonexistent"]
+    assert sym.target is not None
+    assert sym.target.path.resolve() == main.resolve()
+    assert sym.target.line == 0
+    assert sym.imported_module_path is None
+
+
+def test_module_alias_registers_secondary_module_target(tmp_path: Path) -> None:
+    pkg = tmp_path / "docassemble" / "demo"
+    pkg.mkdir(parents=True)
+    (pkg / "data").mkdir()
+    (pkg / "__init__.py").write_text("")
+    (pkg / "utils.py").write_text("FOO = 1\n")
+    (tmp_path / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
+    main = pkg / "main.py"
+    main.write_text("import docassemble.demo.utils as u\n")
+    idx = build_workspace_index([tmp_path])
+    targets = idx.symbol_registry.get("u")
+    assert targets is not None
+    paths = {t.path.resolve() for t in targets}
+    assert main.resolve() in paths
+    assert (pkg / "utils.py").resolve() in paths
+
+
 def test_compute_da_object_subclasses_with_workspace(tmp_path: Path) -> None:
     pkg = tmp_path / "docassemble" / "demo"
     pkg.mkdir(parents=True)

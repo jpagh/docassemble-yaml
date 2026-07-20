@@ -6,6 +6,10 @@
 
 - [LSP] Add `|` value completion for string-typed keys; remove `key (block)` property completions.
 
+### Fixed
+
+- [LSP] Go-to-definition on aliased Python imports (`import X as Y`, `from . import X as Y`) now jumps to the import statement. The resolved module file is also offered as a secondary target for `import X as Y` aliases. Non-aliased imports continue to resolve directly to the module or symbol definition.
+
 ## [26.7.0] - 2026-07-09
 
 ### Added

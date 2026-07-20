@@ -315,13 +315,20 @@ def _python_imported_module_symbol(
     imported_name: str | None,
     current_path: Path,
     workspace_index: WorkspaceIndex | None = None,
+    target: DefinitionTarget | None = None,
+    imported_module_path: Path | None = None,
 ) -> PythonModuleSymbol:
     wi = workspace_index if workspace_index is not None else WorkspaceIndex.empty()
+    resolved_path = (
+        imported_module_path
+        if imported_module_path is not None
+        else resolve_python_module_path(module_name, current_path, wi)
+    )
     return PythonModuleSymbol(
         kind="module" if imported_name is None else "symbol",
-        target=None,
+        target=target,
         methods={},
-        imported_module_path=resolve_python_module_path(module_name, current_path, wi),
+        imported_module_path=resolved_path,
         imported_name=imported_name,
     )
 
@@ -455,16 +462,40 @@ def load_python_module_index(
             continue
 
         if isinstance(node, ast.Import):
+            statement_target = _python_definition_target(module_path, lines, node)
+            import_wi = (
+                workspace_index
+                if workspace_index is not None
+                else WorkspaceIndex.empty()
+            )
             for alias in node.names:
                 module_name = normalize_module_name(alias.name, module_path)
                 if module_name is None:
                     continue
+                resolved_path = resolve_python_module_path(
+                    module_name, module_path, import_wi
+                )
                 alias_name = alias.asname or alias.name.split(".", 1)[0]
+                if alias.asname is not None:
+                    target = statement_target
+                else:
+                    target = (
+                        DefinitionTarget(
+                            path=resolved_path,
+                            line=0,
+                            start_character=0,
+                            end_character=0,
+                        )
+                        if resolved_path is not None
+                        else None
+                    )
                 symbols[alias_name] = _python_imported_module_symbol(
                     module_name,
                     imported_name=None,
                     current_path=module_path,
                     workspace_index=workspace_index,
+                    target=target,
+                    imported_module_path=resolved_path,
                 )
             continue
 
@@ -475,14 +506,17 @@ def load_python_module_index(
         module_name = normalize_module_name(base_module, module_path)
         if module_name is None:
             continue
+        statement_target = _python_definition_target(module_path, lines, node)
         for alias in node.names:
             if alias.name == "*":
                 continue
+            target = statement_target if alias.asname is not None else None
             symbols[alias.asname or alias.name] = _python_imported_module_symbol(
                 module_name,
                 imported_name=alias.name,
                 current_path=module_path,
                 workspace_index=workspace_index,
+                target=target,
             )
 
     # Second pass: detect exception classes by checking inheritance chains.
