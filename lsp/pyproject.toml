@@ -52,9 +52,9 @@
 
 [build-system]
     requires      = [
-        "setuptools>=77.0.3",
+        "uv_build>=0.12.0,<0.13",
     ]
-    build-backend = "setuptools.build_meta"
+    build-backend = "uv_build"
 
 [tool.mypy]
     exclude        = "^build/|^src/docassemble_lsp/data/"
@@ -68,18 +68,3 @@
 
 [tool.ruff]
     line-length = 88
-
-[tool.setuptools]
-    [tool.setuptools.packages.find]
-        include = [
-            "docassemble_lsp*",
-        ]
-        where   = [
-            "src",
-        ]
-
-    [tool.setuptools.package-data]
-        docassemble_lsp = [
-            "data/*.pyi",
-            "py.typed",
-        ]
