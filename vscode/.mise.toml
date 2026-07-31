@@ -44,12 +44,17 @@
 [tasks.test]
     description = "Run VS Code extension tests (mock LSP)"
     depends     = ["build"]
-    run         = "node ./dist/test/runTest.js"
+    run         = "DOCASSEMBLE_LSP_USE_SYSTEM_VSCODE=1 node ./dist/test/runTest.js"
 
 [tasks."test:real-lsp"]
     description = "Run extension tests against the real docassemble-lsp"
     depends     = ["build"]
-    run         = "DOCASSEMBLE_LSP_ENABLE_REAL_TEST=1 node ./dist/test/runTest.js"
+    run         = "DOCASSEMBLE_LSP_ENABLE_REAL_TEST=1 DOCASSEMBLE_LSP_USE_SYSTEM_VSCODE=1 node ./dist/test/runTest.js"
+
+[tasks."test:separate"]
+    description = "Run extension tests against a separate VS Code (download)"
+    depends     = ["build"]
+    run         = "node ./dist/test/runTest.js"
 
 [tasks.package]
     description = "Package the VSIX"
