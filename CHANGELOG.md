@@ -6,9 +6,20 @@
 
 - [LSP] Add `|` value completion for string-typed keys; remove `key (block)` property completions.
 
+### Changed
+
+- [LSP] The Python formatter now honors `--indent` for code blocks whose indentation is not a multiple of 4 (e.g. `# fmt: off` regions): blocks are rebased against their smallest common indent instead of being left untouched.
+- [LSP] DAObject subclass detection now follows import re-exports: a class re-exported via `from .internal import Thing as PublicThing` is recognized as a DAObject subclass, so completions and symbol resolution pick up the new name.
+- [CLI] Removed the "REAL ERROR:" output prefix and the `experimental` code concept: all diagnostic codes are now reported uniformly.
+- [VSCODE] The bundle script now parses `lsp/pyproject.toml` with a real TOML parser and preserves Python-version markers, so `tomli` is only bundled for Python < 3.11 (smaller `bundled/libs/`).
+- [VSCODE] The bundled-server dependency install timeout is now configurable via `BUNDLE_SERVER_TIMEOUT` (default 5 minutes, previously hard-coded at 2).
+
 ### Fixed
 
 - [LSP] Go-to-definition on aliased Python imports (`import X as Y`, `from . import X as Y`) now jumps to the import statement. The resolved module file is also offered as a secondary target for `import X as Y` aliases. Non-aliased imports continue to resolve directly to the module or symbol definition.
+- [LSP] The document-link cache key is now deterministic (SHA-1 of source) instead of process-salted `hash()`, removing a cross-process serialization trap.
+- [LSP] The workspace-index overlay cache now invalidates on a content-derived stamp (built-in `hash()`) of the open documents, and `_WorkspaceIndexStore` mutations are guarded by a lock.
+- [LSP] Python module index caching now uses nanosecond-resolution mtimes, so rapid back-to-back rewrites of the same file reliably invalidate the cache.
 
 ## [26.7.0] - 2026-07-09
 

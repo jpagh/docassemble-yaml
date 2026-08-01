@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import io
 import re
+import tokenize
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -58,17 +60,45 @@ def _strip_common_indent(lines: list[str]) -> tuple[list[str], int]:
     return dedented, min_indent
 
 
+def _multiline_string_content_lines(text: str) -> set[int]:
+    """Return 1-indexed line numbers that are interior or closing lines of
+    multiline string literals (which must not be reindented)."""
+    string_lines: set[int] = set()
+    try:
+        for tok in tokenize.generate_tokens(io.StringIO(text).readline):
+            if tok.type == tokenize.STRING and tok.end[0] > tok.start[0]:
+                for line_no in range(tok.start[0] + 1, tok.end[0] + 1):
+                    string_lines.add(line_no)
+    except (tokenize.TokenError, IndentationError, SyntaxError, ValueError):
+        return set()
+    return string_lines
+
+
 def _reindent_python(text: str, target_indent: int) -> str:
+    lines = text.splitlines(keepends=True)
+    string_lines = _multiline_string_content_lines(text)
+    indents = [
+        len(line) - len(line.lstrip(" "))
+        for idx, line in enumerate(lines, start=1)
+        if line.strip() and line.startswith(" ") and idx not in string_lines
+    ]
+    if not indents:
+        return text
+
+    base = min(indents)
+    if base == 0:
+        return text
+
     result_lines = []
-    for line in text.splitlines(keepends=True):
+    for idx, line in enumerate(lines, start=1):
+        if not line.strip() or idx in string_lines:
+            result_lines.append(line)
+            continue
+
         stripped = line.lstrip(" ")
         leading = len(line) - len(stripped)
-        if leading > 0 and leading % 4 == 0:
-            levels = leading // 4
-            new_indent = " " * (levels * target_indent)
-            result_lines.append(new_indent + stripped)
-        else:
-            result_lines.append(line)
+        units = leading // base
+        result_lines.append(" " * (units * target_indent) + stripped)
     return "".join(result_lines)
 
 

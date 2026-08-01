@@ -49,3 +49,11 @@ monorepo_root = true
         { tasks = ["//lsp:format", "//vscode:format"] },
         { task = "check" },
     ]
+
+[tasks.lint]
+    description = "Lint the whole monorepo"
+    depends     = ["//lsp:lint", "//vscode:lint"]
+
+[tasks.format]
+    description = "Format the whole monorepo"
+    depends     = ["//lsp:format", "//vscode:format"]

@@ -10,6 +10,7 @@ import {
 import { execSync } from "child_process";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
+import { parsePyproject } from "./pyproject-utils.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, "..");
@@ -50,20 +51,8 @@ writeFileSync(join(bundledDir, "run_server.py"), entryPoint);
 
 // 3) Parse dependencies and version from pyproject.toml
 const pyproject = readFileSync(join(lspRoot, "pyproject.toml"), "utf-8");
-
-const versionMatch = pyproject.match(/^\s*version\s*=\s*"([^"]+)"/m);
-const lspVersion = versionMatch ? versionMatch[1] : "unknown";
+const { version: lspVersion, deps } = parsePyproject(pyproject);
 writeFileSync(join(bundledDir, "bundled-lsp-version.txt"), lspVersion + "\n");
-
-const depsMatch = pyproject.match(/dependencies\s*=\s*\[([\s\S]*?)\]/m);
-const deps = depsMatch
-  ? depsMatch[1]
-      .split("\n")
-      .map((l) => l.trim())
-      .filter((l) => l.startsWith('"'))
-      // Strip version constraints — keep the package name and minimum version only
-      .map((l) => l.replace(/^"([^";]*?)(?:;\s*[^"]*)?"[,\s]*$/, "$1"))
-  : [];
 const reqFile = join(bundledDir, "requirements.txt");
 writeFileSync(reqFile, deps.join("\n") + "\n");
 
@@ -73,8 +62,14 @@ if (!existsSync(libsDir)) {
   mkdirSync(libsDir, { recursive: true });
 }
 
+const parsedTimeout = Number.parseInt(process.env.BUNDLE_SERVER_TIMEOUT ?? "300000", 10);
+const pipTimeoutMs = Number.isFinite(parsedTimeout) ? parsedTimeout : 300000;
 const runPip = (command) => {
-  execSync(command, { stdio: "inherit", timeout: 120000 });
+  console.log(`Running: ${command.slice(0, 80)}...`);
+  execSync(command, {
+    stdio: "inherit",
+    timeout: pipTimeoutMs,
+  });
 };
 
 try {

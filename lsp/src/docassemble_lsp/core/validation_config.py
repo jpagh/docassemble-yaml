@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from typing import Literal
 
 from docassemble_lsp.core.accessibility import AccessibilityLintOptions
+from docassemble_lsp.core.messages import message_severity
 
 
 @dataclass(frozen=True)
@@ -44,18 +45,6 @@ def parse_ignore_codes(raw_codes: str) -> frozenset[str]:
     )
 
 
-def message_severity(code: str | None) -> Literal["error", "warning", "convention"]:
-    if code is None:
-        return "error"
-    if code.startswith("E"):
-        return "error"
-    if code.startswith("W"):
-        return "warning"
-    if code.startswith("C"):
-        return "convention"
-    return "error"
-
-
 class YAMLError:
     def __init__(
         self,
@@ -63,13 +52,11 @@ class YAMLError:
         err_str: str,
         line_number: int,
         file_name: str,
-        experimental: bool = True,
         code: str | None = None,
     ):
         self.err_str = err_str
         self.line_number = line_number
         self.file_name = file_name
-        self.experimental = experimental
         self.code = code
 
     @property
@@ -86,8 +73,6 @@ class YAMLError:
     def __str__(self):
         return self.format()
 
-    def format(self, *, show_experimental: bool = True) -> str:
+    def format(self) -> str:
         code_prefix = f"[{self.code}] " if self.code else ""
-        if not self.experimental and show_experimental:
-            return f"REAL ERROR: {code_prefix}At {self.file_name}:{self.line_number}: {self.err_str}"
         return f"{code_prefix}At {self.file_name}:{self.line_number}: {self.err_str}"

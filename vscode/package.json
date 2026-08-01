@@ -25,7 +25,8 @@
   "devDependencies": {
     "@types/node": "^22.20.0",
     "@types/vscode": "^1.93.0",
-    "@vscode/test-electron": "^3.0.0"
+    "@vscode/test-electron": "^3.0.0",
+    "smol-toml": "^1.3.1"
   },
   "contributes": {
     "codeActions": [
@@ -192,17 +193,5 @@
   "engines": {
     "vscode": "^1.93.0"
   },
-  "packageManager": "aube@latest",
-  "__metadata": {
-    "id": "517a3d61-d626-45e9-a011-03be13277f9a",
-    "publisherId": "8651b88b-9643-4b29-83d9-b5407b14d9db",
-    "publisherDisplayName": "Jack Adamson",
-    "targetPlatform": "undefined",
-    "updated": false,
-    "isPreReleaseVersion": false,
-    "hasPreReleaseVersion": false,
-    "installedTimestamp": 1707172694885,
-    "pinned": false,
-    "size": 2511695411
-  }
+  "packageManager": "aube@latest"
 }

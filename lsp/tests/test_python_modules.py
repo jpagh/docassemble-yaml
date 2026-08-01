@@ -64,6 +64,16 @@ def test_module_index_reparsed_on_mtime_change(tmp_path: Path) -> None:
     assert index2 is not index1
 
 
+def test_module_index_reparsed_on_back_to_back_write(tmp_path: Path) -> None:
+    mod_path = tmp_path / "mymodule.py"
+    mod_path.write_text("VERSION = 1\n", encoding="utf-8")
+    index1 = load_python_module_index(mod_path)
+    assert index1.symbols["VERSION"] is not None
+    mod_path.write_text("VERSION = 22\n", encoding="utf-8")
+    index2 = load_python_module_index(mod_path)
+    assert index2 is not index1
+
+
 def test_module_index_clear_single_path(tmp_path: Path) -> None:
     """clear_module_index_cache removes only the specified path."""
     mod_a = tmp_path / "module_a.py"
@@ -226,6 +236,74 @@ def test_compute_da_object_subclasses_with_workspace(tmp_path: Path) -> None:
         workspace_index=idx,
     )
     assert "MyThing" in result
+
+
+def test_da_object_subclass_via_dunder_all(tmp_path: Path) -> None:
+    pkg = tmp_path / "docassemble" / "demo"
+    pkg.mkdir(parents=True)
+    (pkg / "__init__.py").write_text("")
+    (pkg / "internal.py").write_text(
+        "from docassemble.base.util import DAObject\n"
+        "class Thing(DAObject):\n    pass\n"
+        "__all__ = ['Thing']\n"
+    )
+    (pkg / "public.py").write_text("from .internal import Thing as PublicThing\n")
+    idx = build_workspace_index([tmp_path])
+    subclasses = compute_da_object_subclasses(
+        [pkg / "internal.py", pkg / "public.py"], workspace_index=idx
+    )
+    assert "Thing" in subclasses
+    assert "PublicThing" in subclasses
+
+
+def test_da_object_reexport_plain_class_excluded(tmp_path: Path) -> None:
+    pkg = tmp_path / "docassemble" / "demo"
+    pkg.mkdir(parents=True)
+    (pkg / "__init__.py").write_text("")
+    (pkg / "internal.py").write_text(
+        "class PlainHelper:\n    pass\n__all__ = ['PlainHelper']\n"
+    )
+    (pkg / "public.py").write_text(
+        "from .internal import PlainHelper as PublicHelper\n"
+    )
+    idx = build_workspace_index([tmp_path])
+    subclasses = compute_da_object_subclasses(
+        [pkg / "internal.py", pkg / "public.py"], workspace_index=idx
+    )
+    assert "PublicHelper" not in subclasses
+    assert "PlainHelper" not in subclasses
+
+
+def test_da_object_reexport_attribute_base(tmp_path: Path) -> None:
+    pkg = tmp_path / "docassemble" / "demo"
+    pkg.mkdir(parents=True)
+    (pkg / "__init__.py").write_text("")
+    (pkg / "internal.py").write_text(
+        "import docassemble.base.util as util\nclass Thing(util.DAObject):\n    pass\n"
+    )
+    (pkg / "public.py").write_text("from .internal import Thing as PublicThing\n")
+    idx = build_workspace_index([tmp_path])
+    subclasses = compute_da_object_subclasses(
+        [pkg / "internal.py", pkg / "public.py"], workspace_index=idx
+    )
+    assert "Thing" in subclasses
+    assert "PublicThing" in subclasses
+
+
+def test_da_object_reexport_multiple_bases(tmp_path: Path) -> None:
+    pkg = tmp_path / "docassemble" / "demo"
+    pkg.mkdir(parents=True)
+    (pkg / "__init__.py").write_text("")
+    (pkg / "internal.py").write_text(
+        "class JsonMixin:\n    pass\nclass Thing(JsonMixin, DAObject):\n    pass\n"
+    )
+    (pkg / "public.py").write_text("from .internal import Thing as PublicThing\n")
+    idx = build_workspace_index([tmp_path])
+    subclasses = compute_da_object_subclasses(
+        [pkg / "internal.py", pkg / "public.py"], workspace_index=idx
+    )
+    assert "Thing" in subclasses
+    assert "PublicThing" in subclasses
 
 
 def test_load_python_module_index_empty_file(tmp_path: Path) -> None:

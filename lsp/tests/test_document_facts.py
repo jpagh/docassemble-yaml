@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from docassemble_lsp.core import build_document_facts
+from docassemble_lsp.core.document_facts import _build_document_facts_cached
 
 
 def test_build_document_facts_collects_documents_and_top_level_keys() -> None:
@@ -111,3 +112,11 @@ def test_build_document_facts_code_key_without_value() -> None:
     facts = build_document_facts("code: |\n")
     assert len(facts) == 1
     assert facts[0].name == "code"
+
+
+def test_build_document_facts_caches() -> None:
+    source = "question: CacheCheck\n"
+    first = build_document_facts(source)
+    second = build_document_facts(source)
+    assert first == second
+    assert _build_document_facts_cached.cache_info().hits >= 1

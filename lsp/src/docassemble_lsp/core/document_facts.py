@@ -2,6 +2,9 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from functools import lru_cache
+
+from docassemble_lsp.core.yaml_shared import _document_lines
 
 _TOP_LEVEL_KEY_RE = re.compile(r"^([^:#][^:]*?)\s*:\s*(.*)$")
 _BLOCK_SCALAR_MARKERS = {"|", ">", "|-", ">-", "|+", ">+"}
@@ -32,10 +35,6 @@ class DocumentFact:
     end_line: int
     selection_line: int
     keys: tuple[TopLevelKeyFact, ...]
-
-
-def _document_lines(source: str) -> list[str]:
-    return source.splitlines() or [""]
 
 
 def _document_ranges(lines: list[str]) -> list[tuple[int, int]]:
@@ -108,7 +107,8 @@ def _document_name(
     return (f"Document {doc_index + 1}", 0)
 
 
-def build_document_facts(source: str) -> list[DocumentFact]:
+@lru_cache(maxsize=256)
+def _build_document_facts_cached(source: str) -> tuple[DocumentFact, ...]:
     lines = _document_lines(source)
     facts: list[DocumentFact] = []
 
@@ -128,4 +128,8 @@ def build_document_facts(source: str) -> list[DocumentFact]:
             )
         )
 
-    return facts
+    return tuple(facts)
+
+
+def build_document_facts(source: str) -> list[DocumentFact]:
+    return list(_build_document_facts_cached(source))

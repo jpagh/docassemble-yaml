@@ -46,6 +46,11 @@
     depends     = ["build"]
     run         = "DOCASSEMBLE_LSP_USE_SYSTEM_VSCODE=1 node ./dist/test/runTest.js"
 
+[tasks."test:unit"]
+    description = "Run Node unit tests"
+    depends     = ["sync"]
+    run         = "node --test scripts/*.test.mjs"
+
 [tasks."test:real-lsp"]
     description = "Run extension tests against the real docassemble-lsp"
     depends     = ["build"]
@@ -66,9 +71,21 @@
     depends     = ["package"]
     run         = "vsce publish"
 
+[tasks."check:metadata"]
+    description = "Fail if vscode/package.json contains a __metadata block"
+    depends     = ["sync"]
+    run         = "node scripts/check-no-metadata.mjs"
+
 [tasks.check]
     description = "Check formatting, lint, build, and test (mock)"
-    depends     = ["format:check", "lint", "build", "test"]
+    depends     = [
+        "format:check",
+        "lint",
+        "build",
+        "test",
+        "test:unit",
+        "check:metadata"
+    ]
 
 [tasks.watch]
     description = "Watch TypeScript"

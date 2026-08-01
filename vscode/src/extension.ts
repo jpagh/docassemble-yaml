@@ -189,6 +189,11 @@ class DocassembleLspController {
           { language: "docassemble", scheme: "untitled" },
         ],
         middleware: {
+          // VS Code only renders document-link underlines from locally-registered
+          // providers; LSP-delivered ones are surfaced via "Go to definition" but
+          // don't draw an underline. This middleware suppresses the redundant LSP
+          // path, and the local provider below (see the comment at ~line 221)
+          // registers the same links so the underline is preserved.
           provideDocumentLinks: async () => {
             return [];
           },

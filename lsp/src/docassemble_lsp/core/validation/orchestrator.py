@@ -27,7 +27,7 @@ from docassemble_lsp.core.line_helpers import (
     _lc_key_line,
     _relative_value_line,
 )
-from docassemble_lsp.core.messages import MessageCode, is_experimental_code
+from docassemble_lsp.core.messages import MessageCode
 from docassemble_lsp.core.python_paths import path_from_uri_or_path
 from docassemble_lsp.core.validation.blocks import (
     _absolute_document_line,
@@ -492,7 +492,6 @@ def find_errors_from_string(
                     err_str=finding.message,
                     line_number=finding.line_number,
                     file_name=input_file,
-                    experimental=is_experimental_code(finding.code),
                     code=finding.code,
                 )
             )

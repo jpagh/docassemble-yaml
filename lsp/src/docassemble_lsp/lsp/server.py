@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import hashlib
 import logging
 import re
+import threading
 from difflib import get_close_matches
 from pathlib import Path
 
@@ -125,12 +127,22 @@ from docassemble_lsp.core.semantic_tokens import (
 )
 from docassemble_lsp.core.validation_config import RuntimeOptions
 from docassemble_lsp.core.workspace import WorkspaceIndex
+from docassemble_lsp.core.yaml_shared import _document_lines
 
 _PYGLS_JSON_RPC_LOGGER = "pygls.protocol.json_rpc"
 _UNKNOWN_CANCEL_WARNING_PREFIX = 'Cancel notification for unknown message id "'
 
 
 class _IgnoreUnknownCancelFilter(logging.Filter):
+    """Silence pygls "Cancel notification for unknown message id" warnings.
+
+    pygls logs these warnings when a client cancels a request that already
+    completed or is queued; the warning is noise and cancellation semantics
+    are unaffected. Upstream issue (open as of 2026):
+    https://github.com/openlawlibrary/pygls/issues/517
+    Re-evaluate on the next pygls upgrade; remove the filter if upstream fixes it.
+    """
+
     def filter(self, record: logging.LogRecord) -> bool:
         return not (
             record.name == _PYGLS_JSON_RPC_LOGGER
@@ -165,10 +177,6 @@ _BLOCK_SCALAR_KEY_RE = re.compile(
 _BLOCK_SCALAR_MARKERS = {"|", ">", "|-", ">-", "|+", ">+"}
 _PYTHON_BLOCK_KEYS = frozenset({"code", "validation code"})
 _DOCASSEMBLE_FIX_ALL_KIND = "source.fixAll.docassemble-lsp"
-
-
-def _document_lines(source: str) -> list[str]:
-    return source.splitlines() or [""]
 
 
 def _severity_to_lsp(value: str) -> DiagnosticSeverity:
@@ -978,21 +986,24 @@ class _WorkspaceIndexStore:
         self._removed_signatures: dict[Path, frozenset[str]] = {}
         self._base_indexes: dict[tuple[Path, ...], WorkspaceIndex] = {}
         self._needs_python_refresh: bool = False
-        self._generation: int = 0
+        self._lock = threading.Lock()
         self._cached_full: tuple[tuple[Path, ...], int, WorkspaceIndex] | None = None
-        self._cached_document_links: dict[tuple[str, int, int], list[DocumentLink]] = {}
+        self._cached_document_links: dict[
+            tuple[str, int, bytes], list[DocumentLink]
+        ] = {}
 
     def clear(self) -> None:
-        self._base_indexes.clear()
-        self._cached_full = None
-        self._cached_document_links.clear()
-        self._pending_signature_paths.clear()
-        self._removed_signatures.clear()
-        if self._open_sources:
-            self._needs_python_refresh = True
+        with self._lock:
+            self._base_indexes.clear()
+            self._cached_full = None
+            self._cached_document_links.clear()
+            self._pending_signature_paths.clear()
+            self._removed_signatures.clear()
+            if self._open_sources:
+                self._needs_python_refresh = True
 
-    def _document_link_cache_key(self, uri: str, source: str) -> tuple[str, int, int]:
-        return (uri, len(source), hash(source))
+    def _document_link_cache_key(self, uri: str, source: str) -> tuple[str, int, bytes]:
+        return (uri, len(source), hashlib.sha1(source.encode("utf-8")).digest())
 
     def cached_document_links(self, uri: str, source: str) -> list[DocumentLink] | None:
         cached = self._cached_document_links.get(
@@ -1014,40 +1025,40 @@ class _WorkspaceIndexStore:
         }
 
     def update_source(self, uri: str, source: str) -> None:
-        path = path_from_uri_or_path(uri)
-        if path is None:
-            return
-        path = path.resolve()
-        existing = self._open_sources.get(path)
-        if existing != source:
-            self._evict_document_link_cache(uri)
-            signature = python_discovery_signature(source)
-            existing_signature = self._open_signatures.get(path)
-            self._open_sources[path] = source
-            self._open_signatures[path] = signature
-            self._removed_signatures.pop(path, None)
-            if existing_signature is None:
-                self._pending_signature_paths.add(path)
-            elif existing_signature != signature:
-                self._needs_python_refresh = True
-            self._generation += 1
+        with self._lock:
+            path = path_from_uri_or_path(uri)
+            if path is None:
+                return
+            path = path.resolve()
+            existing = self._open_sources.get(path)
+            if existing != source:
+                self._evict_document_link_cache(uri)
+                signature = python_discovery_signature(source)
+                existing_signature = self._open_signatures.get(path)
+                self._open_sources[path] = source
+                self._open_signatures[path] = signature
+                self._removed_signatures.pop(path, None)
+                if existing_signature is None:
+                    self._pending_signature_paths.add(path)
+                elif existing_signature != signature:
+                    self._needs_python_refresh = True
 
     def remove_source(self, uri: str) -> None:
-        path = path_from_uri_or_path(uri)
-        if path is not None:
-            path = path.resolve()
-        if path is not None and path in self._open_sources:
-            self._evict_document_link_cache(uri)
-            del self._open_sources[path]
-            signature = self._open_signatures.pop(path, frozenset())
-            self._pending_signature_paths.discard(path)
-            if self._open_sources:
-                self._removed_signatures[path] = signature
-            else:
-                self._removed_signatures.clear()
-                self._needs_python_refresh = False
-                self._cached_full = None
-            self._generation += 1
+        with self._lock:
+            path = path_from_uri_or_path(uri)
+            if path is not None:
+                path = path.resolve()
+            if path is not None and path in self._open_sources:
+                self._evict_document_link_cache(uri)
+                del self._open_sources[path]
+                signature = self._open_signatures.pop(path, frozenset())
+                self._pending_signature_paths.discard(path)
+                if self._open_sources:
+                    self._removed_signatures[path] = signature
+                else:
+                    self._removed_signatures.clear()
+                    self._needs_python_refresh = False
+                    self._cached_full = None
 
     def _base_for_roots(self, root_path: str | None) -> WorkspaceIndex:
         roots = tuple(_workspace_roots(root_path))
@@ -1085,46 +1096,53 @@ class _WorkspaceIndexStore:
         self._removed_signatures.clear()
         return base
 
+    def _sources_stamp(self) -> int:
+        # In-process cache stamp only: `hash()` is process-salted, so the value is
+        # never deterministic across processes, but it is stable within one. String
+        # hashes are cached on the str objects, so re-stamping after a single edit
+        # only recomputes the hash of the changed content.
+        return hash(tuple(sorted(self._open_sources.items())))
+
     def for_workspace(self, root_path: str | None) -> WorkspaceIndex:
-        if not self._open_sources:
-            self._cached_full = None
-            self._pending_signature_paths.clear()
-            self._removed_signatures.clear()
-            self._needs_python_refresh = False
-            return self._base_for_roots(root_path)
+        with self._lock:
+            if not self._open_sources:
+                self._cached_full = None
+                self._pending_signature_paths.clear()
+                self._removed_signatures.clear()
+                self._needs_python_refresh = False
+                return self._base_for_roots(root_path)
 
-        roots = tuple(_workspace_roots(root_path))
-        checked_base = self._check_pending_signatures(root_path)
+            roots = tuple(_workspace_roots(root_path))
+            checked_base = self._check_pending_signatures(root_path)
 
-        if not self._needs_python_refresh:
-            if (
-                self._cached_full is not None
-                and self._cached_full[0] == roots
-                and self._cached_full[1] == self._generation
-            ):
-                return self._cached_full[2]
+            if not self._needs_python_refresh:
+                if (
+                    self._cached_full is not None
+                    and self._cached_full[0] == roots
+                    and self._cached_full[1] == self._sources_stamp()
+                ):
+                    return self._cached_full[2]
+                base = (
+                    checked_base
+                    if checked_base is not None
+                    else self._base_for_roots(root_path)
+                )
+                index = overlay_workspace_documents(
+                    base, self._open_sources, refresh_python=False
+                )
+                self._cached_full = (roots, self._sources_stamp(), index)
+                return index
             base = (
                 checked_base
                 if checked_base is not None
                 else self._base_for_roots(root_path)
             )
             index = overlay_workspace_documents(
-                base, self._open_sources, refresh_python=False
+                base, self._open_sources, refresh_python=True
             )
-            self._cached_full = (roots, self._generation, index)
+            self._needs_python_refresh = False
+            self._cached_full = (roots, self._sources_stamp(), index)
             return index
-
-        base = (
-            checked_base
-            if checked_base is not None
-            else self._base_for_roots(root_path)
-        )
-        index = overlay_workspace_documents(
-            base, self._open_sources, refresh_python=True
-        )
-        self._needs_python_refresh = False
-        self._cached_full = (roots, self._generation, index)
-        return index
 
     def for_document(
         self, root_path: str | None, uri: str, source: str
@@ -1224,11 +1242,13 @@ def create_server(
         )
         if relevant:
             workspace_indexes.clear()
-            changed_paths = [
-                p
-                for change in params.changes
-                if (p := path_from_uri_or_path(change.uri)) is not None
-            ]
+            changed_paths = list(
+                dict.fromkeys(
+                    p
+                    for change in params.changes
+                    if (p := path_from_uri_or_path(change.uri)) is not None
+                )
+            )
             if changed_paths:
                 clear_detect_package_cache(changed_paths)
             workspace_indexes.for_workspace(ls.workspace.root_path)

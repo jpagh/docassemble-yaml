@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
+from typing import Literal
 
 
 @dataclass(frozen=True, slots=True)
@@ -9,7 +10,6 @@ class MessageDefinition:
     code: str
     summary: str
     template: str
-    experimental: bool = True
 
 
 class MessageCode(str, Enum):
@@ -221,7 +221,6 @@ class MessageCode(str, Enum):
     FIELDS_LABEL_SHORTHAND_DISALLOWED = "C102"
     DATATYPE_PREFER_INPUT_TYPE = "C103"
     FIELD_TARGET_UNDERSCORE = "C104"
-    # C105 — available for future conventions
     RESERVED_DA_NAME = "E931"
     DEF_MAKO_REQUIRED = "E934"
 
@@ -236,31 +235,26 @@ MESSAGE_DEFINITIONS: dict[str, MessageDefinition] = {
         code=MessageCode.YAML_DUPLICATE_KEY,
         summary="Duplicate YAML key",
         template="duplicate key '{key_name}'",
-        experimental=False,
     ),
     MessageCode.YAML_PARSE_ERROR: MessageDefinition(
         code=MessageCode.YAML_PARSE_ERROR,
         summary="YAML parsing error",
         template="{error}",
-        experimental=False,
     ),
     MessageCode.JINJA2_SYNTAX_ERROR: MessageDefinition(
         code=MessageCode.JINJA2_SYNTAX_ERROR,
         summary="Jinja2 syntax error",
         template="Jinja2 syntax error at line {line_number}: {message}",
-        experimental=False,
     ),
     MessageCode.JINJA2_TEMPLATE_ERROR: MessageDefinition(
         code=MessageCode.JINJA2_TEMPLATE_ERROR,
         summary="Jinja2 template error",
         template="Jinja2 template error: {error}",
-        experimental=False,
     ),
     MessageCode.UNKNOWN_KEYS: MessageDefinition(
         code=MessageCode.UNKNOWN_KEYS,
         summary="Unknown YAML keys",
         template="Keys that shouldn't exist! {keys}",
-        experimental=False,
     ),
     MessageCode.YAML_STRING_TYPE: MessageDefinition(
         code=MessageCode.YAML_STRING_TYPE,
@@ -336,7 +330,6 @@ MESSAGE_DEFINITIONS: dict[str, MessageDefinition] = {
         code=MessageCode.BOOLEAN_DATATYPE_CHOICES_IGNORED,
         summary="choices or code are silently ignored with this datatype",
         template='choices or code are silently ignored when datatype is "{datatype}"; the boolean widget takes priority at runtime',
-        experimental=False,
     ),
     MessageCode.PYTHON_VAR_TYPE: MessageDefinition(
         code=MessageCode.PYTHON_VAR_TYPE,
@@ -493,55 +486,46 @@ MESSAGE_DEFINITIONS: dict[str, MessageDefinition] = {
         code=MessageCode.DISABLE_OTHERS_INCOMPATIBLE_DATATYPE,
         summary="disable others incompatible datatype",
         template="A 'disable others' directive cannot be used with '{datatype}' datatype.",
-        experimental=False,
     ),
     MessageCode.DISABLE_OTHERS_INVALID_TYPE: MessageDefinition(
         code=MessageCode.DISABLE_OTHERS_INVALID_TYPE,
         summary="disable others must be boolean or list",
         template="A 'disable others' directive must be True, False, or a list of variable names.",
-        experimental=False,
     ),
     MessageCode.UNCHECK_OTHERS_REQUIRES_YESNO: MessageDefinition(
         code=MessageCode.UNCHECK_OTHERS_REQUIRES_YESNO,
         summary="uncheck others requires yesno datatype",
         template="An 'uncheck others' directive can only be used with a yesno/noyes datatype.",
-        experimental=False,
     ),
     MessageCode.UNCHECK_OTHERS_INVALID_TYPE: MessageDefinition(
         code=MessageCode.UNCHECK_OTHERS_INVALID_TYPE,
         summary="uncheck others must be boolean or list",
         template="An 'uncheck others' directive must be True, False, or a list of variable names.",
-        experimental=False,
     ),
     MessageCode.CHECK_OTHERS_REQUIRES_YESNO: MessageDefinition(
         code=MessageCode.CHECK_OTHERS_REQUIRES_YESNO,
         summary="check others requires yesno datatype",
         template="A 'check others' directive can only be used with a yesno/noyes datatype.",
-        experimental=False,
     ),
     MessageCode.CHECK_OTHERS_INVALID_TYPE: MessageDefinition(
         code=MessageCode.CHECK_OTHERS_INVALID_TYPE,
         summary="check others must be boolean or list",
         template="A 'check others' directive must be True, False, or a list of variable names.",
-        experimental=False,
     ),
     MessageCode.SHUFFLE_NOT_BOOLEAN: MessageDefinition(
         code=MessageCode.SHUFFLE_NOT_BOOLEAN,
         summary="shuffle must be boolean",
         template="The 'shuffle' modifier must be True or False.",
-        experimental=False,
     ),
     MessageCode.ALL_OF_THE_ABOVE_INCOMPATIBLE_DATATYPE: MessageDefinition(
         code=MessageCode.ALL_OF_THE_ABOVE_INCOMPATIBLE_DATATYPE,
         summary="all of the above requires checkboxes datatype",
         template="The 'all of the above' field modifier can only be used with datatype 'checkboxes' or 'object_checkboxes'. Current datatype is '{datatype}'.",
-        experimental=False,
     ),
     MessageCode.NONE_OF_THE_ABOVE_INCOMPATIBLE_DATATYPE: MessageDefinition(
         code=MessageCode.NONE_OF_THE_ABOVE_INCOMPATIBLE_DATATYPE,
         summary="none of the above requires checkboxes or object_radio datatype",
         template="The 'none of the above' field modifier can only be used with datatype 'checkboxes', 'object_checkboxes', or 'object_radio'. Current datatype is '{datatype}'.",
-        experimental=False,
     ),
     # Packet 8: Field Conditions And Validation
     MessageCode.VALIDATE_TYPE: MessageDefinition(
@@ -949,7 +933,6 @@ MESSAGE_DEFINITIONS: dict[str, MessageDefinition] = {
         summary="prefer input type over datatype for input-type concerns",
         template="Use 'input type: {datatype}' instead of 'datatype: {datatype}'. 'datatype: {datatype}' is deprecated for input-type concerns.",
     ),
-    # C105 — reserved/available
     MessageCode.FIELD_TARGET_UNDERSCORE: MessageDefinition(
         code=MessageCode.FIELD_TARGET_UNDERSCORE,
         summary="Field target starts with underscore",
@@ -1156,13 +1139,11 @@ MESSAGE_DEFINITIONS: dict[str, MessageDefinition] = {
         code=MessageCode.VISIBILITY_MODIFIER_CONFLICT,
         summary="visibility modifiers conflict in same field",
         template='"{key1}" cannot be combined with "{key2}" when both use the same syntax form.',
-        experimental=False,
     ),
     MessageCode.VISIBILITY_JS_NON_JS_MIX: MessageDefinition(
         code=MessageCode.VISIBILITY_JS_NON_JS_MIX,
         summary="JavaScript and non-JavaScript visibility modifiers cannot be mixed",
         template='JavaScript and non-JavaScript visibility modifiers cannot be mixed (found "{key1}" and "{key2}").',
-        experimental=False,
     ),
     MessageCode.PYTHON_BOOL_TYPE: MessageDefinition(
         code=MessageCode.PYTHON_BOOL_TYPE,
@@ -1172,13 +1153,17 @@ MESSAGE_DEFINITIONS: dict[str, MessageDefinition] = {
 }
 
 
+def message_severity(code: str | None) -> Literal["error", "warning", "convention"]:
+    if code is None:
+        return "error"
+    if code.startswith("W"):
+        return "warning"
+    if code.startswith("C"):
+        return "convention"
+    return "error"
+
+
 def format_message(code: str, **kwargs: object) -> str:
     if code not in MESSAGE_DEFINITIONS:
         raise ValueError(f"Unknown message code: {code!r}")
     return MESSAGE_DEFINITIONS[code].template.format(**kwargs)
-
-
-def is_experimental_code(code: str) -> bool:
-    if code not in MESSAGE_DEFINITIONS:
-        raise ValueError(f"Unknown message code: {code!r}")
-    return MESSAGE_DEFINITIONS[code].experimental

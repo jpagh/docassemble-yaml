@@ -24,7 +24,7 @@ from docassemble_lsp.core.files import (
     collect_dayaml_conventions,
     collect_dayaml_ignore_codes,
 )
-from docassemble_lsp.core.messages import MESSAGE_DEFINITIONS
+from docassemble_lsp.core.messages import MESSAGE_DEFINITIONS, message_severity
 from docassemble_lsp.core.validation_config import RuntimeOptions, parse_ignore_codes
 from docassemble_lsp.lsp.server import run_server
 
@@ -217,17 +217,9 @@ def _formatter_config_from_args(args: argparse.Namespace) -> FormatterConfig:
     )
 
 
-def _message_severity(code: str) -> str:
-    if code.startswith("W"):
-        return "warning"
-    if code.startswith("C"):
-        return "convention"
-    return "error"
-
-
 def _codes_command(_args: argparse.Namespace) -> int:
     rows = [
-        (code, _message_severity(code), MESSAGE_DEFINITIONS[code].summary)
+        (code, message_severity(code), MESSAGE_DEFINITIONS[code].summary)
         for code in sorted(MESSAGE_DEFINITIONS)
     ]
     code_width = max(len(code) for code, _, _ in rows)

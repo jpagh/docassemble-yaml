@@ -28,7 +28,6 @@ from docassemble_lsp.core.line_helpers import (
 from docassemble_lsp.core.messages import (
     MessageCode,
     format_message,
-    is_experimental_code,
 )
 from docassemble_lsp.core.validation.fields import (
     _CONDITIONAL_MODIFIERS,
@@ -97,7 +96,6 @@ def _yaml_error(
         err_str=err_str if err_str is not None else format_message(code, **kwargs),
         line_number=line_number,
         file_name=file_name,
-        experimental=is_experimental_code(code),
         code=code,
     )
 

@@ -12,7 +12,7 @@ from docassemble_lsp.core.diagnostics import Diagnostic, analyze_text
 from docassemble_lsp.core.field_keys import INPUT_TYPE_DATATYPES
 from docassemble_lsp.core.schema import load_schema
 from docassemble_lsp.core.validation_config import RuntimeOptions
-from docassemble_lsp.core.yaml_shared import _BLOCK_SCALAR_MARKERS
+from docassemble_lsp.core.yaml_shared import _BLOCK_SCALAR_MARKERS, _document_lines
 
 _YAML_KEY_RE = re.compile(r"^(\s*)(?:-\s*)?([^:#][^:]*?)\s*:")
 _FIELD_LABEL_SHORTHAND_RE = re.compile(r"^(\s*)-\s*([^:]+?)\s*:\s*(.*?)\s*(#.*)?$")
@@ -50,10 +50,6 @@ class FixResult:
 
 
 FixProvider = Callable[[str, Diagnostic, int | None], list[ResolvedFix]]
-
-
-def _document_lines(source: str) -> list[str]:
-    return source.splitlines() or [""]
 
 
 def _line_key_range(source: str, line: int) -> tuple[str, int, int] | None:

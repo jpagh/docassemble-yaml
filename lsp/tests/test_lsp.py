@@ -35,6 +35,7 @@ from docassemble_lsp.lsp.server import (
 from docassemble_lsp.lsp.server import (
     build_workspace_symbols as core_build_workspace_symbols,
 )
+from docassemble_lsp.lsp.server import _WorkspaceIndexStore
 from tests.corpus import top_level_keys_from_example_corpora
 
 
@@ -66,6 +67,40 @@ def _workspace_index_from_test_args(
         current_path=current_path,
         current_source=source if current_path is not None else None,
     )
+
+
+def test_workspace_index_store_reuses_and_invalidates_cached_index(
+    tmp_path: Path,
+) -> None:
+    store = _WorkspaceIndexStore()
+    uri = str(tmp_path / "main.yml")
+
+    store.update_source(uri, "question: First\n")
+    first = store.for_workspace(str(tmp_path))
+    assert store.for_workspace(str(tmp_path)) is first
+
+    store.update_source(uri, "question: Second\n")
+    assert store.for_workspace(str(tmp_path)) is not first
+
+
+def test_document_link_cache_key_is_deterministic() -> None:
+    store = _WorkspaceIndexStore()
+    key1 = store._document_link_cache_key("file:///a.yml", "question: Hi\n")
+    key2 = store._document_link_cache_key("file:///a.yml", "question: Hi\n")
+    assert key1 == key2
+    assert len(key1[2]) == 20
+    assert key1[0] == "file:///a.yml"
+
+
+def test_workspace_index_store_single_threaded_operations(tmp_path: Path) -> None:
+    store = _WorkspaceIndexStore()
+    uri = str(tmp_path / "main.yml")
+
+    for number in range(10):
+        store.update_source(uri, f"question: Question {number}\n")
+        store.for_workspace(str(tmp_path))
+        store.remove_source(uri)
+        store.for_workspace(str(tmp_path))
 
 
 def build_completion_list(source: str, line: int, character: int, **kwargs: Any) -> Any:

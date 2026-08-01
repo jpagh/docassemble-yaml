@@ -60,7 +60,14 @@ process.stdin.on("data", (chunk: Buffer) => {
       return;
     }
 
-    const contentLength = Number.parseInt(contentLengthHeader.split(":")[1]?.trim() ?? "", 10);
+    const rawLength = contentLengthHeader.split(":")[1]?.trim() ?? "";
+    const contentLength = Number.parseInt(rawLength, 10);
+    if (!Number.isFinite(contentLength) || contentLength < 0) {
+      process.stderr.write(`Invalid Content-Length: ${rawLength}\n`);
+      process.exit(1);
+      return;
+    }
+
     const messageEnd = headerEnd + 4 + contentLength;
     if (buffer.length < messageEnd) {
       return;
@@ -152,11 +159,16 @@ function handleMessage(message: JsonRpcMessage): void {
     return;
   }
 
+  process.stderr.write(`mock-lsp-server: unknown method ${message.method ?? "<none>"}\n`);
+
   if (typeof message.id !== "undefined") {
     send({
       jsonrpc: "2.0",
       id: message.id,
-      result: null,
+      error: {
+        code: -32601,
+        message: `Method not implemented in mock: ${message.method ?? "<unknown>"}`,
+      },
     });
   }
 }

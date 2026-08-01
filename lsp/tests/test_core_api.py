@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 import docassemble_lsp.core as core
+from docassemble_lsp.core.messages import MessageCode, message_severity
 from docassemble_lsp.core.validation_config import RuntimeOptions
 
 
@@ -83,3 +84,16 @@ def test_core_fix_text_skips_conventions_without_opt_in() -> None:
 
     assert result.changed is False
     assert result.text == "question: Hi\nfields:\n  - Name: user.name\n"
+
+
+def test_message_code_c105_not_reserved() -> None:
+    with pytest.raises(AttributeError):
+        MessageCode.C105
+
+
+def test_message_severity_uses_code_prefix() -> None:
+    assert message_severity("E301") == "error"
+    assert message_severity("W502") == "warning"
+    assert message_severity("C102") == "convention"
+    assert message_severity("UNKNOWN") == "error"
+    assert message_severity(None) == "error"

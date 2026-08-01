@@ -22,6 +22,7 @@ from docassemble_lsp.core.python_paths import (
     normalize_module_name,
 )
 from docassemble_lsp.core.workspace import WorkspaceIndex
+from docassemble_lsp.core.yaml_shared import _document_lines
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +40,7 @@ _VENDORED_PYTHON_MODULES = {
 
 VENDORED_MODULE_NAMES: tuple[str, ...] = tuple(_VENDORED_PYTHON_MODULES.keys())
 
-_python_module_index_cache: dict[Path, tuple[PythonModuleIndex, float]] = {}
+_python_module_index_cache: dict[Path, tuple[PythonModuleIndex, int]] = {}
 
 PYTHON_BUILTIN_EXCEPTIONS = frozenset(
     {
@@ -238,8 +239,15 @@ def resolve_python_module_path(
     ).path
 
 
-def _document_lines(source: str) -> list[str]:
-    return source.splitlines() or [""]
+def _base_names(node: ast.ClassDef) -> tuple[str, ...]:
+    """Return bare base-class names, resolving attribute chains to their final component."""
+    names: list[str] = []
+    for base in node.bases:
+        if isinstance(base, ast.Name):
+            names.append(base.id)
+        elif isinstance(base, ast.Attribute):
+            names.append(base.attr)
+    return tuple(names)
 
 
 def _is_custom_datatype(base: ast.expr) -> bool:
@@ -380,7 +388,7 @@ def load_python_module_index(
     if cached is not None:
         index, mtime = cached
         try:
-            if module_path.stat().st_mtime == mtime:
+            if module_path.stat().st_mtime_ns == mtime:
                 return index
         except OSError:
             pass
@@ -389,14 +397,20 @@ def load_python_module_index(
         source = module_path.read_text(encoding="utf-8")
     except UnicodeDecodeError:
         result = PythonModuleIndex(symbols={})
-        _python_module_index_cache[module_path] = (result, module_path.stat().st_mtime)
+        _python_module_index_cache[module_path] = (
+            result,
+            module_path.stat().st_mtime_ns,
+        )
         return result
 
     try:
         tree = _safe_ast_parse(source)
     except SyntaxError:
         result = PythonModuleIndex(symbols={})
-        _python_module_index_cache[module_path] = (result, module_path.stat().st_mtime)
+        _python_module_index_cache[module_path] = (
+            result,
+            module_path.stat().st_mtime_ns,
+        )
         return result
 
     lines = _document_lines(source)
@@ -425,9 +439,7 @@ def load_python_module_index(
 
             target = _python_definition_target(module_path, lines, node)
             if target is not None:
-                base_names = tuple(
-                    base.id for base in node.bases if isinstance(base, ast.Name)
-                )
+                base_names = _base_names(node)
                 symbols[node.name] = PythonModuleSymbol(
                     kind="class",
                     target=target,
@@ -524,7 +536,7 @@ def load_python_module_index(
     class_bases: dict[str, list[str]] = {}
     for node in tree.body:
         if isinstance(node, ast.ClassDef):
-            base_ids = [base.id for base in node.bases if isinstance(base, ast.Name)]
+            base_ids = list(_base_names(node))
             class_bases[node.name] = base_ids
 
     # Iteratively resolve which classes inherit from BaseException or a known
@@ -571,7 +583,7 @@ def load_python_module_index(
         exported_names=exported_names,
         custom_datatype_names=frozenset(custom_datatypes),
     )
-    _python_module_index_cache[module_path] = (result, module_path.stat().st_mtime)
+    _python_module_index_cache[module_path] = (result, module_path.stat().st_mtime_ns)
     return result
 
 
@@ -602,6 +614,14 @@ def compute_da_object_subclasses(
             if sym.bases:
                 for base in sym.bases:
                     base_to_subclasses.setdefault(base, set()).add(name)
+            if sym.imported_module_path is not None and sym.imported_name is not None:
+                target_index = load_python_module_index(
+                    sym.imported_module_path, workspace_index=workspace_index
+                )
+                target_sym = target_index.symbols.get(sym.imported_name)
+                if target_sym is not None and target_sym.kind in ("class", "exception"):
+                    for base in target_sym.bases:
+                        base_to_subclasses.setdefault(base, set()).add(name)
     subclasses: set[str] = set()
     worklist = ["DAObject"]
     while worklist:
