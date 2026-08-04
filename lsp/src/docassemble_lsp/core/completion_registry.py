@@ -6,13 +6,13 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
+from docassemble_lsp.core import field_keys
 from docassemble_lsp.core.completion_rules import (
     CompletionScope,
     PropertyRule,
     SchemaMetadata,
 )
 from docassemble_lsp.core.definition_models import PythonCompletionTarget
-from docassemble_lsp.core import field_keys
 from docassemble_lsp.core.field_keys import BOOLEAN_DATATYPES
 from docassemble_lsp.core.python_modules import VENDORED_MODULE_NAMES
 from docassemble_lsp.core.python_navigation import resolve_python_completion_targets
@@ -172,9 +172,12 @@ _KEYWORD_COLON_SUFFIX = frozenset(
 
 def python_insert_text(source: str, line: int, character: int, label: str) -> str:
     line_text = _line_at(source, line)
-    if 0 < character <= len(line_text) and line_text[character - 1] == ":":
-        if character == len(line_text) or line_text[character] != " ":
-            return f" {label}"
+    if (
+        0 < character <= len(line_text)
+        and line_text[character - 1] == ":"
+        and (character == len(line_text) or line_text[character] != " ")
+    ):
+        return f" {label}"
     return label
 
 

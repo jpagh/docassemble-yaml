@@ -40,7 +40,7 @@ class NeedDirective:
             if isinstance(item, Mapping):
                 item_keys = {
                     key
-                    for key in item.keys()
+                    for key in item
                     if isinstance(key, str) and not _is_internal_metadata_key(key)
                 }
                 if not item_keys or not item_keys.issubset({"pre", "post"}):
@@ -105,7 +105,7 @@ class ActionButtonsDirective:
         if isinstance(x, Mapping):
             content_keys = {
                 key
-                for key in x.keys()
+                for key in x
                 if isinstance(key, str) and not _is_internal_metadata_key(key)
             }
             if content_keys == {"code"}:

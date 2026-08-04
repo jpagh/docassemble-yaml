@@ -44,15 +44,15 @@ class _SilentUndefined(jinja2.Undefined):
     def __len__(self) -> int:
         return 0
 
-    def __getattr__(self, name: str) -> "_SilentUndefined":
+    def __getattr__(self, name: str) -> _SilentUndefined:
         if name.startswith("_"):
             raise AttributeError(name)
         return _SilentUndefined()
 
-    def __getitem__(self, key: object) -> "_SilentUndefined":  # type: ignore[override]
+    def __getitem__(self, key: object) -> _SilentUndefined:  # type: ignore[override]
         return _SilentUndefined()
 
-    def __call__(self, *args: object, **kwargs: object) -> "_SilentUndefined":  # type: ignore[override]
+    def __call__(self, *args: object, **kwargs: object) -> _SilentUndefined:  # type: ignore[override]
         return _SilentUndefined()
 
 

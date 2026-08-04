@@ -12,7 +12,7 @@ import ast
 import re
 from collections.abc import Mapping
 from difflib import SequenceMatcher
-from typing import Any, Optional
+from typing import Any
 
 from ruamel.yaml import YAML
 from ruamel.yaml.comments import CommentedMap, CommentedSeq
@@ -29,6 +29,7 @@ from docassemble_lsp.core.messages import (
     MessageCode,
     format_message,
 )
+from docassemble_lsp.core.validation.attachments import AttachmentBlockDirective
 from docassemble_lsp.core.validation.fields import (
     _CONDITIONAL_MODIFIERS,
     _HIDE_STYLE_MODIFIERS,
@@ -44,8 +45,6 @@ from docassemble_lsp.core.validation.fields import (
     ShowIf,
     ValidationCode,
 )
-from docassemble_lsp.core.validation.attachments import AttachmentBlockDirective
-from docassemble_lsp.core.validation.review import ReviewBlockDirective
 from docassemble_lsp.core.validation.lists import (
     ActionButtonsDirective,
     AllowedToSetDirective,
@@ -72,6 +71,7 @@ from docassemble_lsp.core.validation.lists import (
     UndefineDirective,
     YAMLStr,
 )
+from docassemble_lsp.core.validation.review import ReviewBlockDirective
 from docassemble_lsp.core.validation.table import TableBlockDirective
 from docassemble_lsp.core.validation_config import YAMLError
 from docassemble_lsp.core.yaml_parsing import (
@@ -155,9 +155,11 @@ def _map_rendered_lines_to_source_lines(
             continue
 
         next_line = next_known_for_line.get(rendered_line)
-        if previous_line is not None and next_line is not None:
-            line_map[rendered_line] = previous_line
-        elif previous_line is not None:
+        if (
+            previous_line is not None
+            and next_line is not None
+            or previous_line is not None
+        ):
             line_map[rendered_line] = previous_line
         elif next_line is not None:
             line_map[rendered_line] = next_line
@@ -668,7 +670,7 @@ _SIGNATURE_ONLY_TOP_LEVEL_KEYS = frozenset({"required", "pen color"})
 def _lowercase_key_map(mapping: dict[Any, Any]) -> dict[str, str]:
     return {
         key.lower(): key
-        for key in mapping.keys()
+        for key in mapping
         if isinstance(key, str) and not _is_internal_metadata_key(key)
     }
 
@@ -802,12 +804,10 @@ def _is_interview_order_style_block(doc: dict[str, Any]) -> bool:
         return True
     if _contains_interview_order_marker(_get_case_insensitive(doc, "id")):
         return True
-    if _contains_interview_order_marker(_get_case_insensitive(doc, "comment")):
-        return True
-    return False
+    return _contains_interview_order_marker(_get_case_insensitive(doc, "comment"))
 
 
-def _extract_field_var_name(field_item: Any) -> Optional[str]:
+def _extract_field_var_name(field_item: Any) -> str | None:
     if not isinstance(field_item, dict):
         return None
     modifier_keys = DAFields.modifier_keys
@@ -852,7 +852,7 @@ def _extract_vars_from_js_condition(cond: str) -> set[str]:
     return {m.group(1) for m in _JS_VAL_RE.finditer(cond)}
 
 
-def _invert_simple_comparison(cond: str) -> Optional[str]:
+def _invert_simple_comparison(cond: str) -> str | None:
     m = re.match(r"^\s*(.+?)\s*(==|!=)\s*(.+?)\s*$", cond or "")
     if not m:
         return None
@@ -902,10 +902,10 @@ def _guard_candidates_for_modifier(modifier_key: str, modifier_value: Any) -> li
     if isinstance(ref_var, str):
         if has_is:
             if is_hide:
-                guards.append(f"{ref_var} != {repr(is_val)}")
-                guards.append(f"not ({ref_var} == {repr(is_val)})")
+                guards.append(f"{ref_var} != {is_val!r}")
+                guards.append(f"not ({ref_var} == {is_val!r})")
             else:
-                guards.append(f"{ref_var} == {repr(is_val)}")
+                guards.append(f"{ref_var} == {is_val!r}")
         else:
             if is_hide:
                 guards.append(f"not ({ref_var})")
@@ -962,7 +962,7 @@ def _find_variable_reference_lines(code: str, variable_expr: str) -> list[int]:
     return [i + 1 for i, line in enumerate(lines) if pattern.search(line)]
 
 
-def _statement_span(stmts: list[ast.stmt]) -> Optional[tuple[int, int]]:
+def _statement_span(stmts: list[ast.stmt]) -> tuple[int, int] | None:
     if not stmts:
         return None
     starts = [getattr(stmt, "lineno", None) for stmt in stmts]
@@ -990,7 +990,7 @@ def _extract_branch_guards_by_line(code: str) -> dict[int, list[str]]:
         if not cond:
             try:
                 cond = ast.unparse(node.test)
-            except Exception:
+            except (TypeError, ValueError):
                 cond = ""
         if not cond:
             continue
@@ -1113,7 +1113,7 @@ def _max_screen_visibility_nesting_depth(doc: dict[str, Any]) -> tuple[int, int 
         return max_result
 
     return max(
-        (depth(var) for var in adjacency.keys()),
+        (depth(var) for var in adjacency),
         default=(0, None),
         key=lambda result: result[0],
     )

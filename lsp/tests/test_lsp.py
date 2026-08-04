@@ -13,6 +13,7 @@ from docassemble_lsp.core.workspace import WorkspaceIndex
 from docassemble_lsp.lsp import server as lsp_server
 from docassemble_lsp.lsp.server import (
     _IgnoreUnknownCancelFilter,
+    _WorkspaceIndexStore,
     build_code_actions,
     build_document_symbols,
     build_formatting_edits,
@@ -35,7 +36,6 @@ from docassemble_lsp.lsp.server import (
 from docassemble_lsp.lsp.server import (
     build_workspace_symbols as core_build_workspace_symbols,
 )
-from docassemble_lsp.lsp.server import _WorkspaceIndexStore
 from tests.corpus import top_level_keys_from_example_corpora
 
 
@@ -2647,11 +2647,11 @@ def test_on_type_formatting_indents_action_buttons_item_properties() -> None:
 # ---------------------------------------------------------------------------
 
 
-from docassemble_lsp.core.semantic_tokens import (  # noqa: E402
+from docassemble_lsp.core.semantic_tokens import (
     SEMANTIC_TOKEN_MODIFIERS,
     SEMANTIC_TOKEN_TYPES,
 )
-from docassemble_lsp.lsp.server import build_semantic_tokens  # noqa: E402
+from docassemble_lsp.lsp.server import build_semantic_tokens
 
 
 def test_semantic_tokens_empty_source_returns_no_data() -> None:

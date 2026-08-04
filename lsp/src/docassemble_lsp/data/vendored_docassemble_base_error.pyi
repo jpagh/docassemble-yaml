@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from typing import Any
 
 """Generated fallback stub for docassemble.base.error."""

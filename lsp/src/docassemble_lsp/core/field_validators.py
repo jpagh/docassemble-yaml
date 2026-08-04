@@ -28,8 +28,8 @@ from docassemble_lsp.core.line_helpers import (
     _is_internal_metadata_key,
     _lc_key_line,
     _relative_value_line,
+    _safe_ast_parse,
 )
-from docassemble_lsp.core.line_helpers import _safe_ast_parse
 from docassemble_lsp.core.messages import MessageCode, format_message
 
 
@@ -304,33 +304,41 @@ class FieldChoiceValidator:
                 )
 
         # all of the above requires checkboxes/object_checkboxes
-        if "all of the above" in field_item:
-            if datatype_normalized is not None and datatype_normalized not in {
+        if (
+            "all of the above" in field_item
+            and datatype_normalized is not None
+            and datatype_normalized
+            not in {
                 "checkboxes",
                 "object_checkboxes",
-            }:
-                self.errors.append(
-                    _validator_error(
-                        MessageCode.ALL_OF_THE_ABOVE_INCOMPATIBLE_DATATYPE,
-                        _lc_key_line(field_item, "all of the above"),
-                        datatype=datatype_normalized,
-                    )
+            }
+        ):
+            self.errors.append(
+                _validator_error(
+                    MessageCode.ALL_OF_THE_ABOVE_INCOMPATIBLE_DATATYPE,
+                    _lc_key_line(field_item, "all of the above"),
+                    datatype=datatype_normalized,
                 )
+            )
 
         # none of the above requires checkboxes/object_checkboxes/object_radio
-        if "none of the above" in field_item:
-            if datatype_normalized is not None and datatype_normalized not in {
+        if (
+            "none of the above" in field_item
+            and datatype_normalized is not None
+            and datatype_normalized
+            not in {
                 "checkboxes",
                 "object_checkboxes",
                 "object_radio",
-            }:
-                self.errors.append(
-                    _validator_error(
-                        MessageCode.NONE_OF_THE_ABOVE_INCOMPATIBLE_DATATYPE,
-                        _lc_key_line(field_item, "none of the above"),
-                        datatype=datatype_normalized,
-                    )
+            }
+        ):
+            self.errors.append(
+                _validator_error(
+                    MessageCode.NONE_OF_THE_ABOVE_INCOMPATIBLE_DATATYPE,
+                    _lc_key_line(field_item, "none of the above"),
+                    datatype=datatype_normalized,
                 )
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -448,34 +456,34 @@ class FieldConditionValidator:
         if "using" in field_item:
             using_value = field_item["using"]
             datatype = field_item.get("datatype")
-            if isinstance(datatype, str) and datatype.strip().lower() in (
-                "ml",
-                "mlarea",
+            if (
+                isinstance(datatype, str)
+                and datatype.strip().lower() in ("ml", "mlarea")
+                and not isinstance(using_value, str)
             ):
-                if not isinstance(using_value, str):
-                    self.errors.append(
-                        _validator_error(
-                            MessageCode.ML_USING_TYPE,
-                            _lc_key_line(field_item, "using"),
-                            value_type=type(using_value).__name__,
-                        )
+                self.errors.append(
+                    _validator_error(
+                        MessageCode.ML_USING_TYPE,
+                        _lc_key_line(field_item, "using"),
+                        value_type=type(using_value).__name__,
                     )
+                )
 
         if "keep for training" in field_item:
             kft_value = field_item["keep for training"]
             datatype = field_item.get("datatype")
-            if isinstance(datatype, str) and datatype.strip().lower() in (
-                "ml",
-                "mlarea",
+            if (
+                isinstance(datatype, str)
+                and datatype.strip().lower() in ("ml", "mlarea")
+                and not isinstance(kft_value, (bool, str))
             ):
-                if not isinstance(kft_value, (bool, str)):
-                    self.errors.append(
-                        _validator_error(
-                            MessageCode.KEEP_FOR_TRAINING_TYPE,
-                            _lc_key_line(field_item, "keep for training"),
-                            value_type=type(kft_value).__name__,
-                        )
+                self.errors.append(
+                    _validator_error(
+                        MessageCode.KEEP_FOR_TRAINING_TYPE,
+                        _lc_key_line(field_item, "keep for training"),
+                        value_type=type(kft_value).__name__,
                     )
+                )
 
         # --- Visibility modifier cross-key conflicts (matching parse.py) ---
         _NON_JS_VISIBILITY = frozenset(

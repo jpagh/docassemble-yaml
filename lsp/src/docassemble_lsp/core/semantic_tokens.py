@@ -41,7 +41,7 @@ class SemanticTokenSpan:
     token_type: int
 
 
-def build_semantic_token_spans(source: str) -> list[SemanticTokenSpan]:  # noqa: ARG001
+def build_semantic_token_spans(source: str) -> list[SemanticTokenSpan]:
     return []
 
 

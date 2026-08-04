@@ -63,8 +63,8 @@ def __dir__() -> list[str]:
 
 
 __all__ = [
-    "DocumentFact",
     "Diagnostic",
+    "DocumentFact",
     "FixResult",
     "FormatResult",
     "FormatterConfig",
@@ -75,13 +75,13 @@ __all__ = [
     "build_workspace_index",
     "collect_yaml_files",
     "configure_logging",
-    "reset_logging",
     "fix_path",
     "fix_text",
     "format_path",
     "format_text",
     "get_completions",
     "get_hover",
+    "reset_logging",
     "resolve_definition_targets",
     "resolve_python_hover",
     "resolve_reference_targets",

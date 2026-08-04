@@ -24,12 +24,12 @@ from docassemble_lsp.core.yaml_shared import (
     _KEY_VALUE_RE,
     _LIST_ITEM_VALUE_RE,
     _NON_ATTACHMENT_FILE_KEYS,
-    _precompute_parent_keys,
     _STATIC_FILE_PARENT_KEYS,
     _ancestor_keys,
     _clean_value_and_range,
     _document_lines,
     _is_list_key_match,
+    _precompute_parent_keys,
 )
 
 logger = logging.getLogger(__name__)
@@ -251,7 +251,7 @@ def _check_line_for_document_link(
                             target_path = resolve_python_module_path(
                                 normalized, current_path, workspace_index
                             )
-                        except Exception:
+                        except (ImportError, OSError, ValueError):
                             target_path = None
                     if target_path is not None:
                         return DocumentLinkTarget(
@@ -518,7 +518,7 @@ def resolve_document_link_targets(
                             target_path = resolve_python_module_path(
                                 normalized, current_path, workspace_index
                             )
-                        except Exception as exc:
+                        except (ImportError, OSError, ValueError) as exc:
                             logger.debug(
                                 "Module link resolution failed: normalized=%r error=%s",
                                 normalized,

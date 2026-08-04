@@ -8,9 +8,12 @@ import sys
 import threading
 import time
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pytest
+
+if TYPE_CHECKING:
+    from typing import Self
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 PACKAGE_FIXTURE_ROOT = Path(__file__).resolve().parent / "fixtures" / "demo_package"
@@ -73,7 +76,11 @@ class _LspMessageReader(threading.Thread):
                     body = bytes(buffer[header_end + 4 : message_end])
                     del buffer[:message_end]
                     self._sink.put(json.loads(body.decode("utf-8")))
-        except BaseException as exc:  # pragma: no cover - surfaced by test helper
+        except (
+            OSError,
+            UnicodeDecodeError,
+            ValueError,
+        ) as exc:  # pragma: no cover - surfaced by test helper
             self.error = exc
 
 
@@ -96,7 +103,7 @@ class _LspSession:
         self._stdout_reader: _LspMessageReader | None = None
         self._stderr_reader: _PipeCollector | None = None
 
-    def __enter__(self) -> _LspSession:
+    def __enter__(self) -> Self:
         env = os.environ.copy()
         source_root = str(REPO_ROOT / "src")
         paths = [source_root]

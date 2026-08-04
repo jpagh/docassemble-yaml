@@ -10,7 +10,7 @@ import logging
 import re
 from collections.abc import Mapping
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from ruamel.yaml.constructor import DuplicateKeyError
 from ruamel.yaml.error import MarkedYAMLError
@@ -321,10 +321,10 @@ def _validate_cross_document(
 
 def find_errors_from_string(
     full_content: str,
-    input_file: Optional[str] = None,
-    runtime_options: Optional[RuntimeOptions] = None,
+    input_file: str | None = None,
+    runtime_options: RuntimeOptions | None = None,
     _jinja_affected_sections: frozenset[int] | None = None,
-    workspace_index: Optional[WorkspaceIndex] = None,
+    workspace_index: WorkspaceIndex | None = None,
 ) -> list[YAMLError]:
     """Return list of YAMLError found in the given full_content string.
 
@@ -395,9 +395,7 @@ def find_errors_from_string(
         return [error for error in errors if runtime_options.allows_code(error.code)]
 
     exclusive_keys = [
-        key
-        for key in types_of_blocks.keys()
-        if types_of_blocks[key].get("exclusive", True)
+        key for key in types_of_blocks if types_of_blocks[key].get("exclusive", True)
     ]
     yaml_parser = _make_yaml_parser()
     prior_conditional_fields: list[dict[str, Any]] = []
@@ -415,7 +413,7 @@ def find_errors_from_string(
         source_code = normalize_yaml_document_for_parser(source_code)
         try:
             doc = _with_line_metadata(yaml_parser.load(source_code))
-        except Exception as errMess:
+        except (DuplicateKeyError, MarkedYAMLError) as errMess:
             if isinstance(errMess, DuplicateKeyError):
                 key_match = re.match(
                     r'found duplicate key "([^"]+)"', errMess.problem or ""
@@ -499,7 +497,7 @@ def find_errors_from_string(
         doc_keys_lower = _lowercase_key_map(doc)
         non_meta_keys_lower = {
             key.lower()
-            for key in doc.keys()
+            for key in doc
             if isinstance(key, str) and not _is_internal_metadata_key(key)
         }
         if non_meta_keys_lower == {"comment"}:
@@ -507,7 +505,7 @@ def find_errors_from_string(
         else:
             any_types = [
                 block
-                for block in types_of_blocks.keys()
+                for block in types_of_blocks
                 if block in doc_keys_lower and block != "comment"
             ]
             if len(any_types) == 0:
@@ -537,7 +535,7 @@ def find_errors_from_string(
 
         allowed_top_level_keys = _allowed_top_level_keys(doc_keys_lower)
         weird_keys = []
-        for attr in doc.keys():
+        for attr in doc:
             if _is_internal_metadata_key(attr):
                 continue
             if not isinstance(attr, str):
@@ -630,7 +628,7 @@ def find_errors_from_string(
             or section_index not in _jinja_affected_sections
         )
         if _run_type_validators:
-            for key in doc.keys():
+            for key in doc:
                 if not isinstance(key, str) or _is_internal_metadata_key(key):
                     continue
                 lower_key = key.lower()
@@ -699,7 +697,7 @@ def find_errors_from_string(
 
 def find_errors(
     input_file: str,
-    runtime_options: Optional[RuntimeOptions] = None,
+    runtime_options: RuntimeOptions | None = None,
 ) -> list[YAMLError]:
     """Return list of YAMLError found in the given input_file."""
     with open(input_file, "r", encoding="utf-8") as f:

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-import docassemble_lsp.core as core
+from docassemble_lsp import core
 from docassemble_lsp.core.messages import MessageCode, message_severity
 from docassemble_lsp.core.validation_config import RuntimeOptions
 
@@ -88,7 +88,7 @@ def test_core_fix_text_skips_conventions_without_opt_in() -> None:
 
 def test_message_code_c105_not_reserved() -> None:
     with pytest.raises(AttributeError):
-        MessageCode.C105
+        _ = MessageCode.C105
 
 
 def test_message_severity_uses_code_prefix() -> None:

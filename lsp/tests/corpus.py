@@ -1,11 +1,15 @@
 from __future__ import annotations
 
+import logging
 import re
-from functools import lru_cache
+from functools import cache, lru_cache
 from io import StringIO
 from pathlib import Path
 
 from ruamel.yaml import YAML
+from ruamel.yaml.error import YAMLError
+
+logger = logging.getLogger(__name__)
 
 _EXAMPLE_TOP_LEVEL_KEY_RE = re.compile(r"^([^:#][^:]*?)\s*:")
 _FIXTURE_DOCUMENT_ID_RE = re.compile(r"^id:\s*(.+?)\s*$", re.MULTILINE)
@@ -36,7 +40,7 @@ def regression_fixture_path(name: str) -> Path:
     return regression_fixture_root() / name
 
 
-@lru_cache(maxsize=None)
+@cache
 def regression_fixture_text(name: str) -> str:
     return regression_fixture_path(name).read_text(encoding="utf-8")
 
@@ -58,7 +62,7 @@ def split_yaml_documents(text: str) -> tuple[str, ...]:
     return tuple(documents)
 
 
-@lru_cache(maxsize=None)
+@cache
 def regression_fixture_documents(name: str) -> tuple[tuple[str, str], ...]:
     documents: list[tuple[str, str]] = []
     for source in split_yaml_documents(regression_fixture_text(name)):
@@ -105,7 +109,8 @@ def example_documents(
         for path in root.rglob("*.yml"):
             try:
                 loaded = list(yaml.load_all(path.read_text(encoding="utf-8")))
-            except Exception:
+            except (YAMLError, UnicodeDecodeError, OSError) as exc:
+                logger.debug("Skipping unparsable example %s: %s", path, exc)
                 continue
             for document in loaded:
                 if isinstance(document, dict):

@@ -24,6 +24,7 @@ from docassemble_lsp.core.files import (
     resolve_static_target,
     safe_iterdir,
 )
+from docassemble_lsp.core.line_helpers import _safe_ast_parse
 from docassemble_lsp.core.python_modules import (
     VENDORED_MODULE_NAMES,
     collect_class_names,
@@ -52,7 +53,6 @@ from docassemble_lsp.core.schema_models import HoverInfo
 from docassemble_lsp.core.workspace import WorkspaceIndex, WorkspaceYamlSources
 from docassemble_lsp.core.workspace_navigation import WorkspaceNavigationService
 from docassemble_lsp.core.workspace_symbols import WorkspaceSymbolService
-from docassemble_lsp.core.line_helpers import _safe_ast_parse
 from docassemble_lsp.core.yaml_shared import (
     _BLOCK_SCALAR_MARKERS,
     _EVENT_REFERENCE_KEYS,
@@ -61,10 +61,10 @@ from docassemble_lsp.core.yaml_shared import (
     _FILE_REFERENCE_LIST_PARENTS,
     _KEY_VALUE_RE,
     _LIST_ITEM_VALUE_RE,
-    _ancestor_keys,
     _NON_ATTACHMENT_FILE_KEYS,
     _PYTHON_BLOCK_KEYS,
     _STATIC_FILE_PARENT_KEYS,
+    _ancestor_keys,
     _block_scalar_region_from_key_line,
     _clean_value,
     _clean_value_and_range,
@@ -133,11 +133,10 @@ def _match_value_context_with_range(
         value, start, end = _clean_value_and_range(
             raw_value, list_match.start(2), list_match.end(2)
         )
-        if value:
-            if start <= character <= end:
-                ancestors = _ancestor_keys(source, line)
-                parent = ancestors[0] if ancestors else None
-                return (parent, value, start, end)
+        if value and start <= character <= end:
+            ancestors = _ancestor_keys(source, line)
+            parent = ancestors[0] if ancestors else None
+            return (parent, value, start, end)
 
     return (None, None, 0, 0)
 
@@ -983,14 +982,20 @@ def _symbol_request(
                 name=value,
                 target_path=(current_path.parent / value).resolve(),
             )
-        if parent == "fields" and (
-            key_or_parent == "field" or key_or_parent not in FIELD_ITEM_KNOWN_KEYS
+        if (
+            parent == "fields"
+            and (key_or_parent == "field" or key_or_parent not in FIELD_ITEM_KNOWN_KEYS)
+            and value
+            and ":" not in value
         ):
-            if value and ":" not in value:
-                return ReferenceRequest(kind="field_var", name=value)
-        if key_or_parent == "variable" and parent in _FIELD_CONDITION_KEYS:
-            if value and ":" not in value:
-                return ReferenceRequest(kind="field_var", name=value)
+            return ReferenceRequest(kind="field_var", name=value)
+        if (
+            key_or_parent == "variable"
+            and parent in _FIELD_CONDITION_KEYS
+            and value
+            and ":" not in value
+        ):
+            return ReferenceRequest(kind="field_var", name=value)
 
     helper_request = _event_helper_request_at_position(source, line, character)
     if helper_request is not None:
@@ -1278,18 +1283,24 @@ def resolve_definition_targets(
             tdir,
         )
 
-    if parent == "fields" and (
-        key_or_parent == "field" or key_or_parent not in FIELD_ITEM_KNOWN_KEYS
+    if (
+        parent == "fields"
+        and (key_or_parent == "field" or key_or_parent not in FIELD_ITEM_KNOWN_KEYS)
+        and value
+        and ":" not in value
     ):
-        if value and ":" not in value:
-            return _workspace_navigation_service(
-                workspace_index
-            ).field_var_declarations(ReferenceRequest(kind="field_var", name=value))
+        return _workspace_navigation_service(workspace_index).field_var_declarations(
+            ReferenceRequest(kind="field_var", name=value)
+        )
 
-    if key_or_parent == "variable" and parent in _FIELD_CONDITION_KEYS:
-        if value and ":" not in value:
-            return _workspace_navigation_service(
-                workspace_index
-            ).field_var_declarations(ReferenceRequest(kind="field_var", name=value))
+    if (
+        key_or_parent == "variable"
+        and parent in _FIELD_CONDITION_KEYS
+        and value
+        and ":" not in value
+    ):
+        return _workspace_navigation_service(workspace_index).field_var_declarations(
+            ReferenceRequest(kind="field_var", name=value)
+        )
 
     return []

@@ -132,12 +132,10 @@ def _candidate_package_dirs(package_name: str, search_roots: list[Path]) -> list
                                 if (
                                     pkg_subdir.is_dir()
                                     and (pkg_subdir / "__init__.py").is_file()
+                                    and docassemble_package_name(pkg_subdir)
+                                    == package_name
                                 ):
-                                    if (
-                                        docassemble_package_name(pkg_subdir)
-                                        == package_name
-                                    ):
-                                        append(pkg_subdir)
+                                    append(pkg_subdir)
 
     return candidates
 

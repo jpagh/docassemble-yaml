@@ -210,11 +210,15 @@ async function main(): Promise<void> {
     DOCASSEMBLE_LSP_PROJECT: lspProject,
   };
 
-  // Pass --headless on every platform by default, unless the user opts out
-  // with DOCASSEMBLE_LSP_SHOW_WINDOW=1.  Linux/Windows fully suppress the
-  // window; macOS ignores --headless (see microsoft/vscode-test#290).
+  // Pass --headless on platforms that support it (Linux/Windows) to fully
+  // suppress the window.  macOS rejects the flag outright ("bad option:
+  // --headless" on VS Code 1.131), and when it appears in the launch args
+  // the seeded test workspace folder never opens — leaving the language
+  // server without a root path (see microsoft/vscode-test#290).
   const launchArgs: string[] =
-    process.env.DOCASSEMBLE_LSP_SHOW_WINDOW === "1" ? [] : ["--headless"];
+    process.env.DOCASSEMBLE_LSP_SHOW_WINDOW === "1" || process.platform === "darwin"
+      ? []
+      : ["--headless"];
 
   // Seed a temp workspace with docassemble package structure for real tests.
   let workspaceDir: string | undefined;

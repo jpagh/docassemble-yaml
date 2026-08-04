@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import io
+import logging
 import re
 import tokenize
 from dataclasses import dataclass, field
@@ -14,6 +15,8 @@ from ruamel.yaml.error import YAMLError
 
 from docassemble_lsp.core.jinja import contains_jinja_syntax, has_jinja_header
 from docassemble_lsp.core.yaml_parsing import normalize_yaml_for_parser
+
+logger = logging.getLogger(__name__)
 
 
 # Black's target_versions follow the installed black version (see pyproject.toml dependencies).
@@ -210,7 +213,7 @@ def _collect_text_replacements_for_doc(
             if key_str in config.python_keys and isinstance(value, str) and has_lc_key:
                 try:
                     key_line, _ = doc.lc.key(key)
-                except Exception:
+                except KeyError:
                     key_line = None
 
                 if key_line is not None:
@@ -274,7 +277,10 @@ def _format_jinja_yaml_string(
 
         try:
             formatted = format_python_code(body, config)
-        except Exception:
+        except (SyntaxError, ValueError) as exc:
+            logger.debug(
+                "Skipping unformattable python block at line %d: %s", line_idx, exc
+            )
             continue
 
         if _normalize_newlines(formatted) != _normalize_newlines(body):

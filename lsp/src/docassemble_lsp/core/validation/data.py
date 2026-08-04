@@ -17,8 +17,10 @@ def validate_data_block(
 ) -> list[YAMLError]:
     """Cross-validate ``data`` block shapes (E928-E930)."""
     from docassemble_lsp.core.line_helpers import _lc_key_line
-    from docassemble_lsp.core.validation.blocks import _absolute_document_line
-    from docassemble_lsp.core.validation.blocks import _yaml_error
+    from docassemble_lsp.core.validation.blocks import (
+        _absolute_document_line,
+        _yaml_error,
+    )
 
     errors: list[YAMLError] = []
     has_data = "data" in doc_keys_lower

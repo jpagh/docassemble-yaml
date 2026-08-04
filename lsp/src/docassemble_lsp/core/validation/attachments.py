@@ -153,9 +153,7 @@ class AttachmentBlockDirective:
 
         if "valid formats" in item:
             vf = item["valid formats"]
-            if isinstance(vf, str):
-                pass
-            elif isinstance(vf, list):
+            if isinstance(vf, (str, list)):
                 pass
             elif isinstance(vf, Mapping):
                 content_keys = {

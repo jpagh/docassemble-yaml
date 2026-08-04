@@ -1,5 +1,5 @@
 [tools]
-    "pipx:ruff" = "0.15"
+    "pipx:ruff" = "latest"
     python      = "3.14"
     uv          = "latest"
 

@@ -948,7 +948,7 @@ def build_document_links(
     ):
         try:
             target_uri = target.target_path.as_uri()
-        except Exception as exc:
+        except ValueError as exc:
             logger.warning(
                 "Skipping document link target %s: %s", target.target_path, exc
             )

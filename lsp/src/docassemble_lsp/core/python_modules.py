@@ -191,7 +191,7 @@ def resolve_python_module_source(
 
     try:
         spec = importlib.util.find_spec(normalized)
-    except Exception:
+    except (ImportError, ValueError):
         spec = None
     if spec is None or spec.origin in {None, "built-in", "frozen"}:
         if vendored_path is not None and vendored_path.is_file():
@@ -253,9 +253,7 @@ def _base_names(node: ast.ClassDef) -> tuple[str, ...]:
 def _is_custom_datatype(base: ast.expr) -> bool:
     if isinstance(base, ast.Name) and base.id == "CustomDataType":
         return True
-    if isinstance(base, ast.Attribute) and base.attr == "CustomDataType":
-        return True
-    return False
+    return isinstance(base, ast.Attribute) and base.attr == "CustomDataType"
 
 
 def _python_definition_target(
@@ -284,9 +282,12 @@ def _python_all_exports(tree: ast.Module) -> tuple[str, ...] | None:
                 for target in node.targets
             ):
                 value = node.value
-        elif isinstance(node, ast.AnnAssign):
-            if isinstance(node.target, ast.Name) and node.target.id == "__all__":
-                value = node.value
+        elif (
+            isinstance(node, ast.AnnAssign)
+            and isinstance(node.target, ast.Name)
+            and node.target.id == "__all__"
+        ):
+            value = node.value
 
         if value is None:
             continue

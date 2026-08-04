@@ -301,15 +301,13 @@ class WorkspaceNavigationService:
                 request.kind == "file"
                 and parent in _FILE_REFERENCE_LIST_PARENTS
                 and request.target_path is not None
+                and value
+                and ":" not in value
+                and (path.parent / value).resolve() == request.target_path
             ):
-                if (
-                    value
-                    and ":" not in value
-                    and (path.parent / value).resolve() == request.target_path
-                ):
-                    _append_reference_target(
-                        targets, path, line_index, start_character, end_character
-                    )
+                _append_reference_target(
+                    targets, path, line_index, start_character, end_character
+                )
 
         if request.kind == "event":
             for occurrence in self.event_helper_occurrences(source):

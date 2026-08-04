@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from typing import Any
 
 """Generated fallback stub for docassemble.base.functions."""
@@ -17,7 +15,6 @@ def alpha(num: Any, case: Any = ...) -> Any:
         str: The alphabetical label (e.g. ``alpha(0)`` returns ``'A'``,
             ``alpha(25)`` returns ``'Z'``, ``alpha(26)`` returns ``'AA'``).
     """
-    ...
 
 def roman(num: Any, case: Any = ...) -> Any:
     """
@@ -36,7 +33,6 @@ def roman(num: Any, case: Any = ...) -> Any:
         ValueError: If ``num + 1`` is not between 1 and 3999.
         TypeError: If ``num`` is not an integer.
     """
-    ...
 
 def item_label(num: Any, level: Any = ..., punctuation: Any = ...) -> Any:
     """
@@ -55,7 +51,6 @@ def item_label(num: Any, level: Any = ..., punctuation: Any = ...) -> Any:
         str: The formatted label (e.g. ``'I.'``, ``'A.'``, ``'1.'``,
             ``'a)'``, ``'(1)'``, ``'(a)'``, ``'i)'``).
     """
-    ...
 
 ordinal: Any
 
@@ -80,7 +75,6 @@ def word(the_word: Any, **kwargs: Any) -> Any:
     Returns:
         str: The translated (or original) word.
     """
-    ...
 
 def get_language() -> Any:
     """
@@ -89,7 +83,6 @@ def get_language() -> Any:
     Returns:
         str: The current language code (e.g., ``'en'``, ``'es'``).
     """
-    ...
 
 def set_language(lang: Any, dialect: Any = ..., voice: Any = ...) -> Any:
     """
@@ -107,7 +100,6 @@ def set_language(lang: Any, dialect: Any = ..., voice: Any = ...) -> Any:
         voice (str, optional): A voice name for the text-to-speech engine.
             Defaults to None.
     """
-    ...
 
 def get_dialect() -> Any:
     """
@@ -117,7 +109,6 @@ def get_dialect() -> Any:
         str: The dialect code set by the ``dialect`` keyword argument to
             :func:`set_language`, or ``None`` if no dialect has been set.
     """
-    ...
 
 def set_country(country: Any) -> Any:
     """
@@ -127,7 +118,6 @@ def set_country(country: Any) -> Any:
         country (str): A two-letter uppercase ISO 3166-1 alpha-2 country code
             (e.g., ``'US'``, ``'GB'``, ``'DE'``).
     """
-    ...
 
 def get_country() -> Any:
     """
@@ -137,7 +127,6 @@ def get_country() -> Any:
         str: A two-letter uppercase ISO 3166-1 alpha-2 country code
             (e.g., ``'US'``). Defaults to ``'US'`` unless configured otherwise.
     """
-    ...
 
 def get_locale(*pargs: Any) -> Any:
     """
@@ -156,7 +145,6 @@ def get_locale(*pargs: Any) -> Any:
         str or None: The locale string when called with no arguments, or the
             value of the requested locale convention (``None`` if not found).
     """
-    ...
 
 def set_locale(*pargs: Any, **kwargs: Any) -> Any:
     """
@@ -172,7 +160,6 @@ def set_locale(*pargs: Any, **kwargs: Any) -> Any:
         *pargs: An optional locale string (e.g. ``'FR.utf8'``).
         **kwargs: Locale convention overrides (e.g. ``currency_symbol='€'``).
     """
-    ...
 
 comma_and_list: Any
 
@@ -191,7 +178,6 @@ def need(*pargs: Any) -> Any:
     Returns:
         bool: Always ``True``.
     """
-    ...
 
 nice_number: Any
 
@@ -224,7 +210,6 @@ def space_to_underscore(a: Any) -> Any:
     Returns:
         str: A filename-safe string with spaces replaced by underscores.
     """
-    ...
 
 def force_ask(*pargs: Any, **kwargs: Any) -> Any:
     """
@@ -243,7 +228,6 @@ def force_ask(*pargs: Any, **kwargs: Any) -> Any:
             adding new ones, and ``evaluate`` (bool, default ``False``) to
             resolve alias variable names to their intrinsic names.
     """
-    ...
 
 period_list: Any
 
@@ -270,7 +254,6 @@ def static_image(filereference: Any, width: Any = ...) -> Any:
         str: A ``[FILE ...]`` markup string, or an error string if the
             reference is invalid.
     """
-    ...
 
 title_case: Any
 
@@ -295,7 +278,6 @@ def url_of(file_reference: Any, **kwargs: Any) -> Any:
     Returns:
         str: A URL string.
     """
-    ...
 
 def process_action() -> Any:
     """
@@ -308,7 +290,6 @@ def process_action() -> Any:
     docassemble before evaluating ``initial`` and ``mandatory`` blocks, but
     you can call it explicitly to control when actions are processed.
     """
-    ...
 
 def url_action(action: Any, **kwargs: Any) -> Any:
     """
@@ -327,7 +308,6 @@ def url_action(action: Any, **kwargs: Any) -> Any:
     Returns:
         str: A URL string that triggers the action when visited.
     """
-    ...
 
 def get_info(att: Any) -> Any:
     """
@@ -339,7 +319,6 @@ def get_info(att: Any) -> Any:
     Returns:
         The value that was set for the attribute, or None if it was never set.
     """
-    ...
 
 def set_info(**kwargs: Any) -> Any:
     """
@@ -352,7 +331,6 @@ def set_info(**kwargs: Any) -> Any:
         **kwargs: Keyword arguments whose names become attribute names and
             whose values are stored for later retrieval.
     """
-    ...
 
 def get_config(key: Any, none_value: Any = ...) -> Any:
     """
@@ -367,7 +345,6 @@ def get_config(key: Any, none_value: Any = ...) -> Any:
         The configuration value associated with the key, or ``none_value``
             if the key is not present.
     """
-    ...
 
 def prevent_going_back() -> Any:
     """
@@ -376,7 +353,6 @@ def prevent_going_back() -> Any:
     Once called, the user will not be able to go back and change any answers
     entered before this point in the interview.
     """
-    ...
 
 def qr_code(string: Any, width: Any = ..., alt_text: Any = ...) -> Any:
     """
@@ -396,7 +372,6 @@ def qr_code(string: Any, width: Any = ..., alt_text: Any = ...) -> Any:
     Returns:
         str: A ``[QR ...]`` markup string.
     """
-    ...
 
 def action_menu_item(label: Any, action: Any, **kwargs: Any) -> Any:
     """
@@ -416,7 +391,6 @@ def action_menu_item(label: Any, action: Any, **kwargs: Any) -> Any:
         dict: A dictionary with keys ``label`` and ``url``, and optionally
             ``screen_size``.
     """
-    ...
 
 def from_b64_json(string: Any) -> Any:
     """
@@ -432,7 +406,6 @@ def from_b64_json(string: Any) -> Any:
         The Python object represented by the decoded JSON, or ``None`` if
             ``string`` is ``None``.
     """
-    ...
 
 def defined(var: str, prior: Any = ...) -> bool:
     """
@@ -450,7 +423,6 @@ def defined(var: str, prior: Any = ...) -> bool:
     Returns:
         bool: ``True`` if the variable is defined, ``False`` otherwise.
     """
-    ...
 
 def value(var: str, prior: Any = ...) -> Any:
     """
@@ -469,7 +441,6 @@ def value(var: str, prior: Any = ...) -> Any:
     Returns:
         The value of the specified variable.
     """
-    ...
 
 def message(*pargs: Any, **kwargs: Any) -> Any:
     """
@@ -488,7 +459,6 @@ def message(*pargs: Any, **kwargs: Any) -> Any:
             ``show_restart``, ``show_exit``, ``show_leave``, ``url``, and
             ``buttons``.
     """
-    ...
 
 def response(*pargs: Any, **kwargs: Any) -> Any:
     """
@@ -507,7 +477,6 @@ def response(*pargs: Any, **kwargs: Any) -> Any:
             (redirect target).  Optional: ``content_type`` and
             ``response_code`` (default ``200``).
     """
-    ...
 
 def json_response(data: Any, response_code: Any = ...) -> Any:
     """
@@ -522,7 +491,6 @@ def json_response(data: Any, response_code: Any = ...) -> Any:
         response_code (int, optional): The HTTP response code. Defaults to
             ``200``.
     """
-    ...
 
 def command(*pargs: Any, **kwargs: Any) -> Any:
     """
@@ -539,7 +507,6 @@ def command(*pargs: Any, **kwargs: Any) -> Any:
         **kwargs: Optional keyword arguments such as ``url`` (the redirect
             target) and ``sleep`` (seconds to pause in scheduled tasks).
     """
-    ...
 
 def background_response(*pargs: Any, **kwargs: Any) -> Any:
     """
@@ -558,7 +525,6 @@ def background_response(*pargs: Any, **kwargs: Any) -> Any:
         **kwargs: Optional keyword arguments such as ``target`` and
             ``content`` for populating ``[TARGET ...]`` areas.
     """
-    ...
 
 def background_response_action(*pargs: Any, **kwargs: Any) -> Any:
     """
@@ -572,7 +538,6 @@ def background_response_action(*pargs: Any, **kwargs: Any) -> Any:
         *pargs: The action name as the first positional argument.
         **kwargs: Arguments to pass to the specified action.
     """
-    ...
 
 def single_paragraph(text: Any) -> Any:
     """
@@ -587,7 +552,6 @@ def single_paragraph(text: Any) -> Any:
     Returns:
         str: The text with all newline characters replaced by spaces.
     """
-    ...
 
 def quote_paragraphs(text: Any) -> Any:
     """
@@ -602,7 +566,6 @@ def quote_paragraphs(text: Any) -> Any:
     Returns:
         str: The text with each paragraph prefixed by ``'> '``.
     """
-    ...
 
 def location_returned() -> Any:
     """
@@ -615,7 +578,6 @@ def location_returned() -> Any:
     Returns:
         bool: True if a location transmission has been attempted, False otherwise.
     """
-    ...
 
 def location_known() -> Any:
     """
@@ -624,7 +586,6 @@ def location_known() -> Any:
     Returns:
         bool: True if the user's latitude and longitude are known, False otherwise.
     """
-    ...
 
 def user_lat_lon() -> Any:
     """
@@ -635,7 +596,6 @@ def user_lat_lon() -> Any:
             known, or ``(None, None)`` if the location is not available. If
             there was a location error, returns ``(error_message, error_message)``.
     """
-    ...
 
 def interview_url(**kwargs: Any) -> Any:
     """
@@ -650,7 +610,6 @@ def interview_url(**kwargs: Any) -> Any:
     Returns:
         str: A URL string pointing to the interview session.
     """
-    ...
 
 def interview_url_action(action: Any, **kwargs: Any) -> Any:
     """
@@ -669,7 +628,6 @@ def interview_url_action(action: Any, **kwargs: Any) -> Any:
     Returns:
         str: A URL string that will trigger the specified action when visited.
     """
-    ...
 
 def interview_url_as_qr(**kwargs: Any) -> Any:
     """
@@ -682,7 +640,6 @@ def interview_url_as_qr(**kwargs: Any) -> Any:
     Returns:
         str: Markup string containing a QR code image linking to the interview.
     """
-    ...
 
 def interview_url_action_as_qr(action: Any, **kwargs: Any) -> Any:
     """
@@ -699,7 +656,6 @@ def interview_url_action_as_qr(action: Any, **kwargs: Any) -> Any:
     Returns:
         str: Markup string containing a QR code image linking to the action URL.
     """
-    ...
 
 def interview_email(key: Any = ..., index: Any = ...) -> Any:
     """
@@ -718,7 +674,6 @@ def interview_email(key: Any = ..., index: Any = ...) -> Any:
     Returns:
         str: An e-mail address string (e.g., ``'kgjeir@help.example.com'``).
     """
-    ...
 
 def get_emails(key: Any = ..., index: Any = ...) -> Any:
     """
@@ -737,7 +692,6 @@ def get_emails(key: Any = ..., index: Any = ...) -> Any:
         list: A list of objects representing e-mail addresses and their received
             messages.
     """
-    ...
 
 def action_arguments() -> Any:
     """
@@ -751,7 +705,6 @@ def action_arguments() -> Any:
         dict: A dictionary of keyword arguments passed to the action, or an
             empty dictionary if no arguments were provided.
     """
-    ...
 
 def action_argument(item: Any = ...) -> Any:
     """
@@ -770,7 +723,6 @@ def action_argument(item: Any = ...) -> Any:
         The value of the specified argument, the action name (if ``item`` is
             None), or None if the action or argument is not found.
     """
-    ...
 
 def get_default_timezone() -> Any:
     """
@@ -782,7 +734,6 @@ def get_default_timezone() -> Any:
     Returns:
         str: A timezone string such as ``'America/New_York'``.
     """
-    ...
 
 def user_logged_in() -> Any:
     """
@@ -791,7 +742,6 @@ def user_logged_in() -> Any:
     Returns:
         bool: True if the current user is authenticated, False otherwise.
     """
-    ...
 
 def user_privileges() -> Any:
     """
@@ -803,7 +753,6 @@ def user_privileges() -> Any:
     Returns:
         list: A list of privilege strings (e.g., ``['user', 'admin']``).
     """
-    ...
 
 def user_has_privilege(*pargs: Any) -> Any:
     """
@@ -817,7 +766,6 @@ def user_has_privilege(*pargs: Any) -> Any:
         bool: True if the user has at least one of the specified privileges,
             False otherwise.
     """
-    ...
 
 def user_info() -> Any:
     """
@@ -831,7 +779,6 @@ def user_info() -> Any:
     Returns:
         TheUser: An object with attributes describing the current user.
     """
-    ...
 
 def current_context() -> Any:
     """
@@ -845,7 +792,6 @@ def current_context() -> Any:
     Returns:
         TheContext: An object with context attributes for the current execution.
     """
-    ...
 
 def background_action(*pargs: Any, **kwargs: Any) -> Any:
     """
@@ -864,7 +810,6 @@ def background_action(*pargs: Any, **kwargs: Any) -> Any:
     Returns:
         A task object representing the background task.
     """
-    ...
 
 us: Any
 
@@ -884,7 +829,6 @@ def set_live_help_status(
         partner_roles (str or list, optional): The roles of monitors with
             whom the user may chat.
     """
-    ...
 
 def chat_partners_available(*pargs: Any, **kwargs: Any) -> Any:
     """
@@ -901,7 +845,6 @@ def chat_partners_available(*pargs: Any, **kwargs: Any) -> Any:
         dict: A dictionary with keys ``'peer'`` and ``'help'``, each mapping to
             an integer count of available partners.
     """
-    ...
 
 def phone_number_in_e164(number: Any, country: Any = ...) -> Any:
     """
@@ -917,7 +860,6 @@ def phone_number_in_e164(number: Any, country: Any = ...) -> Any:
         str or None: The number in E.164 format (e.g. ``'+12025551234'``),
             or ``None`` if the number could not be formatted.
     """
-    ...
 
 def phone_number_formatted(number: Any, country: Any = ...) -> Any:
     """
@@ -933,7 +875,6 @@ def phone_number_formatted(number: Any, country: Any = ...) -> Any:
         str or None: The number in national format, or ``None`` if the
             number could not be formatted.
     """
-    ...
 
 def phone_number_is_valid(number: Any, country: Any = ...) -> Any:
     """
@@ -948,7 +889,6 @@ def phone_number_is_valid(number: Any, country: Any = ...) -> Any:
     Returns:
         bool: ``True`` if the number is valid, ``False`` otherwise.
     """
-    ...
 
 def countries_list() -> Any:
     """
@@ -960,7 +900,6 @@ def countries_list() -> Any:
     Returns:
         list: A list of dicts, each mapping a country code (str) to a country name (str).
     """
-    ...
 
 def country_name(country_code: Any) -> Any:
     """
@@ -974,7 +913,6 @@ def country_name(country_code: Any) -> Any:
     Returns:
         str: The full name of the country in the current language.
     """
-    ...
 
 def write_record(key: Any, data: Any) -> Any:
     """
@@ -987,7 +925,6 @@ def write_record(key: Any, data: Any) -> Any:
     Returns:
         int: The unique integer ID of the saved record.
     """
-    ...
 
 def read_records(key: Any) -> Any:
     """
@@ -999,7 +936,6 @@ def read_records(key: Any) -> Any:
     Returns:
         dict: A dictionary mapping unique integer record IDs to the stored data.
     """
-    ...
 
 def delete_record(key: Any, the_id: Any) -> Any:
     """
@@ -1009,7 +945,6 @@ def delete_record(key: Any, the_id: Any) -> Any:
         key (str): The string key associated with the record.
         the_id (int): The unique integer ID of the record to delete.
     """
-    ...
 
 def variables_as_json(include_internal: Any = ...) -> Any:
     """
@@ -1024,7 +959,6 @@ def variables_as_json(include_internal: Any = ...) -> Any:
             ``_internal`` and ``nav`` variables in the output. Defaults to
             ``False``.
     """
-    ...
 
 def all_variables(
     simplify: Any = ...,
@@ -1056,7 +990,6 @@ def all_variables(
         dict or set: The interview variables dictionary, or a set of tags
             when ``special='tags'``.
     """
-    ...
 
 def language_from_browser(*pargs: Any) -> Any:
     """
@@ -1075,7 +1008,6 @@ def language_from_browser(*pargs: Any) -> Any:
         str: A language code (e.g., ``'en'``, ``'es'``) or None if the language
             cannot be determined.
     """
-    ...
 
 def device(ip: Any = ...) -> Any:
     """
@@ -1090,7 +1022,6 @@ def device(ip: Any = ...) -> Any:
             a string IP address when ``ip=True``. Returns None if device
             information cannot be determined.
     """
-    ...
 
 def plain(text: Any, default: Any = ...) -> Any:
     """
@@ -1107,7 +1038,6 @@ def plain(text: Any, default: Any = ...) -> Any:
     Returns:
         str: The text, or the default value if the text is empty.
     """
-    ...
 
 def bold(text: Any, default: Any = ...) -> Any:
     """
@@ -1125,7 +1055,6 @@ def bold(text: Any, default: Any = ...) -> Any:
         str: The text wrapped in ``**...**`` Markdown, or ``''`` if blank
             and no default is given.
     """
-    ...
 
 def italic(text: Any, default: Any = ...) -> Any:
     """
@@ -1143,7 +1072,6 @@ def italic(text: Any, default: Any = ...) -> Any:
         str: The text wrapped in ``_..._`` Markdown, or ``''`` if blank
             and no default is given.
     """
-    ...
 
 def subdivision_type(country_code: Any) -> Any:
     """
@@ -1159,7 +1087,6 @@ def subdivision_type(country_code: Any) -> Any:
         str: The name of the most common first-level subdivision type, or None
             if the country has no subdivisions.
     """
-    ...
 
 def indent(text: Any, by: Any = ...) -> Any:
     """
@@ -1177,7 +1104,6 @@ def indent(text: Any, by: Any = ...) -> Any:
         str: The text with each line prefixed by the specified number of
             spaces.
     """
-    ...
 
 def raw(val: Any) -> Any:
     """
@@ -1192,7 +1118,6 @@ def raw(val: Any) -> Any:
     Returns:
         RawValue: A wrapper object containing the original value.
     """
-    ...
 
 def fix_punctuation(text: Any, mark: Any = ..., other_marks: Any = ...) -> Any:
     """
@@ -1208,7 +1133,6 @@ def fix_punctuation(text: Any, mark: Any = ..., other_marks: Any = ...) -> Any:
     Returns:
         str: The text, possibly with a punctuation mark appended.
     """
-    ...
 
 def set_progress(number: Any) -> Any:
     """
@@ -1218,7 +1142,6 @@ def set_progress(number: Any) -> Any:
         number (int or float): The progress value to display. Pass None to
             hide the progress meter.
     """
-    ...
 
 def get_progress() -> Any:
     """
@@ -1227,7 +1150,6 @@ def get_progress() -> Any:
     Returns:
         int or float: The current progress value.
     """
-    ...
 
 def referring_url(default: Any = ..., current: Any = ...) -> Any:
     """
@@ -1249,7 +1171,6 @@ def referring_url(default: Any = ..., current: Any = ...) -> Any:
         str: The referring URL, the ``default`` value, or the ``exitpage``
             URL.
     """
-    ...
 
 def undefine(*pargs: Any, invalidate: Any = ...) -> Any:
     """
@@ -1265,7 +1186,6 @@ def undefine(*pargs: Any, invalidate: Any = ...) -> Any:
             :func:`invalidate` instead of setting this directly. Defaults
             to ``False``.
     """
-    ...
 
 def invalidate(*pargs: Any) -> Any:
     """
@@ -1277,7 +1197,6 @@ def invalidate(*pargs: Any) -> Any:
     Args:
         *pargs: Variable name strings to invalidate.
     """
-    ...
 
 def dispatch(var: Any) -> Any:
     """
@@ -1295,7 +1214,6 @@ def dispatch(var: Any) -> Any:
     Returns:
         bool: Always ``True``.
     """
-    ...
 
 def yesno(the_value: Any, invert: Any = ...) -> Any:
     """
@@ -1312,7 +1230,6 @@ def yesno(the_value: Any, invert: Any = ...) -> Any:
     Returns:
         str: ``'Yes'`` or ``'No'``, or ``''`` if the value is empty.
     """
-    ...
 
 def noyes(the_value: Any, invert: Any = ...) -> Any:
     """
@@ -1329,7 +1246,6 @@ def noyes(the_value: Any, invert: Any = ...) -> Any:
     Returns:
         str: ``'No'`` or ``'Yes'``, or ``''`` if the value is empty.
     """
-    ...
 
 def phone_number_part(number: Any, part: Any, country: Any = ...) -> Any:
     """
@@ -1351,7 +1267,6 @@ def phone_number_part(number: Any, part: Any, country: Any = ...) -> Any:
         str: The requested segment, or an empty string if parsing fails or
             the index is out of range.
     """
-    ...
 
 def log(the_message: Any, priority: Any = ...) -> Any:
     """
@@ -1365,7 +1280,6 @@ def log(the_message: Any, priority: Any = ...) -> Any:
             Bootstrap alert level (``'success'``, ``'info'``, ``'danger'``,
             etc.) to show a popup notification. Defaults to ``'log'``.
     """
-    ...
 
 def encode_name(var: Any) -> Any:
     """
@@ -1379,7 +1293,6 @@ def encode_name(var: Any) -> Any:
     Returns:
         str: The base64-encoded variable name (without padding ``=`` characters).
     """
-    ...
 
 def decode_name(var: Any) -> Any:
     """
@@ -1393,7 +1306,6 @@ def decode_name(var: Any) -> Any:
     Returns:
         str: The decoded Python variable name.
     """
-    ...
 
 def interview_list(
     exclude_invalid: Any = ...,
@@ -1435,7 +1347,6 @@ def interview_list(
         tuple or int or None: A ``(list, next_id)`` tuple for listing, an
             integer when deleting, or ``None`` if the user is not logged in.
     """
-    ...
 
 def interview_menu(*pargs: Any, **kwargs: Any) -> Any:
     """
@@ -1446,7 +1357,6 @@ def interview_menu(*pargs: Any, **kwargs: Any) -> Any:
             keys such as ``title``, ``filename``, ``link``, ``tags``,
             and ``metadata``.
     """
-    ...
 
 def server_capabilities() -> Any:
     """
@@ -1461,7 +1371,6 @@ def server_capabilities() -> Any:
     Returns:
         dict: A dictionary mapping capability names to True/False values.
     """
-    ...
 
 def session_tags() -> Any:
     """
@@ -1473,7 +1382,6 @@ def session_tags() -> Any:
     Returns:
         DATagsSet: A set-like object containing the current session tags.
     """
-    ...
 
 def get_chat_log(utc: Any = ..., timezone: Any = ...) -> Any:
     """
@@ -1487,7 +1395,6 @@ def get_chat_log(utc: Any = ..., timezone: Any = ...) -> Any:
     Returns:
         list: A list of chat messages for the current interview session.
     """
-    ...
 
 def get_user_list(include_inactive: Any = ..., next_id: Any = ...) -> Any:
     """
@@ -1504,7 +1411,6 @@ def get_user_list(include_inactive: Any = ..., next_id: Any = ...) -> Any:
         tuple or None: A ``(list, next_id)`` tuple where the list contains
             user-info dictionaries, or ``None`` if the user is not logged in.
     """
-    ...
 
 def get_user_info(user_id: Any = ..., email: Any = ...) -> Any:
     """
@@ -1523,7 +1429,6 @@ def get_user_info(user_id: Any = ..., email: Any = ...) -> Any:
         dict or None: A dictionary of user profile information, or ``None``
             if no user is found.
     """
-    ...
 
 def set_user_info(**kwargs: Any) -> Any:
     """
@@ -1539,7 +1444,6 @@ def set_user_info(**kwargs: Any) -> Any:
         **kwargs: Profile fields to update.  Use ``user_id`` or ``email``
             to target a specific user.
     """
-    ...
 
 def get_user_secret(username: Any, password: Any) -> Any:
     """
@@ -1557,7 +1461,6 @@ def get_user_secret(username: Any, password: Any) -> Any:
         str or None: The decryption key string if the credentials are valid,
             otherwise ``None``.
     """
-    ...
 
 def create_user(
     email: Any, password: Any, privileges: Any = ..., info: Any = ...
@@ -1578,7 +1481,6 @@ def create_user(
     Returns:
         int: The user ID of the newly created account.
     """
-    ...
 
 def invite_user(email_address: Any, privilege: Any = ..., send: Any = ...) -> Any:
     """
@@ -1599,7 +1501,6 @@ def invite_user(email_address: Any, privilege: Any = ..., send: Any = ...) -> An
         str or None: The registration URL when ``send=False``, otherwise
             ``None``.
     """
-    ...
 
 def create_session(yaml_filename: Any, secret: Any = ..., url_args: Any = ...) -> Any:
     """
@@ -1616,7 +1517,6 @@ def create_session(yaml_filename: Any, secret: Any = ..., url_args: Any = ...) -
     Returns:
         str: The session ID of the newly created session.
     """
-    ...
 
 def get_session_variables(
     yaml_filename: Any, session_id: Any, secret: Any = ..., simplify: Any = ...
@@ -1637,7 +1537,6 @@ def get_session_variables(
     Returns:
         dict: The interview session dictionary.
     """
-    ...
 
 def set_session_variables(
     yaml_filename: Any,
@@ -1670,7 +1569,6 @@ def set_session_variables(
         delete (str or list, optional): Variable name(s) to undefine in
             the session.
     """
-    ...
 
 def go_back_in_session(yaml_filename: Any, session_id: Any, secret: Any = ...) -> Any:
     """
@@ -1684,7 +1582,6 @@ def go_back_in_session(yaml_filename: Any, session_id: Any, secret: Any = ...) -
         session_id (str): The session ID.
         secret (str, optional): The encryption key for the session.
     """
-    ...
 
 def manage_privileges(*pargs: Any) -> Any:
     """
@@ -1704,7 +1601,6 @@ def manage_privileges(*pargs: Any) -> Any:
             permission details for ``'inspect'``, ``True`` for successful
             ``'add'``/``'remove'``, or ``None`` if not authenticated.
     """
-    ...
 
 def redact(text: Any) -> Any:
     """
@@ -1721,7 +1617,6 @@ def redact(text: Any) -> Any:
             version (masking characters appropriate for the output format)
             if redaction is enabled.
     """
-    ...
 
 def forget_result_of(*pargs: Any) -> Any:
     """
@@ -1735,7 +1630,6 @@ def forget_result_of(*pargs: Any) -> Any:
         *pargs: The ``id`` strings of the blocks whose results should be
             forgotten.
     """
-    ...
 
 def re_run_logic() -> Any:
     """
@@ -1746,7 +1640,6 @@ def re_run_logic() -> Any:
     should cause earlier blocks to run again.  Take care to avoid infinite
     loops.
     """
-    ...
 
 def reconsider(*pargs: Any, evaluate: Any = ...) -> Any:
     """
@@ -1761,7 +1654,6 @@ def reconsider(*pargs: Any, evaluate: Any = ...) -> Any:
             names to their intrinsic names before reconsidering. Defaults
             to ``False``.
     """
-    ...
 
 def get_question_data(yaml_filename: Any, session_id: Any, secret: Any = ...) -> Any:
     """
@@ -1778,7 +1670,6 @@ def get_question_data(yaml_filename: Any, session_id: Any, secret: Any = ...) ->
     Returns:
         dict: A dictionary containing data about the current question.
     """
-    ...
 
 def set_save_status(status: Any) -> Any:
     """
@@ -1789,7 +1680,6 @@ def set_save_status(status: Any) -> Any:
             ``'overwrite'`` (overwrite the current step), or ``'ignore'``
             (do not save a new step at all).
     """
-    ...
 
 def single_to_double_newlines(text: Any) -> Any:
     """
@@ -1805,7 +1695,6 @@ def single_to_double_newlines(text: Any) -> Any:
         str: The text with each sequence of newline characters replaced by
             two newlines.
     """
-    ...
 
 def verbatim(text: Any) -> Any:
     """
@@ -1822,7 +1711,6 @@ def verbatim(text: Any) -> Any:
         str: The text with formatting characters escaped appropriately for
             the current output context (Markdown, HTML, DOCX, or LaTeX).
     """
-    ...
 
 add_separators: Any
 
@@ -1847,7 +1735,6 @@ def store_variables_snapshot(
         persistent (bool, optional): If ``True``, the snapshot persists
             after the session ends. Defaults to ``False``.
     """
-    ...
 
 def update_terms(dictionary: Any, auto: Any = ..., language: Any = ...) -> Any:
     """
@@ -1861,7 +1748,6 @@ def update_terms(dictionary: Any, auto: Any = ..., language: Any = ...) -> Any:
         language (str, optional): The language code for which to set the terms.
             Use ``'*'`` for the default language. Defaults to ``'*'``.
     """
-    ...
 
 def set_variables(variables: Any, process_objects: Any = ...) -> Any:
     """
@@ -1877,7 +1763,6 @@ def set_variables(variables: Any, process_objects: Any = ...) -> Any:
             (e.g., from ``.as_serializable()``) into actual Python objects.
             Defaults to ``False``.
     """
-    ...
 
 def language_name(language_code: Any) -> Any:
     """
@@ -1894,7 +1779,6 @@ def language_name(language_code: Any) -> Any:
     Returns:
         str: The full name of the language (e.g., ``'English'``).
     """
-    ...
 
 def run_action_in_session(
     yaml_filename: Any,
@@ -1930,4 +1814,3 @@ def run_action_in_session(
     Raises:
         DAError: If the action fails or targets the current session.
     """
-    ...

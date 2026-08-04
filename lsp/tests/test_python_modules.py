@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 
+from docassemble_lsp.core import build_workspace_index
 from docassemble_lsp.core.python_modules import (
     clear_module_index_cache,
     compute_da_object_subclasses,
@@ -15,7 +16,6 @@ from docassemble_lsp.core.python_modules import (
     python_module_symbol_detail,
     resolve_python_symbol_chain,
 )
-from docassemble_lsp.core import build_workspace_index
 from docassemble_lsp.core.workspace import WorkspaceIndex
 
 

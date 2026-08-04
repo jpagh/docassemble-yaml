@@ -34,9 +34,7 @@ class RuntimeOptions:
             return False
         if normalized.startswith("C"):
             return self.convention_enabled(normalized)
-        if normalized.startswith("W") and not self.show_warnings:
-            return False
-        return True
+        return not (normalized.startswith("W") and not self.show_warnings)
 
 
 def parse_ignore_codes(raw_codes: str) -> frozenset[str]:

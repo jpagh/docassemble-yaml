@@ -1879,6 +1879,7 @@ def test_modules_item_relative_prefix_matches_workspace_stems(tmp_path) -> None:
     """A dot-prefixed partial (.func) matches workspace module stems and yields
     dot-prefixed labels/insert_text with explicit text_edit_range."""
     import dataclasses
+
     from docassemble_lsp.core.workspace import WorkspaceIndex
 
     wi = dataclasses.replace(
@@ -1917,6 +1918,7 @@ def test_modules_item_relative_prefix_excludes_vendored_modules(tmp_path) -> Non
     Workspace modules get text_edit_range so VS Code replaces the exact value
     range regardless of word-boundary heuristics."""
     import dataclasses
+
     from docassemble_lsp.core.workspace import WorkspaceIndex
 
     wi = dataclasses.replace(
@@ -1943,6 +1945,7 @@ def test_modules_item_non_relative_prefix_shows_workspace_modules(tmp_path) -> N
     """Without a dot prefix, workspace modules get text_edit_range.
     Vendored modules never appear in modules: blocks."""
     import dataclasses
+
     from docassemble_lsp.core.workspace import WorkspaceIndex
 
     wi = dataclasses.replace(

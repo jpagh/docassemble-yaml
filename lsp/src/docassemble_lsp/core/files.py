@@ -460,14 +460,11 @@ def resolve_collection_path(path: Path) -> Path:
 
 
 def is_default_ignored_dir(dirname: str) -> bool:
-    return (
-        dirname.startswith(".git")
-        or dirname.startswith(".github")
-        or dirname.startswith(".venv")
-        or dirname == "build"
-        or dirname == "dist"
-        or dirname == "node_modules"
-        or dirname == "sources"
+    return dirname.startswith((".git", ".github", ".venv")) or dirname in (
+        "build",
+        "dist",
+        "node_modules",
+        "sources",
     )
 
 

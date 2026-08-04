@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 from dataclasses import dataclass
 from difflib import get_close_matches
+from itertools import pairwise
 from pathlib import Path
-from typing import Callable
 
 from docassemble_lsp.core.completion_registry import format_property_insert_text
 from docassemble_lsp.core.completion_rules import get_property_rule
@@ -306,7 +307,7 @@ def _table_missing_keys_fixes(
     for line in lines:
         key_match = re.match(r"^(\s*)(\S+?)\s*:", line)
         if key_match:
-            key_indent, key_name = key_match.groups()
+            _key_indent, key_name = key_match.groups()
             if key_name in _TABLE_REQUIRED_KEYS:
                 present_keys.add(key_name)
 
@@ -661,7 +662,7 @@ def apply_resolved_fixes(source: str, fixes: list[ResolvedFix]) -> FixResult:
         edits_with_offsets.append((start_offset, end_offset, fix))
 
     edits_with_offsets.sort(key=lambda item: (item[0], item[1]))
-    for previous, current in zip(edits_with_offsets, edits_with_offsets[1:]):
+    for previous, current in pairwise(edits_with_offsets):
         if previous[1] > current[0]:
             raise ValueError("Overlapping fixes are not supported")
 

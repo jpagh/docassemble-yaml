@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-import docassemble_lsp.cli as cli
+from docassemble_lsp import cli
 from docassemble_lsp.cli import build_parser, main
 from docassemble_lsp.core import FormatterConfig
 from docassemble_lsp.core.validation_config import RuntimeOptions

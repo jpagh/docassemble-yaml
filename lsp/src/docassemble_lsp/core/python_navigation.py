@@ -738,9 +738,7 @@ def _is_objects_value_completion_position(
     ):
         local_line = line - region.content_start_line + 1
         if local_line == 1:
-            if ".using(" in region.text.splitlines()[0]:
-                return False
-            return True
+            return ".using(" not in region.text.splitlines()[0]
         local_lines = region.text.splitlines()
         if local_line <= len(local_lines):
             local_text = local_lines[local_line - 1]
@@ -982,9 +980,12 @@ def _call_argument_context(
             continue
         if char in "([{":
             delimiters.append((char, index))
-        elif char in ")]}":
-            if delimiters and _is_matching_delimiter(delimiters[-1][0], char):
-                delimiters.pop()
+        elif (
+            char in ")]}"
+            and delimiters
+            and _is_matching_delimiter(delimiters[-1][0], char)
+        ):
+            delimiters.pop()
         index += 1
     open_positions = [
         position for delimiter, position in delimiters if delimiter == "("
@@ -1304,10 +1305,9 @@ def _suggest_call_kwarg_completions(
             if positional_remaining > 0:
                 positional_remaining -= 1
             continue
-        if kind == "pos":
-            if positional_remaining > 0:
-                positional_remaining -= 1
-                continue
+        if kind == "pos" and positional_remaining > 0:
+            positional_remaining -= 1
+            continue
         if param_name in used:
             continue
         names[param_name] = f"default: {default}" if default else ""

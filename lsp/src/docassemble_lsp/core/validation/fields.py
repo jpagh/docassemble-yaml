@@ -17,7 +17,10 @@ from collections.abc import Mapping
 from typing import Any
 
 import esprima  # type: ignore[import-untyped]
-from mako.exceptions import CompileException, SyntaxException  # type: ignore[import-untyped]
+from mako.exceptions import (  # type: ignore[import-untyped]
+    CompileException,
+    SyntaxException,
+)
 from mako.template import Template as MakoTemplate  # type: ignore[import-untyped]
 
 from docassemble_lsp.core.field_keys import (
@@ -33,8 +36,8 @@ from docassemble_lsp.core.field_validators import (
     FieldChoiceValidator,
     FieldConditionValidator,
     FieldDatatypeValidator,
+    _validator_error,
 )
-from docassemble_lsp.core.field_validators import _validator_error as _validator_error
 from docassemble_lsp.core.line_helpers import (
     _is_internal_metadata_key,
     _lc_key_line,
@@ -458,7 +461,7 @@ class ObjectsAttrType:
 
     def __init__(self, x):
         self.errors = []
-        if not (isinstance(x, list) or isinstance(x, dict)):
+        if not isinstance(x, (list, dict)):
             self.errors = [_validator_error(MessageCode.OBJECTS_BLOCK_TYPE, value=x)]
 
 
@@ -595,7 +598,7 @@ class ShowIf:
         if isinstance(x, str):
             if ":" not in x and " " not in x:
                 pass
-            elif x.startswith("variable:") or x.startswith("code:"):
+            elif x.startswith(("variable:", "code:")):
                 self.errors.append(
                     _validator_error(MessageCode.SHOW_IF_MALFORMED, value=x)
                 )
@@ -643,9 +646,7 @@ class DAFields:
         self.has_dynamic_fields_code = False
         self.runtime_options = runtime_options or RuntimeOptions()
         if isinstance(x, dict):
-            content_keys = {
-                key for key in x.keys() if not _is_internal_metadata_key(key)
-            }
+            content_keys = {key for key in x if not _is_internal_metadata_key(key)}
             if content_keys == {"code"}:
                 if not isinstance(x.get("code"), str):
                     self.errors = [
@@ -937,16 +938,19 @@ class DAFields:
                         modifier_key=modifier_key,
                     )
                 )
-        elif isinstance(modifier_value, str) and ":" not in modifier_value:
-            if not references_screen_variable(modifier_value):
-                self.errors.append(
-                    _validator_error(
-                        MessageCode.FIELD_MODIFIER_UNKNOWN_VARIABLE_STRING,
-                        self._key_line_for(field_item, modifier_key),
-                        modifier_key=modifier_key,
-                        modifier_value=modifier_value,
-                    )
+        elif (
+            isinstance(modifier_value, str)
+            and ":" not in modifier_value
+            and not references_screen_variable(modifier_value)
+        ):
+            self.errors.append(
+                _validator_error(
+                    MessageCode.FIELD_MODIFIER_UNKNOWN_VARIABLE_STRING,
+                    self._key_line_for(field_item, modifier_key),
+                    modifier_key=modifier_key,
+                    modifier_value=modifier_value,
                 )
+            )
 
     def _find_screen_variable_references_in_code(self, code_text, screen_variables):
         try:
@@ -982,7 +986,7 @@ class DAFields:
 
         choices_value = field_item.get("choices")
         if isinstance(choices_value, Mapping) and (
-            {key for key in choices_value.keys() if not _is_internal_metadata_key(key)}
+            {key for key in choices_value if not _is_internal_metadata_key(key)}
             == {"code"}
         ):
             self.errors.append(
@@ -995,7 +999,7 @@ class DAFields:
     def _field_item_has_content_target(self, field_item: dict[str, Any]) -> bool:
         content_keys = {
             key
-            for key in field_item.keys()
+            for key in field_item
             if isinstance(key, str) and not _is_internal_metadata_key(key)
         }
         if content_keys == {"code"}:
@@ -1011,7 +1015,7 @@ class DAFields:
             and len(
                 {
                     key
-                    for key in field_item.keys()
+                    for key in field_item
                     if key != "code" and not _is_internal_metadata_key(key)
                 }
             )
@@ -1074,34 +1078,38 @@ class DAFields:
 
     def _validate_field_modifier_key_case(self, field_item):
         for field_key in field_item:
-            if isinstance(field_key, str) and not _is_internal_metadata_key(field_key):
-                if (
-                    field_key not in self.modifier_keys
-                    and field_key.lower() in self.modifier_keys
-                    and not self._is_shorthand_label_key(field_item, field_key)
-                ):
-                    self.errors.append(
-                        (
-                            f'Invalid field key "{field_key}". docassemble field modifier keys are case-sensitive; use "{field_key.lower()}"',
-                            self._key_line_for(field_item, field_key),
-                            MessageCode.FIELD_MODIFIER_DICT_KEYS,
-                        )
+            if (
+                isinstance(field_key, str)
+                and not _is_internal_metadata_key(field_key)
+                and field_key not in self.modifier_keys
+                and field_key.lower() in self.modifier_keys
+                and not self._is_shorthand_label_key(field_item, field_key)
+            ):
+                self.errors.append(
+                    (
+                        f'Invalid field key "{field_key}". docassemble field modifier keys are case-sensitive; use "{field_key.lower()}"',
+                        self._key_line_for(field_item, field_key),
+                        MessageCode.FIELD_MODIFIER_DICT_KEYS,
                     )
+                )
 
     def _validate_field_mako_keys(self, field_item):
         for field_key in field_item:
-            if isinstance(field_key, str) and not _is_internal_metadata_key(field_key):
-                if field_key in self.mako_keys:
-                    the_mako = MakoText(str(field_item[field_key]))
-                    for err in the_mako.errors:
-                        err_msg, err_line, err_code = _normalize_validator_error(err)
-                        self.errors.append(
-                            (
-                                f"{field_key} value has {err_msg}",
-                                self._value_line_for(field_item, field_key, err_line),
-                                err_code,
-                            )
+            if (
+                isinstance(field_key, str)
+                and not _is_internal_metadata_key(field_key)
+                and field_key in self.mako_keys
+            ):
+                the_mako = MakoText(str(field_item[field_key]))
+                for err in the_mako.errors:
+                    err_msg, err_line, err_code = _normalize_validator_error(err)
+                    self.errors.append(
+                        (
+                            f"{field_key} value has {err_msg}",
+                            self._value_line_for(field_item, field_key, err_line),
+                            err_code,
                         )
+                    )
 
     def _validate_field_py_modifiers(self, field_item, screen_variables):
         for py_key in self.py_modifier_keys:
@@ -1156,6 +1164,18 @@ def _seq_item_line(seq: Any, index: int) -> int:
 # ---------------------------------------------------------------------------
 
 __all__ = [
+    "_BRACKET_COMMANDS_REQUIRING_CONTENT",
+    "_BRACKET_COMMAND_RE",
+    "_CONDITIONAL_MODIFIERS",
+    "_DOCASSEMBLE_RESERVED_NAMES",
+    "_FIELD_PRESENTATION_KEYS",
+    "_HIDE_STYLE_MODIFIERS",
+    "_IDENTIFIER_RE",
+    "_ILLEGAL_VARIABLE_AST_NODES",
+    "_JS_VAL_RE",
+    "_MAKO_SYNTAX_RE",
+    "_SHOW_STYLE_MODIFIERS",
+    "_SIMPLE_IDENTIFIER_RE",
     "AcceptFieldValue",
     "DAFields",
     "DAPythonVar",
@@ -1170,25 +1190,13 @@ __all__ = [
     "ShowIf",
     "ValidationCode",
     "ValidatorError",
-    "_CONDITIONAL_MODIFIERS",
-    "_DOCASSEMBLE_RESERVED_NAMES",
-    "_FIELD_PRESENTATION_KEYS",
-    "_HIDE_STYLE_MODIFIERS",
-    "_IDENTIFIER_RE",
-    "_ILLEGAL_VARIABLE_AST_NODES",
-    "_JS_VAL_RE",
-    "_MAKO_SYNTAX_RE",
-    "_SHOW_STYLE_MODIFIERS",
-    "_SIMPLE_IDENTIFIER_RE",
-    "_BRACKET_COMMANDS_REQUIRING_CONTENT",
-    "_BRACKET_COMMAND_RE",
     "_contains_mako_syntax",
     "_invalid_field_variable_name",
     "_is_docassemble_reserved_name",
     "_normalize_validator_error",
     "_scan_bracket_markup_errors",
     "_seq_item_line",
-    "_variable_candidates",
     "_validator_error",
+    "_variable_candidates",
     "space_in_str",
 ]

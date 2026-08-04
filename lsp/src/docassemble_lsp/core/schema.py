@@ -207,19 +207,18 @@ def _resolve_non_schema_hover(
 
     if request.kind == "file":
         target_path = request.target_path
-        if target_path is not None:
-            if not target_path.exists():
-                templates_dir = (
-                    workspace_index.templates_dir_for(current_path)
-                    if current_path is not None
-                    else None
-                )
-                if templates_dir is None:
-                    templates_dir = templates_dir_for_path(target_path)
-                if templates_dir is not None:
-                    template_path = (templates_dir / request.name).resolve()
-                    if template_path.exists():
-                        target_path = template_path
+        if target_path is not None and not target_path.exists():
+            templates_dir = (
+                workspace_index.templates_dir_for(current_path)
+                if current_path is not None
+                else None
+            )
+            if templates_dir is None:
+                templates_dir = templates_dir_for_path(target_path)
+            if templates_dir is not None:
+                template_path = (templates_dir / request.name).resolve()
+                if template_path.exists():
+                    target_path = template_path
         return _file_hover(request.name, target_path)
 
     return None

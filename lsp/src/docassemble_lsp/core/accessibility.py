@@ -1,7 +1,7 @@
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from docassemble_lsp.core.messages import MessageCode
 
@@ -118,8 +118,8 @@ def find_accessibility_findings(
     doc: dict[str, Any],
     source_code: str,
     document_start_line: int,
-    input_file: Optional[str] = None,
-    options: Optional[AccessibilityLintOptions] = None,
+    input_file: str | None = None,
+    options: AccessibilityLintOptions | None = None,
 ) -> list[AccessibilityFinding]:
     options = options or AccessibilityLintOptions()
     findings: list[AccessibilityFinding] = []
@@ -319,7 +319,7 @@ def _check_theme_css_contrast(
     source_code: str,
     document_start_line: int,
     *,
-    input_file: Optional[str] = None,
+    input_file: str | None = None,
 ) -> list[AccessibilityFinding]:
     features = doc.get("features")
     if not isinstance(features, dict):
@@ -419,7 +419,7 @@ def _check_missing_alt_text(
         )
 
     for file_tag_match in _FILE_TAG_RE.finditer(section.value):
-        file_target, width_value, alt_text = file_tag_match.groups()
+        file_target, _width_value, alt_text = file_tag_match.groups()
         if alt_text and alt_text.strip():
             continue
         snippet = file_tag_match.group(0)
@@ -579,7 +579,7 @@ def _check_non_descriptive_link_text(
     return findings
 
 
-def _find_top_level_key_line(source_code: str, key: str) -> Optional[int]:
+def _find_top_level_key_line(source_code: str, key: str) -> int | None:
     key_re = re.compile(rf"^{re.escape(key)}\s*:", re.MULTILINE)
     match = key_re.search(source_code)
     if not match:
@@ -600,7 +600,7 @@ def _absolute_line_number(
 
 def _find_snippet_line(
     source_code: str, snippet: str, *, start_line: int = 1
-) -> Optional[int]:
+) -> int | None:
     normalized_snippet = re.sub(r"\s+", " ", snippet).strip()
     if not normalized_snippet:
         return None
@@ -657,7 +657,7 @@ def _extract_field_label(field: dict[str, Any]) -> str:
     explicit = str(field.get("label") or "").strip()
     if explicit:
         return explicit
-    for key in field.keys():
+    for key in field:
         key_text = str(key).strip()
         if key_text and key_text not in FIELD_NON_LABEL_KEYS:
             return key_text
@@ -688,8 +688,8 @@ def _attachment_uses_docx(attachment: dict[str, Any]) -> bool:
 
 
 def _load_bootstrap_theme_css(
-    theme_value: str, *, input_file: Optional[str]
-) -> Optional[str]:
+    theme_value: str, *, input_file: str | None
+) -> str | None:
     path = theme_value.strip().strip('"').strip("'")
     if not path or path.startswith(("http://", "https://")):
         return None
@@ -747,9 +747,9 @@ def _best_component_color_pair(
     selector_props: list[tuple[list[str], dict[str, str]]],
     variables: dict[str, str],
     selector_patterns: list[str],
-) -> Optional[tuple[tuple[float, float, float], tuple[float, float, float]]]:
-    fg: Optional[tuple[float, float, float]] = None
-    bg: Optional[tuple[float, float, float]] = None
+) -> tuple[tuple[float, float, float], tuple[float, float, float]] | None:
+    fg: tuple[float, float, float] | None = None
+    bg: tuple[float, float, float] | None = None
 
     for selectors, props in selector_props:
         selector_text = " ".join(selectors)
@@ -774,8 +774,8 @@ def _best_component_color_pair(
 
 
 def _resolve_css_color(
-    value: Optional[str], variables: dict[str, str]
-) -> Optional[tuple[float, float, float]]:
+    value: str | None, variables: dict[str, str]
+) -> tuple[float, float, float] | None:
     if not value:
         return None
     color_text = value.strip().lower()
@@ -825,7 +825,7 @@ def _resolve_css_color(
     return None
 
 
-def _extract_color_token(value: str) -> Optional[str]:
+def _extract_color_token(value: str) -> str | None:
     if _HEX_COLOR_RE.match(value):
         return value
     m = _RGB_COLOR_RE.search(value)

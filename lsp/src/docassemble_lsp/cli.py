@@ -5,8 +5,9 @@ import json
 import os
 import re
 import sys
+from collections.abc import Iterable, Sequence
 from pathlib import Path
-from typing import Iterable, Sequence, TypeVar, overload
+from typing import TypeVar, overload
 
 from docassemble_lsp.core import (
     Diagnostic,
