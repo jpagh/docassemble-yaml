@@ -61,7 +61,6 @@ from docassemble_lsp.core.yaml_shared import (
     _FILE_REFERENCE_LIST_PARENTS,
     _KEY_VALUE_RE,
     _LIST_ITEM_VALUE_RE,
-    _MAKO_EXPRESSION_RE,
     _ancestor_keys,
     _NON_ATTACHMENT_FILE_KEYS,
     _PYTHON_BLOCK_KEYS,
@@ -71,6 +70,7 @@ from docassemble_lsp.core.yaml_shared import (
     _clean_value_and_range,
     _document_lines,
     _iter_mako_block_regions,
+    _iter_mako_expressions,
     _line_col_to_offset,
     _precompute_parent_keys,
 )
@@ -771,12 +771,10 @@ def _event_helper_request_at_position(
         if request is not None:
             return request
 
-    for match in _MAKO_EXPRESSION_RE.finditer(text):
-        if not (match.start(1) <= character <= match.end(1)):
+    for expr, expr_start, expr_end in _iter_mako_expressions(text):
+        if not (expr_start <= character <= expr_end):
             continue
-        request = _event_helper_request_in_text(
-            match.group(1), 0, character - match.start(1)
-        )
+        request = _event_helper_request_in_text(expr, 0, character - expr_start)
         if request is not None:
             return request
 
@@ -834,14 +832,14 @@ def _iter_event_helper_occurrences(source: str) -> list[EventHelperOccurrence]:
             )
 
     for line_index, text in enumerate(_document_lines(source)):
-        for match in _MAKO_EXPRESSION_RE.finditer(text):
-            for occurrence in _event_helper_occurrences(match.group(1)):
+        for expr, expr_start, _expr_end in _iter_mako_expressions(text):
+            for occurrence in _event_helper_occurrences(expr):
                 occurrences.append(
                     EventHelperOccurrence(
                         name=occurrence.name,
                         line=line_index + occurrence.line,
-                        start_character=match.start(1) + occurrence.start_character,
-                        end_character=match.start(1) + occurrence.end_character,
+                        start_character=expr_start + occurrence.start_character,
+                        end_character=expr_start + occurrence.end_character,
                     )
                 )
 

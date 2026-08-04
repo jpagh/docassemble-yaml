@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Iterator
 from pathlib import Path
 
 from docassemble_lsp.core.definition_models import (
@@ -50,13 +51,55 @@ _PYTHON_BLOCK_KEYS = frozenset({"code", "validation code"})
 
 _KEY_VALUE_RE = re.compile(r"^(\s*)(?:-\s*)?([^:#][^:]*?)\s*:\s*(.*?)\s*$")
 _LIST_ITEM_VALUE_RE = re.compile(r"^(\s*)-\s*(.*?)\s*$")
-_MAKO_EXPRESSION_RE = re.compile(r"\$\{([^}]*)\}")
+_MAKO_EXPRESSION_RE = re.compile(r"\$\{((?:[^{}]|\{[^{}]*\})*)\}")
+_MAKO_EXPRESSION_SIMPLE_RE = re.compile(r"\$\{([^}]*)\}")
 _MAKO_BLOCK_RE = re.compile(r"<%(=?|!)(?![a-zA-Z])(.*?)%>", re.DOTALL)
 _MAKO_BLOCK_OPEN_RE = re.compile(r"<%(=?|!)(?![a-zA-Z])([^%]*)$", re.MULTILINE)
 
 
 def _document_lines(source: str) -> list[str]:
     return source.splitlines() or [""]
+
+
+def _iter_mako_expressions(text: str) -> Iterator[tuple[str, int, int]]:
+    """Yield ``(content, start, end)`` for each ``${...}`` expression in *text*.
+
+    ``start``/``end`` are the column offsets of ``content`` (the text between
+    ``${`` and ``}``).  The brace-tolerant pattern matches the full expression
+    when it contains nested braces, e.g. an f-string like
+    ``label=f"Edit {x}"``.  Spans the tolerant pattern skipped are re-scanned
+    with the simple pattern so expressions containing a stray ``}`` inside a
+    string literal still yield a (truncated) match.
+    """
+    spans: list[tuple[int, int]] = []
+    for match in _MAKO_EXPRESSION_RE.finditer(text):
+        yield (match.group(1), match.start(1), match.end(1))
+        spans.append((match.start(1), match.end(1)))
+
+    if not spans:
+        for match in _MAKO_EXPRESSION_SIMPLE_RE.finditer(text):
+            yield (match.group(1), match.start(1), match.end(1))
+        return
+
+    cursor = 0
+    for start, end in sorted(spans):
+        if start > cursor:
+            gap = text[cursor:start]
+            for match in _MAKO_EXPRESSION_SIMPLE_RE.finditer(gap):
+                yield (
+                    match.group(1),
+                    cursor + match.start(1),
+                    cursor + match.end(1),
+                )
+        cursor = max(cursor, end)
+    if cursor < len(text):
+        gap = text[cursor:]
+        for match in _MAKO_EXPRESSION_SIMPLE_RE.finditer(gap):
+            yield (
+                match.group(1),
+                cursor + match.start(1),
+                cursor + match.end(1),
+            )
 
 
 def _line_indent(text: str) -> int:

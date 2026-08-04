@@ -9,6 +9,7 @@ from docassemble_lsp.core.definition_models import (
     BlockScalarRegion,
     DefinitionTarget,
     PythonCompletionTarget,
+    PythonModuleSymbol,
     PythonNamespaceBinding,
 )
 from docassemble_lsp.core.line_helpers import _safe_ast_parse
@@ -16,6 +17,7 @@ from docassemble_lsp.core.python_modules import (
     PYTHON_BUILTIN_EXCEPTIONS,
     VENDORED_MODULE_NAMES,
     compute_da_object_subclasses,
+    load_python_module_index,
     module_completion_members,
     python_module_symbol_detail,
     python_module_symbol_details,
@@ -31,7 +33,6 @@ from docassemble_lsp.core.yaml_shared import (
     _BLOCK_SCALAR_MARKERS,
     _KEY_VALUE_RE,
     _LIST_ITEM_VALUE_RE,
-    _MAKO_EXPRESSION_RE,
     _PYTHON_BLOCK_KEYS,
     _PYTHON_MODULE_REFERENCE_KEYS,
     _ancestor_keys,
@@ -40,6 +41,7 @@ from docassemble_lsp.core.yaml_shared import (
     _clean_value,
     _document_lines,
     _iter_mako_block_regions,
+    _iter_mako_expressions,
     _line_col_to_offset,
     _line_indent,
     _value_range,
@@ -109,6 +111,8 @@ _PYTHON_CHILD_VALUE_PARENTS = {
     "manual",
 }
 _PYTHON_COMPLETION_PREFIX_RE = re.compile(r"([A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*\.?)$")
+_CALLEE_RE = re.compile(r"[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*$")
+_CALL_KWARG_NAME_RE = re.compile(r"\s*([A-Za-z_]\w*)\s*")
 
 _USING_KWARGS: dict[str, str] = {
     "object_type": "DAObject subclass for new items",
@@ -288,6 +292,20 @@ def _parse_import_binding(
                 )
             )
             continue
+        submodule_name = f"{module_name}.{alias.name}"
+        submodule_path = resolve_python_module_path(
+            submodule_name, current_path, workspace_index
+        )
+        if submodule_path is not None:
+            bindings.append(
+                PythonNamespaceBinding(
+                    kind="module_namespace",
+                    module_name=submodule_name,
+                    module_path=submodule_path,
+                    alias=alias.asname or alias.name,
+                )
+            )
+            continue
         bindings.append(
             PythonNamespaceBinding(
                 kind="symbol",
@@ -448,11 +466,16 @@ def _is_objects_value_path(path: tuple[str, ...]) -> bool:
     return len(path) >= 2 and path[0] == "objects"
 
 
-def _scalar_python_completion_prefix_at_position(
+def _scalar_python_value_text_at_position(
     source: str,
     line: int,
     character: int,
-) -> tuple[tuple[str, ...], str] | None:
+) -> str | None:
+    """Raw scalar value text before the cursor, or ``None`` outside a Python value.
+
+    An empty value yields ``""`` (still a Python position — e.g. empty
+    ``objects:`` values offer subclass names).
+    """
     lines = _document_lines(source)
     text = lines[min(max(line, 0), len(lines) - 1)]
     match = _KEY_VALUE_RE.match(text)
@@ -475,20 +498,34 @@ def _scalar_python_completion_prefix_at_position(
     if character < start_character:
         return None
     if not trimmed:
-        if _is_objects_value_path(key_path):
-            return ((), "")
-        return None
+        return ""
     if trimmed in _BLOCK_SCALAR_MARKERS:
         return None
     local_character = max(character - start_character, 0)
-    return _python_completion_prefix_in_text(trimmed, 1, local_character)
+    return raw_value[:local_character]
 
 
-def _list_item_python_completion_prefix_at_position(
+def _scalar_python_completion_prefix_at_position(
     source: str,
     line: int,
     character: int,
 ) -> tuple[tuple[str, ...], str] | None:
+    value_text = _scalar_python_value_text_at_position(source, line, character)
+    if value_text is None:
+        return None
+    if not value_text:
+        if _is_objects_value_completion_position(source, line, character):
+            return ((), "")
+        return None
+    return _python_completion_prefix_in_text(value_text, 1, len(value_text))
+
+
+def _list_item_python_value_text_at_position(
+    source: str,
+    line: int,
+    character: int,
+) -> str | None:
+    """Raw list-item value text before the cursor in a Python list value."""
     lines = _document_lines(source)
     text = lines[min(max(line, 0), len(lines) - 1)]
     match = _LIST_ITEM_VALUE_RE.match(text)
@@ -510,12 +547,27 @@ def _list_item_python_completion_prefix_at_position(
     if character < start_character:
         return None
     local_character = max(character - start_character, 0)
-    return _python_completion_prefix_in_text(trimmed, 1, local_character)
+    return raw_value[:local_character]
 
 
-def _python_completion_prefix_at_position(
-    source: str, line: int, character: int
+def _list_item_python_completion_prefix_at_position(
+    source: str,
+    line: int,
+    character: int,
 ) -> tuple[tuple[str, ...], str] | None:
+    value_text = _list_item_python_value_text_at_position(source, line, character)
+    if value_text is None:
+        return None
+    return _python_completion_prefix_in_text(value_text, 1, len(value_text))
+
+
+def _python_code_text_at_position(source: str, line: int, character: int) -> str | None:
+    """Python code text before the cursor, or ``None`` outside a Python context.
+
+    Covers the same contexts the prefix logic handles: Python block scalars,
+    Mako block regions, ``${...}`` expressions, ``%`` lines, and scalar/list
+    Python values.
+    """
     region = enclosing_block_scalar_region(source, line)
     if region is not None and (
         region.key_name in _PYTHON_BLOCK_KEYS
@@ -523,11 +575,13 @@ def _python_completion_prefix_at_position(
     ):
         local_line = line - region.content_start_line + 1
         local_character = max(character - region.content_indent, 0)
-        prefix = _python_completion_prefix_in_text(
-            region.text, local_line, local_character
-        )
-        if prefix is not None:
-            return prefix
+        region_lines = region.text.splitlines() or [""]
+        if not (1 <= local_line <= len(region_lines)):
+            return None
+        before = "\n".join(region_lines[: local_line - 1])
+        if before:
+            before += "\n"
+        return before + region_lines[local_line - 1][:local_character]
 
     lines = _document_lines(source)
     text = lines[min(max(line, 0), len(lines) - 1)]
@@ -543,24 +597,12 @@ def _python_completion_prefix_at_position(
         ):
             continue
         local_offset = cursor_offset - mako_region.content_start_offset
-        code_before = mako_region.code_text[:local_offset]
-        local_line = code_before.count("\n")
-        last_nl = code_before.rfind("\n")
-        local_char = local_offset - last_nl - 1 if last_nl != -1 else local_offset
-        prefix = _python_completion_prefix_in_text(
-            mako_region.code_text, local_line + 1, local_char
-        )
-        if prefix is not None:
-            return prefix
+        return mako_region.code_text[:local_offset]
 
-    for match in _MAKO_EXPRESSION_RE.finditer(text):
-        if not (match.start(1) <= character <= match.end(1) + 1):
+    for expr, expr_start, expr_end in _iter_mako_expressions(text):
+        if not (expr_start <= character <= expr_end + 1):
             continue
-        prefix = _python_completion_prefix_in_text(
-            match.group(1), 1, character - match.start(1)
-        )
-        if prefix is not None:
-            return prefix
+        return expr[: max(character - expr_start, 0)]
 
     stripped = text.lstrip()
     if stripped.startswith("%"):
@@ -571,19 +613,38 @@ def _python_completion_prefix_at_position(
                 percent_index + 1 + len(text[percent_index + 1 :]) - len(statement)
             )
             if character >= statement_start:
-                prefix = _python_completion_prefix_in_text(
-                    statement, 1, character - statement_start
-                )
-                if prefix is not None:
-                    return prefix
+                return statement[: character - statement_start]
 
-    return _scalar_python_completion_prefix_at_position(
-        source, line, character
-    ) or _list_item_python_completion_prefix_at_position(
+    scalar_text = _scalar_python_value_text_at_position(source, line, character)
+    if scalar_text is not None:
+        return scalar_text
+    return _list_item_python_value_text_at_position(
         source,
         line,
         character,
     )
+
+
+def _python_completion_prefix_at_position(
+    source: str,
+    line: int,
+    character: int,
+    *,
+    code_text: str | None = None,
+) -> tuple[tuple[str, ...], str] | None:
+    code = (
+        _python_code_text_at_position(source, line, character)
+        if code_text is None
+        else code_text
+    )
+    if code is None:
+        return None
+    if not code:
+        if _is_objects_value_completion_position(source, line, character):
+            return ((), "")
+        return None
+    code_lines = code.splitlines() or [""]
+    return _python_completion_prefix_in_text(code, len(code_lines), len(code_lines[-1]))
 
 
 def _add_python_completion_entry(
@@ -605,8 +666,8 @@ def _keywords_for_context(source: str, line: int, character: int) -> frozenset |
     lines = _document_lines(source)
     text = lines[min(max(line, 0), len(lines) - 1)]
 
-    for match in _MAKO_EXPRESSION_RE.finditer(text):
-        if match.start(1) <= character <= match.end(1) + 1:
+    for _expr, expr_start, expr_end in _iter_mako_expressions(text):
+        if expr_start <= character <= expr_end + 1:
             return _EXPRESSION_KEYWORDS
 
     cursor_offset = _line_col_to_offset(lines, line, character)
@@ -843,6 +904,432 @@ def _suggest_using_completions(
     return None
 
 
+def _skip_string(code_text: str, index: int) -> int:
+    """Advance past a string literal starting at *index* (a quote char)."""
+    quote = code_text[index]
+    triple = code_text.startswith(quote * 3, index)
+    end = index + 3 if triple else index + 1
+    while end < len(code_text):
+        char = code_text[end]
+        if char == "\\":
+            end += 2
+            continue
+        if char == quote:
+            if triple:
+                if code_text.startswith(quote * 3, end):
+                    return end + 3
+            else:
+                return end + 1
+        end += 1
+    return len(code_text)
+
+
+def _without_python_comments(code_text: str) -> str:
+    """Replace comments with spaces while preserving source offsets."""
+    chars = list(code_text)
+    index = 0
+    while index < len(chars):
+        char = chars[index]
+        if char in ("'", '"'):
+            index = _skip_string(code_text, index)
+            continue
+        if char == "#":
+            end = code_text.find("\n", index)
+            if end == -1:
+                end = len(chars)
+            for comment_index in range(index, end):
+                chars[comment_index] = " "
+            index = end
+            continue
+        index += 1
+    return "".join(chars)
+
+
+def _is_matching_delimiter(open_char: str, close_char: str) -> bool:
+    return (open_char, close_char) in {
+        ("(", ")"),
+        ("[", "]"),
+        ("{", "}"),
+    }
+
+
+def _has_unquoted_char(text: str, wanted: frozenset[str]) -> bool:
+    text = _without_python_comments(text)
+    index = 0
+    while index < len(text):
+        char = text[index]
+        if char in ("'", '"'):
+            index = _skip_string(text, index)
+            continue
+        if char in wanted:
+            return True
+        index += 1
+    return False
+
+
+def _call_argument_context(
+    code_text: str,
+) -> tuple[tuple[str, ...] | None, str | None]:
+    """Return ``(callee chain, arg text up to cursor)`` when the cursor sits
+    inside an unbalanced function call in *code_text*."""
+    code_text = _without_python_comments(code_text)
+    delimiters: list[tuple[str, int]] = []
+    index = 0
+    while index < len(code_text):
+        char = code_text[index]
+        if char in ("'", '"'):
+            index = _skip_string(code_text, index)
+            continue
+        if char in "([{":
+            delimiters.append((char, index))
+        elif char in ")]}":
+            if delimiters and _is_matching_delimiter(delimiters[-1][0], char):
+                delimiters.pop()
+        index += 1
+    open_positions = [
+        position for delimiter, position in delimiters if delimiter == "("
+    ]
+    if not open_positions:
+        return None, None
+    open_pos = open_positions[-1]
+    callee_match = _CALLEE_RE.search(code_text[:open_pos])
+    if callee_match is None:
+        return None, None
+    return tuple(callee_match.group(0).split(".")), code_text[open_pos + 1 :]
+
+
+def _call_kwarg_partial(arg_text: str) -> str | None:
+    """Return the partial kwarg name being typed, or ``None`` when the cursor
+    is not at a kwarg-name position (e.g. typing a value)."""
+    arg_text = _without_python_comments(arg_text)
+    delimiters: list[str] = []
+    last_sep = -1
+    index = 0
+    while index < len(arg_text):
+        char = arg_text[index]
+        if char in ("'", '"'):
+            index = _skip_string(arg_text, index)
+            continue
+        if char in "([{":
+            delimiters.append(char)
+        elif char in ")]}":
+            if delimiters and _is_matching_delimiter(delimiters[-1], char):
+                delimiters.pop()
+        elif char == "," and not delimiters:
+            last_sep = index
+        index += 1
+    partial = arg_text[last_sep + 1 :].strip()
+    if not partial:
+        return ""
+    if (
+        delimiters
+        or any(char in partial for char in ('"', "'"))
+        or _has_unquoted_char(partial, frozenset("=()[]{}"))
+    ):
+        return None
+    return partial
+
+
+def _iter_top_level_segments(arg_text: str) -> list[str]:
+    """Split call argument text on top-level commas (string-aware)."""
+    arg_text = _without_python_comments(arg_text)
+    segments: list[str] = []
+    delimiters: list[str] = []
+    start = 0
+    index = 0
+    while index <= len(arg_text):
+        if index == len(arg_text):
+            segments.append(arg_text[start:index])
+            break
+        char = arg_text[index]
+        if char in ("'", '"'):
+            index = _skip_string(arg_text, index)
+            continue
+        if char in "([{":
+            delimiters.append(char)
+        elif char in ")]}":
+            if delimiters and _is_matching_delimiter(delimiters[-1], char):
+                delimiters.pop()
+        elif char == "," and not delimiters:
+            segments.append(arg_text[start:index])
+            start = index + 1
+        index += 1
+    return segments
+
+
+def _top_level_assignment_name(segment: str) -> str | None:
+    """Return a single top-level keyword name, if *segment* has one."""
+    segment = _without_python_comments(segment)
+    delimiters: list[str] = []
+    index = 0
+    while index < len(segment):
+        char = segment[index]
+        if char in ("'", '"'):
+            index = _skip_string(segment, index)
+            continue
+        if char in "([{":
+            delimiters.append(char)
+        elif char in ")]}":
+            if delimiters and _is_matching_delimiter(delimiters[-1], char):
+                delimiters.pop()
+        elif char == "=" and not delimiters:
+            previous = segment[index - 1] if index else ""
+            following = segment[index + 1] if index + 1 < len(segment) else ""
+            if previous in "=!<>+-*/%@&|^:" or following in "=<>":
+                index += 1
+                continue
+            match = _CALL_KWARG_NAME_RE.fullmatch(segment[:index])
+            if match is not None:
+                return match.group(1)
+        index += 1
+    return None
+
+
+def _used_call_kwargs(arg_text: str) -> set[str]:
+    used: set[str] = set()
+    for segment in _iter_top_level_segments(arg_text):
+        name = _top_level_assignment_name(segment)
+        if name is not None:
+            used.add(name)
+    return used
+
+
+def _positional_arg_count(arg_text: str) -> int:
+    count = 0
+    segments = _iter_top_level_segments(arg_text)
+    for index, segment in enumerate(segments):
+        stripped = segment.strip()
+        if not stripped or _top_level_assignment_name(segment) is not None:
+            continue
+        # A star expansion has an unknown number of positional values. Do not
+        # consume a fixed parameter slot based on it.
+        if stripped.startswith("*"):
+            continue
+        if index < len(segments) - 1 or arg_text.rstrip().endswith(","):
+            count += 1
+    return count
+
+
+def _module_star_exports_name(
+    module_path: Path | None,
+    name: str,
+    workspace_index: WorkspaceIndex,
+) -> bool:
+    if module_path is None:
+        return False
+    index = load_python_module_index(module_path, workspace_index=workspace_index)
+    if index.exported_names is not None:
+        return name in index.exported_names
+    return not name.startswith("_")
+
+
+def _symbol_after_chain(
+    module_path: Path,
+    name: str,
+    workspace_index: WorkspaceIndex,
+    seen: set[tuple[Path, str]],
+) -> PythonModuleSymbol | None:
+    """Resolve *name* inside *module_path*, following re-export chains."""
+    key = (module_path.resolve(), name)
+    if key in seen:
+        return None
+    seen.add(key)
+    index = load_python_module_index(module_path, workspace_index=workspace_index)
+    symbol = index.symbols.get(name)
+    if symbol is None:
+        return None
+    if symbol.kind == "function":
+        return symbol
+    if symbol.imported_module_path is not None and symbol.imported_name is not None:
+        return _symbol_after_chain(
+            symbol.imported_module_path,
+            symbol.imported_name,
+            workspace_index,
+            seen,
+        )
+    return None
+
+
+def _sibling_module_path(module_path: Path, name: str) -> Path | None:
+    """Resolve *name* as a module or package sibling of *module_path*."""
+    directory = module_path.parent
+    sibling = directory / f"{name}.py"
+    if sibling.is_file():
+        return sibling.resolve()
+    package = directory / name / "__init__.py"
+    if package.is_file():
+        return package.resolve()
+    return None
+
+
+def _symbol_after_chain_segments(
+    module_path: Path,
+    chain: tuple[str, ...],
+    workspace_index: WorkspaceIndex,
+    seen: set[tuple[Path, str]],
+) -> PythonModuleSymbol | None:
+    """Resolve *chain* of names through module boundaries to a function symbol.
+
+    Intermediate names must resolve to imported modules (``import sub``, a
+    re-export via ``from x import y``, or a sibling submodule); a function
+    symbol is only returned when it is the final segment.
+    """
+    index = load_python_module_index(module_path, workspace_index=workspace_index)
+    symbol = index.symbols.get(chain[0])
+    if symbol is None:
+        return None
+    key = (module_path.resolve(), chain[0])
+    if key in seen:
+        return None
+    seen.add(key)
+    if symbol.kind == "function":
+        return symbol if len(chain) == 1 else None
+
+    target_path = symbol.imported_module_path
+    if target_path is None:
+        # Unresolvable import: fall back to a sibling module of the same name.
+        if len(chain) == 1:
+            return None
+        sibling = _sibling_module_path(module_path, chain[0])
+        if sibling is None:
+            return None
+        return _symbol_after_chain_segments(sibling, chain[1:], workspace_index, seen)
+
+    if (
+        target_path.resolve() == module_path.resolve()
+        and symbol.imported_name is not None
+    ):
+        # ``from . import sub``: the symbol points back at the package itself;
+        # hop to the sibling submodule instead of looping.
+        if len(chain) == 1:
+            return None
+        sibling = _sibling_module_path(module_path, symbol.imported_name)
+        if sibling is None:
+            return None
+        return _symbol_after_chain_segments(sibling, chain[1:], workspace_index, seen)
+
+    delegated = (
+        (symbol.imported_name,) if symbol.imported_name is not None else ()
+    ) + chain[1:]
+    if not delegated:
+        return None
+    return _symbol_after_chain_segments(
+        target_path,
+        delegated,
+        workspace_index,
+        seen,
+    )
+
+
+def _resolve_callable_symbol(
+    callee_chain: tuple[str, ...],
+    source: str,
+    current_path: Path | None,
+    workspace_index: WorkspaceIndex,
+) -> PythonModuleSymbol | None:
+    """Resolve a called name to its function symbol, or ``None``."""
+    if not callee_chain:
+        return None
+    name = callee_chain[0]
+    if name in _PYTHON_KEYWORDS or name in _EXPRESSION_KEYWORDS:
+        return None
+    bindings = _python_namespace_bindings(source, current_path, workspace_index)
+    seen: set[tuple[Path, str]] = set()
+    if len(callee_chain) == 1:
+        for binding in bindings:
+            if binding.module_path is None:
+                continue
+            if binding.kind == "module_star":
+                if not _module_star_exports_name(
+                    binding.module_path, name, workspace_index
+                ):
+                    continue
+                symbol = _symbol_after_chain(
+                    binding.module_path, name, workspace_index, seen
+                )
+            elif binding.kind == "symbol" and binding.alias == name:
+                symbol = _symbol_after_chain(
+                    binding.module_path,
+                    binding.imported_name or name,
+                    workspace_index,
+                    seen,
+                )
+            else:
+                continue
+            if symbol is not None:
+                return symbol
+        return None
+
+    for binding in bindings:
+        if binding.kind != "module_namespace" or binding.alias != name:
+            continue
+        if binding.module_path is None:
+            continue
+        return _symbol_after_chain_segments(
+            binding.module_path, callee_chain[1:], workspace_index, seen
+        )
+    return None
+
+
+def _suggest_call_kwarg_completions(
+    code_text: str,
+    source: str,
+    current_path: Path | None,
+    workspace_index: WorkspaceIndex,
+) -> list[PythonCompletionTarget] | None:
+    """Suggest ``name=`` completions for the innermost call in *code_text*.
+
+    Returns ``[]`` when the callee resolves but has no suggestible
+    parameters (suppressing unrelated symbol completions), and ``None``
+    when the position is not a call-argument kwarg slot or the callee
+    cannot be resolved.
+    """
+    callee_chain, arg_text = _call_argument_context(code_text)
+    if callee_chain is None or arg_text is None:
+        return None
+    partial = _call_kwarg_partial(arg_text)
+    if partial is None:
+        return None
+    symbol = _resolve_callable_symbol(
+        callee_chain, source, current_path, workspace_index
+    )
+    if symbol is None:
+        return None
+
+    used = _used_call_kwargs(arg_text)
+    positional_remaining = _positional_arg_count(arg_text)
+    names: dict[str, str] = {}
+    for kind, param_name, default in symbol.parameters:
+        if kind == "posonly":
+            if positional_remaining > 0:
+                positional_remaining -= 1
+            continue
+        if kind == "pos":
+            if positional_remaining > 0:
+                positional_remaining -= 1
+                continue
+        if param_name in used:
+            continue
+        names[param_name] = f"default: {default}" if default else ""
+
+    matched = [
+        PythonCompletionTarget(
+            label=f"{name}=",
+            detail="kwarg",
+            documentation=documentation or None,
+        )
+        for name, documentation in names.items()
+        if not partial or partial.lower() in name.lower()
+    ]
+    matched.sort(
+        key=lambda candidate: (
+            0 if partial and candidate.label.lower().startswith(partial.lower()) else 1,
+            candidate.label,
+        )
+    )
+    return matched
+
+
 def _python_completion_candidates_from_bindings(
     bindings: list[PythonNamespaceBinding],
     base_chain: tuple[str, ...],
@@ -895,6 +1382,10 @@ def _python_completion_candidates_from_bindings(
             continue
 
         if binding.kind == "module_star":
+            if not _module_star_exports_name(
+                binding.module_path, base_chain[0], workspace_index
+            ):
+                continue
             members = module_completion_members(
                 binding.module_path,
                 base_chain,
@@ -929,10 +1420,7 @@ class PythonNavigationService:
         *,
         uri_or_path: str | Path | None = None,
     ) -> list[PythonCompletionTarget]:
-        prefix = _python_completion_prefix_at_position(source, line, character)
-        if prefix is None:
-            return []
-
+        code_text = _python_code_text_at_position(source, line, character)
         current_path = path_from_uri_or_path(uri_or_path)
 
         using_candidates = _suggest_using_completions(
@@ -944,6 +1432,11 @@ class PythonNavigationService:
         # DAObject subclass + dot → offer .using(
         # Check both precomputed subclass names and import aliases from the current file.
         if _is_objects_value_completion_position(source, line, character):
+            prefix = _python_completion_prefix_at_position(
+                source, line, character, code_text=code_text
+            )
+            if prefix is None:
+                return []
             base_chain, partial = prefix
             if len(base_chain) == 1:
                 known_name = (
@@ -969,15 +1462,28 @@ class PythonNavigationService:
                         )
                     ]
 
-        # Short-circuit objects: value completions: use precomputed DAObject
-        # subclass names plus any import aliases from the current file's ``imports:``.
-        if _is_objects_value_completion_position(source, line, character):
+            # Short-circuit objects: value completions: use precomputed DAObject
+            # subclass names plus any import aliases from the current file's ``imports:``.
             _, partial = prefix
             candidates = _da_object_subclass_completions(
                 self.workspace_index, source, current_path, partial
             )
             if candidates is not None:
                 return candidates
+
+        # Inside a function call: suggest the callee's keyword arguments.
+        if code_text is not None:
+            call_candidates = _suggest_call_kwarg_completions(
+                code_text, source, current_path, self.workspace_index
+            )
+            if call_candidates is not None:
+                return call_candidates
+
+        prefix = _python_completion_prefix_at_position(
+            source, line, character, code_text=code_text
+        )
+        if prefix is None:
+            return []
 
         bindings = _python_namespace_bindings(
             source,

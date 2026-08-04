@@ -2915,6 +2915,104 @@ def test_get_completions_in_if_value_include_python_aliases(tmp_path) -> None:
     assert "eligible" in labels
 
 
+def test_get_completions_in_mako_call_suggest_function_kwargs(tmp_path) -> None:
+    package_dir = tmp_path / "docassemble" / "demo"
+    questions_dir = package_dir / "data" / "questions"
+    questions_dir.mkdir(parents=True)
+    (package_dir / "functions.py").write_text(
+        "def edit_button(\n"
+        "    instance_name: str,\n"
+        "    color: str = 'secondary',\n"
+        "    icon: str = 'pencil',\n"
+        "    label: str = 'Edit',\n"
+        "    size: str = 'sm',\n"
+        ") -> str:\n"
+        '    """Generate an HTML edit button."""\n'
+        "    return ''\n",
+        encoding="utf-8",
+    )
+    source_path = questions_dir / "main.yml"
+    expression = '${edit_button("M.parties[1].revisit", la)}'
+    source = f"modules:\n  - .functions\n---\nquestion: |\n  {expression}\n"
+
+    items = get_completions(
+        source,
+        4,
+        source.splitlines()[4].index("la") + 2,
+        uri_or_path=str(source_path),
+        workspace_paths=[str(tmp_path)],
+    )
+
+    labels = {item.label for item in items}
+    assert labels == {"label="}
+
+
+def test_get_completions_in_mako_call_suggests_signature_kwargs(tmp_path) -> None:
+    package_dir = tmp_path / "docassemble" / "demo"
+    questions_dir = package_dir / "data" / "questions"
+    questions_dir.mkdir(parents=True)
+    (package_dir / "functions.py").write_text(
+        "def edit_button(\n"
+        "    instance_name: str,\n"
+        "    color: str = 'secondary',\n"
+        "    icon: str = 'pencil',\n"
+        "    label: str = 'Edit',\n"
+        "    size: str = 'sm',\n"
+        ") -> str:\n"
+        '    """Generate an HTML edit button."""\n'
+        "    return ''\n",
+        encoding="utf-8",
+    )
+    source_path = questions_dir / "main.yml"
+    expression = '${edit_button("M.parties[1].revisit", )}'
+    source = f"modules:\n  - .functions\n---\nquestion: |\n  {expression}\n"
+
+    items = get_completions(
+        source,
+        4,
+        len('  ${edit_button("M.parties[1].revisit", '),
+        uri_or_path=str(source_path),
+        workspace_paths=[str(tmp_path)],
+    )
+
+    labels = {item.label for item in items}
+    assert labels == {"color=", "icon=", "label=", "size="}
+
+
+def test_get_completions_in_mako_call_ignore_docstring_kwargs(tmp_path) -> None:
+    package_dir = tmp_path / "docassemble" / "demo"
+    questions_dir = package_dir / "data" / "questions"
+    questions_dir.mkdir(parents=True)
+    (package_dir / "functions.py").write_text(
+        "def edit_button(instance_name: str, **kwargs) -> str:\n"
+        '    """Generate an HTML edit button.\n'
+        "\n"
+        "    Args:\n"
+        "        instance_name (str): The variable to edit.\n"
+        "        **kwargs: Passed to action_button_html. Common overrides include:\n"
+        "            - color (str): Bootstrap color class.\n"
+        "            - icon (str): FontAwesome icon name.\n"
+        "            - label (str): Text displayed on the button.\n"
+        "            - size (str): Button size suffix.\n"
+        '    """\n'
+        "    return action_button_html(instance_name, **kwargs)\n",
+        encoding="utf-8",
+    )
+    source_path = questions_dir / "main.yml"
+    expression = '${edit_button("M.parties[1].revisit", la)}'
+    source = f"modules:\n  - .functions\n---\nquestion: |\n  {expression}\n"
+
+    items = get_completions(
+        source,
+        4,
+        source.splitlines()[4].index("la") + 2,
+        uri_or_path=str(source_path),
+        workspace_paths=[str(tmp_path)],
+    )
+
+    assert items == []
+
+
 def test_get_completions_in_need_list_item_include_python_aliases(tmp_path) -> None:
     package_dir = tmp_path / "docassemble" / "demo"
     questions_dir = package_dir / "data" / "questions"

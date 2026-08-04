@@ -48,6 +48,7 @@ class PythonModuleSymbol:
     imported_name: str | None = None
     docstring: str | None = None
     bases: tuple[str, ...] = ()
+    parameters: tuple[tuple[str, str, str | None], ...] = ()
 
 
 @dataclass(frozen=True, slots=True)

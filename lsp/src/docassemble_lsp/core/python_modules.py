@@ -317,6 +317,35 @@ def _iter_top_level_assigned_names(node: ast.AST) -> tuple[str, ...]:
     return ()
 
 
+def _function_parameters(
+    node: ast.FunctionDef | ast.AsyncFunctionDef,
+) -> tuple[tuple[str, str, str | None], ...]:
+    """Extract ``(kind, name, default)`` tuples for a function definition.
+
+    ``kind`` is ``"posonly"``, ``"pos"`` (positional-or-keyword), or
+    ``"kwonly"``; ``default`` is the unparsed default expression, or ``None``.
+    """
+    parameters: list[tuple[str, str, str | None]] = []
+    positional = [*node.args.posonlyargs, *node.args.args]
+    padded_defaults = [None] * (len(positional) - len(node.args.defaults)) + [
+        ast.unparse(default) for default in node.args.defaults
+    ]
+    for index, (positional_arg, default) in enumerate(zip(positional, padded_defaults)):
+        kind = "posonly" if index < len(node.args.posonlyargs) else "pos"
+        parameters.append((kind, positional_arg.arg, default))
+    for keyword_arg, keyword_default in zip(
+        node.args.kwonlyargs, node.args.kw_defaults
+    ):
+        parameters.append(
+            (
+                "kwonly",
+                keyword_arg.arg,
+                None if keyword_default is None else ast.unparse(keyword_default),
+            )
+        )
+    return tuple(parameters)
+
+
 def _python_imported_module_symbol(
     module_name: str,
     *,
@@ -425,6 +454,7 @@ def load_python_module_index(
                     target=target,
                     methods={},
                     docstring=ast.get_docstring(node),
+                    parameters=_function_parameters(node),
                 )
             continue
 

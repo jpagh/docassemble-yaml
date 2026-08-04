@@ -336,6 +336,28 @@ def test_load_python_module_index_all_export_valid(tmp_path: Path) -> None:
     assert "FOO" in index.symbols
 
 
+def test_load_python_module_index_function_parameters(tmp_path: Path) -> None:
+    mod_path = tmp_path / "parameters.py"
+    _write_py_file(
+        mod_path,
+        "def sample(first, /, second='x', *, required, option=1, **kwargs):\n"
+        "    return None\n",
+    )
+
+    parameters = load_python_module_index(mod_path).symbols["sample"].parameters
+
+    assert [(kind, name) for kind, name, _default in parameters] == [
+        ("posonly", "first"),
+        ("pos", "second"),
+        ("kwonly", "required"),
+        ("kwonly", "option"),
+    ]
+    assert parameters[0][2] is None
+    assert parameters[1][2] == "'x'"
+    assert parameters[2][2] is None
+    assert parameters[3][2] == "1"
+
+
 def test_load_python_module_index_all_export_missing(tmp_path: Path) -> None:
     mod_path = tmp_path / "all_missing.py"
     _write_py_file(mod_path, '__all__ = ("MISSING",)\n')

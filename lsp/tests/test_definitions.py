@@ -3,6 +3,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 from docassemble_lsp.core import (
     build_workspace_index,
     python_modules,
@@ -193,6 +195,537 @@ def test_resolve_python_completion_targets_resolves_workspace_import(
 
     labels = {t.label for t in targets}
     assert "bar" in labels
+
+
+def _call_kwarg_workspace(
+    tmp_path: Path,
+    functions_source: str,
+    expression: str,
+    *,
+    init_source: str = "",
+    imports_line: str | None = None,
+) -> tuple[str, Path]:
+    package_dir = tmp_path / "docassemble" / "demo"
+    questions_dir = package_dir / "data" / "questions"
+    questions_dir.mkdir(parents=True)
+    (package_dir / "__init__.py").write_text(init_source, encoding="utf-8")
+    (package_dir / "functions.py").write_text(functions_source, encoding="utf-8")
+    source_path = questions_dir / "main.yml"
+    imports_text = (
+        imports_line if imports_line is not None else "modules:\n  - .functions"
+    )
+    if imports_line is not None:
+        (tmp_path / "pyproject.toml").write_text(
+            "[project]\nname = 'demo'\n", encoding="utf-8"
+        )
+    source = f"{imports_text}\n---\nquestion: |\n  {expression}\n"
+    return source, source_path
+
+
+EDIT_BUTTON_FUNCTIONS = (
+    "def edit_button(\n"
+    "    instance_name: str,\n"
+    "    color: str = 'secondary',\n"
+    "    icon: str = 'pencil',\n"
+    "    label: str = 'Edit',\n"
+    "    size: str = 'sm',\n"
+    ") -> str:\n"
+    '    """Generate an HTML edit button."""\n'
+    "    return action_button_html(instance_name, **dict(color=color, icon=icon, label=label, size=size))\n"
+)
+
+
+KWARGS_ONLY_FUNCTIONS = (
+    "def edit_button(instance_name: str, **kwargs) -> str:\n"
+    '    """Generate an HTML edit button.\n'
+    "\n"
+    "    Args:\n"
+    "        instance_name (str): The variable to edit.\n"
+    "        **kwargs: Passed to action_button_html. Common overrides include:\n"
+    "            - color (str): Bootstrap color class.\n"
+    "            - icon (str): FontAwesome icon name.\n"
+    "            - label (str): Text displayed on the button.\n"
+    "            - size (str): Button size suffix.\n"
+    '    """\n'
+    "    return action_button_html(instance_name, **kwargs)\n"
+)
+
+
+def test_python_call_kwarg_completions_in_mako_expression(tmp_path: Path) -> None:
+    expression = '${edit_button("M.parties[1].revisit", )}'
+    source, source_path = _call_kwarg_workspace(
+        tmp_path, EDIT_BUTTON_FUNCTIONS, expression
+    )
+    line = 4
+    character = len('  ${edit_button("M.parties[1].revisit", ')
+
+    targets = resolve_python_completion_targets(
+        source,
+        line,
+        character,
+        uri_or_path=source_path,
+        workspace_index=build_workspace_index([tmp_path]),
+    )
+
+    labels = {t.label for t in targets}
+    assert labels == {"color=", "icon=", "label=", "size="}
+    assert all(t.detail == "kwarg" for t in targets)
+
+
+def test_python_call_kwarg_completions_filter_by_partial(tmp_path: Path) -> None:
+    expression = '${edit_button("M.parties[1].revisit", la)}'
+    source, source_path = _call_kwarg_workspace(
+        tmp_path, EDIT_BUTTON_FUNCTIONS, expression
+    )
+    line = 4
+    character = len('  ${edit_button("M.parties[1].revisit", la')
+
+    targets = resolve_python_completion_targets(
+        source,
+        line,
+        character,
+        uri_or_path=source_path,
+        workspace_index=build_workspace_index([tmp_path]),
+    )
+
+    assert [t.label for t in targets] == ["label="]
+
+
+def test_python_call_kwarg_completions_ignore_docstring_kwargs(
+    tmp_path: Path,
+) -> None:
+    expression = '${edit_button("M.parties[1].revisit", )}'
+    source, source_path = _call_kwarg_workspace(
+        tmp_path, KWARGS_ONLY_FUNCTIONS, expression
+    )
+    line = 4
+    character = len('  ${edit_button("M.parties[1].revisit", ')
+
+    targets = resolve_python_completion_targets(
+        source,
+        line,
+        character,
+        uri_or_path=source_path,
+        workspace_index=build_workspace_index([tmp_path]),
+    )
+
+    assert targets == []
+
+
+def test_python_call_kwarg_completions_resolved_but_empty_suppresses_symbols(
+    tmp_path: Path,
+) -> None:
+    expression = '${edit_button("M.parties[1].revisit", la)}'
+    source, source_path = _call_kwarg_workspace(
+        tmp_path, KWARGS_ONLY_FUNCTIONS, expression
+    )
+    line = 4
+    character = len('  ${edit_button("M.parties[1].revisit", la')
+
+    targets = resolve_python_completion_targets(
+        source,
+        line,
+        character,
+        uri_or_path=source_path,
+        workspace_index=build_workspace_index([tmp_path]),
+    )
+
+    assert targets == []
+
+
+def test_python_call_kwarg_completions_after_open_paren_suggests_params(
+    tmp_path: Path,
+) -> None:
+    expression = "${greeting(}"
+    source, source_path = _call_kwarg_workspace(
+        tmp_path,
+        "def greeting(name, greeting: str = 'hi') -> str:\n    return ''\n",
+        expression,
+    )
+    line = 4
+    character = len("  ${greeting(")
+
+    targets = resolve_python_completion_targets(
+        source,
+        line,
+        character,
+        uri_or_path=source_path,
+        workspace_index=build_workspace_index([tmp_path]),
+    )
+
+    labels = {t.label for t in targets}
+    assert labels == {"name=", "greeting="}
+
+
+def test_python_call_kwarg_completions_exclude_used_kwargs(tmp_path: Path) -> None:
+    expression = '${edit_button("x", label="Edit", )}'
+    source, source_path = _call_kwarg_workspace(
+        tmp_path, EDIT_BUTTON_FUNCTIONS, expression
+    )
+    line = 4
+    character = len('  ${edit_button("x", label="Edit", ')
+
+    targets = resolve_python_completion_targets(
+        source,
+        line,
+        character,
+        uri_or_path=source_path,
+        workspace_index=build_workspace_index([tmp_path]),
+    )
+
+    labels = {t.label for t in targets}
+    assert labels == {"color=", "icon=", "size="}
+
+
+def test_python_call_kwarg_completions_ignore_nested_delimiters(
+    tmp_path: Path,
+) -> None:
+    expression = '${edit_button({"a": 1, "b": 2}, )}'
+    source, source_path = _call_kwarg_workspace(
+        tmp_path, EDIT_BUTTON_FUNCTIONS, expression
+    )
+    line = 4
+    character = len('  ${edit_button({"a": 1, "b": 2}, ')
+
+    targets = resolve_python_completion_targets(
+        source,
+        line,
+        character,
+        uri_or_path=source_path,
+        workspace_index=build_workspace_index([tmp_path]),
+    )
+
+    assert {t.label for t in targets} == {"color=", "icon=", "label=", "size="}
+
+
+@pytest.mark.parametrize("argument", ['"x=y"', "value == other"])
+def test_python_call_kwarg_completions_count_expression_arguments(
+    tmp_path: Path, argument: str
+) -> None:
+    expression = f"${{edit_button({argument}, )}}"
+    source, source_path = _call_kwarg_workspace(
+        tmp_path, EDIT_BUTTON_FUNCTIONS, expression
+    )
+    line = 4
+    character = len(f"  ${{edit_button({argument}, ")
+
+    targets = resolve_python_completion_targets(
+        source,
+        line,
+        character,
+        uri_or_path=source_path,
+        workspace_index=build_workspace_index([tmp_path]),
+    )
+
+    labels = {t.label for t in targets}
+    assert "instance_name=" not in labels
+    assert "color=" in labels
+
+
+def test_python_call_kwarg_completions_do_not_treat_comparison_as_kwarg(
+    tmp_path: Path,
+) -> None:
+    functions = "def helper(first, second='x', value='v'):\n    return ''\n"
+    expression = "${helper('x', value == other, )}"
+    source, source_path = _call_kwarg_workspace(tmp_path, functions, expression)
+    line = 4
+    character = len("  ${helper('x', value == other, ")
+
+    targets = resolve_python_completion_targets(
+        source,
+        line,
+        character,
+        uri_or_path=source_path,
+        workspace_index=build_workspace_index([tmp_path]),
+    )
+
+    assert [target.label for target in targets] == ["value="]
+
+
+def test_python_call_kwarg_completions_consume_positional_only_parameters(
+    tmp_path: Path,
+) -> None:
+    functions = (
+        "def edit_button(instance_name, /, color='secondary', *, icon='pencil'):\n"
+        "    return ''\n"
+    )
+    expression = '${edit_button("x", )}'
+    source, source_path = _call_kwarg_workspace(tmp_path, functions, expression)
+    line = 4
+    character = len('  ${edit_button("x", ')
+
+    targets = resolve_python_completion_targets(
+        source,
+        line,
+        character,
+        uri_or_path=source_path,
+        workspace_index=build_workspace_index([tmp_path]),
+    )
+
+    assert {t.label for t in targets} == {"color=", "icon="}
+
+
+def test_python_call_kwarg_completions_ignore_comment_delimiters(
+    tmp_path: Path,
+) -> None:
+    source, source_path = _call_kwarg_workspace(
+        tmp_path, EDIT_BUTTON_FUNCTIONS, "${x()}"
+    )
+    source = (
+        "modules:\n  - .functions\n---\n"
+        "code: |\n"
+        "  result = edit_button(  # ) is only a comment\n"
+        '      "x",\n'
+        "      la\n"
+    )
+    line = 6
+    character = len("      la")
+
+    targets = resolve_python_completion_targets(
+        source,
+        line,
+        character,
+        uri_or_path=source_path,
+        workspace_index=build_workspace_index([tmp_path]),
+    )
+
+    assert [t.label for t in targets] == ["label="]
+
+
+def test_python_call_kwarg_completions_value_position_falls_through(
+    tmp_path: Path,
+) -> None:
+    expression = '${edit_button("M.parties[1].revisit", label=)}'
+    source, source_path = _call_kwarg_workspace(
+        tmp_path, EDIT_BUTTON_FUNCTIONS, expression
+    )
+    line = 4
+    character = len('  ${edit_button("M.parties[1].revisit", label=')
+
+    targets = resolve_python_completion_targets(
+        source,
+        line,
+        character,
+        uri_or_path=source_path,
+        workspace_index=build_workspace_index([tmp_path]),
+    )
+
+    assert all(t.detail != "kwarg" for t in targets)
+
+
+def test_python_call_kwarg_completions_unresolvable_falls_through(
+    tmp_path: Path,
+) -> None:
+    source, source_path = _call_kwarg_workspace(
+        tmp_path,
+        "def edit_button(instance_name, **kwargs):\n    return ''\n",
+        '${unknown_helper("x", )}',
+    )
+    line = 4
+    character = len('  ${unknown_helper("x", ')
+
+    targets = resolve_python_completion_targets(
+        source,
+        line,
+        character,
+        uri_or_path=source_path,
+        workspace_index=build_workspace_index([tmp_path]),
+    )
+
+    assert all(t.detail != "kwarg" for t in targets)
+
+
+def test_python_call_kwarg_completions_multiline_code_block(tmp_path: Path) -> None:
+    source, source_path = _call_kwarg_workspace(
+        tmp_path, EDIT_BUTTON_FUNCTIONS, "${x()}"
+    )
+    source = (
+        "modules:\n  - .functions\n---\n"
+        "code: |\n"
+        "  result = edit_button(\n"
+        '      "x",\n'
+        "      la\n"
+    )
+    line = 6
+    character = len("      la")
+
+    targets = resolve_python_completion_targets(
+        source,
+        line,
+        character,
+        uri_or_path=source_path,
+        workspace_index=build_workspace_index([tmp_path]),
+    )
+
+    assert [t.label for t in targets] == ["label="]
+
+
+def test_python_call_kwarg_completions_nested_brace_mako(tmp_path: Path) -> None:
+    expression = '${edit_button("x", label=f"Edit {name}", co)}'
+    source, source_path = _call_kwarg_workspace(
+        tmp_path, EDIT_BUTTON_FUNCTIONS, expression
+    )
+    line = 4
+    character = len('  ${edit_button("x", label=f"Edit {name}", co')
+
+    targets = resolve_python_completion_targets(
+        source,
+        line,
+        character,
+        uri_or_path=source_path,
+        workspace_index=build_workspace_index([tmp_path]),
+    )
+
+    assert {t.label for t in targets} == {"color=", "icon="}
+
+
+def test_python_call_kwarg_completions_vendored_util(
+    tmp_path: Path, monkeypatch: Any
+) -> None:
+    monkeypatch.setattr(python_modules.importlib.util, "find_spec", lambda _name: None)
+    expression = "${action_button_html(}"
+    source, source_path = _call_kwarg_workspace(tmp_path, "x = 1\n", expression)
+    line = 4
+    character = len("  ${action_button_html(")
+
+    targets = resolve_python_completion_targets(
+        source,
+        line,
+        character,
+        uri_or_path=source_path,
+        workspace_index=build_workspace_index([tmp_path]),
+    )
+
+    labels = {t.label for t in targets}
+    assert "url=" in labels
+    assert "icon=" in labels
+    assert "label=" in labels
+
+
+@pytest.mark.parametrize(
+    "init_source", ["import functions\n", "from . import functions\n"]
+)
+def test_python_call_kwarg_completions_multi_segment_chain(
+    tmp_path: Path, init_source: str
+) -> None:
+    expression = "${demo.functions.edit_button(}"
+    source, source_path = _call_kwarg_workspace(
+        tmp_path,
+        EDIT_BUTTON_FUNCTIONS,
+        expression,
+        init_source=init_source,
+        imports_line="imports:\n  - docassemble.demo",
+    )
+    line = 4
+    character = len(f"  {expression}") - 1
+
+    targets = resolve_python_completion_targets(
+        source,
+        line,
+        character,
+        uri_or_path=source_path,
+        workspace_index=build_workspace_index([tmp_path]),
+    )
+
+    labels = {t.label for t in targets}
+    assert labels == {"color=", "icon=", "instance_name=", "label=", "size="}
+    assert all(t.detail == "kwarg" for t in targets)
+
+
+@pytest.mark.parametrize(
+    "imports_line, callee",
+    [
+        ("imports:\n  - from docassemble.demo import functions", "functions"),
+        ("imports:\n  - from docassemble.demo import functions as f", "f"),
+        ("imports:\n  - from . import functions", "functions"),
+    ],
+)
+def test_python_call_kwarg_completions_from_imported_submodule(
+    tmp_path: Path, imports_line: str, callee: str
+) -> None:
+    expression = f"${{{callee}.edit_button(}}"
+    source, source_path = _call_kwarg_workspace(
+        tmp_path,
+        EDIT_BUTTON_FUNCTIONS,
+        expression,
+        imports_line=imports_line,
+    )
+    line = 4
+    character = len(f"  ${{{callee}.edit_button(")
+
+    targets = resolve_python_completion_targets(
+        source,
+        line,
+        character,
+        uri_or_path=source_path,
+        workspace_index=build_workspace_index([tmp_path]),
+    )
+
+    assert {t.label for t in targets} == {
+        "color=",
+        "icon=",
+        "instance_name=",
+        "label=",
+        "size=",
+    }
+
+
+def test_python_call_kwarg_completions_respect_module_all(tmp_path: Path) -> None:
+    functions = (
+        "__all__ = ['visible']\n"
+        "def visible(value, color='blue'):\n"
+        "    return ''\n"
+        "def hidden(value, secret='red'):\n"
+        "    return ''\n"
+    )
+    visible_source, visible_path = _call_kwarg_workspace(
+        tmp_path / "visible", functions, '${visible("x", co)}'
+    )
+    visible_targets = resolve_python_completion_targets(
+        visible_source,
+        4,
+        len('  ${visible("x", co'),
+        uri_or_path=visible_path,
+        workspace_index=build_workspace_index([tmp_path / "visible"]),
+    )
+    assert [target.label for target in visible_targets] == ["color="]
+
+    hidden_source, hidden_path = _call_kwarg_workspace(
+        tmp_path / "hidden", functions, '${hidden("x", se)}'
+    )
+    hidden_targets = resolve_python_completion_targets(
+        hidden_source,
+        4,
+        len('  ${hidden("x", se'),
+        uri_or_path=hidden_path,
+        workspace_index=build_workspace_index([tmp_path / "hidden"]),
+    )
+    assert "secret=" not in {target.label for target in hidden_targets}
+
+
+def test_python_call_kwarg_completions_chain_through_function_falls_through(
+    tmp_path: Path,
+) -> None:
+    expression = "${demo.intermediate.edit_button(}"
+    source, source_path = _call_kwarg_workspace(
+        tmp_path,
+        EDIT_BUTTON_FUNCTIONS,
+        expression,
+        init_source="def intermediate(value):\n    return value\n",
+        imports_line="imports:\n  - docassemble.demo",
+    )
+    line = 4
+    character = len(f"  {expression}") - 1
+
+    targets = resolve_python_completion_targets(
+        source,
+        line,
+        character,
+        uri_or_path=source_path,
+        workspace_index=build_workspace_index([tmp_path]),
+    )
+
+    assert all(t.detail != "kwarg" for t in targets)
 
 
 def test_build_flat_caches_uses_workspace_index(tmp_path: Path) -> None:
