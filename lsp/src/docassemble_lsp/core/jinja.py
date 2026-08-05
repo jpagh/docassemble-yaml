@@ -52,7 +52,7 @@ class _SilentUndefined(jinja2.Undefined):
     def __getitem__(self, key: object) -> _SilentUndefined:  # type: ignore[override]
         return _SilentUndefined()
 
-    def __call__(self, *args: object, **kwargs: object) -> _SilentUndefined:  # type: ignore[override]
+    def __call__(self, *args: object, **kwargs: object) -> _SilentUndefined:
         return _SilentUndefined()
 
 

@@ -32,7 +32,6 @@
     dev  = [
         "docassemble-base>=1.9.13",
         "docassemble-webapp>=1.9.13",
-        "mypy>=2.3.0",
         "pytest>=9.1.1",
         "pytest-cov>=7.1.0",
         "pytest-xdist>=3.8.0",
@@ -48,10 +47,17 @@
     ]
     build-backend = "uv_build"
 
-[tool.mypy]
-    exclude        = "^build/|^src/docassemble_lsp/data/"
-    pretty         = true
-    python_version = "3.12"
+[tool.pyrefly]
+    preset           = "default"
+    project-includes = [
+        "**/*.py*",
+        "**/*.ipynb",
+    ]
+    project-excludes = [
+        "tests/**",
+        "scripts/**",
+        "src/docassemble_lsp/data/**",
+    ]
 
 [tool.pytest.ini_options]
     # docassemble-pattern 3.6.7 uses deprecated codecs.open() in

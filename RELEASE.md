@@ -27,7 +27,7 @@ The automated gate must be green:
 mise run //lsp:check
 ```
 
-This runs ruff, mypy, and the full pytest suite across all supported
+This runs ruff, pyrefly, and the full pytest suite across all supported
 Python versions. The following test areas are the gate:
 
 - Diagnostics + validator parity: `test_diagnostics.py`, `test_cli.py`

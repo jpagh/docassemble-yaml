@@ -1,7 +1,8 @@
 [tools]
-    "pipx:ruff" = "latest"
-    python      = "3.14"
-    uv          = "latest"
+    "pipx:pyrefly" = "latest"
+    "pipx:ruff"    = "latest"
+    python         = "3.14"
+    uv             = "latest"
 
 [settings]
     python.uv_venv_auto = "create|source"
@@ -35,9 +36,9 @@
     run         = "uv run ruff check --fix"
 
 [tasks.type]
-    description = "mypy on src/"
+    description = "Pyrefly"
     depends     = ["sync"]
-    run         = "uv run mypy src/"
+    run         = "pyrefly check"
 
 [tasks.test]
     description = "pytest with xdist"

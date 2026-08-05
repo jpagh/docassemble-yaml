@@ -10,7 +10,7 @@ def path_from_uri_or_path(uri_or_path: str | Path | None) -> Path | None:
         return None
     if isinstance(uri_or_path, Path):
         return uri_or_path
-    text = str(uri_or_path)
+    text = uri_or_path
     if text.startswith("file://"):
         from urllib.parse import unquote, urlparse
 

@@ -13,7 +13,7 @@ Monorepo for the docassemble-lsp language server and its VS Code extension.
 | `uv` | lsp | Python package manager, runs scripts and tests |
 | `tombi` | root, lsp, vscode | TOML formatter (`mise run //lsp:format`/`mise run //vscode:format` includes TOML; `tombi format` standalone) |
 | `ruff` | lsp | Python linter and formatter (`mise run //lsp:lint`/`mise run //lsp:format`) |
-| `mypy` | lsp | Python type checker (`mise run //lsp:type`) |
+| `pyrefly` | lsp | Python type checker (`mise run //lsp:type`) |
 | `pytest` | lsp | Python test runner (`mise run //lsp:test`) |
 | `bump-my-version` | root | Unified version bump (`mise run bump`) |
 | `aube` | vscode | Node package manager (replaces npm); mise-managed |

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Literal
+from typing import Literal, cast
 
 from docassemble_lsp.core.validation import find_errors, find_errors_from_string
 from docassemble_lsp.core.validation_config import RuntimeOptions, YAMLError
@@ -62,4 +62,4 @@ def analyze_path(
 
 
 def diagnostic_to_dict(diagnostic: Diagnostic) -> dict[str, object]:
-    return asdict(diagnostic)
+    return cast(dict[str, object], asdict(diagnostic))

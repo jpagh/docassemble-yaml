@@ -39,7 +39,7 @@ The current in-repo gate is:
 mise run //lsp:check
 ```
 
-That gate runs the full pytest suite and mypy. It should stay green
+That gate runs the full pytest suite and pyrefly. It should stay green
 before any work is considered complete.
 
 ## Next Plan

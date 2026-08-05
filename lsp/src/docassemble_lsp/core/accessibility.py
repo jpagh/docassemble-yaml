@@ -213,7 +213,7 @@ def _check_combobox_usage(
                     f"{field_label}"
                 ),
                 line_number=document_start_line
-                + field_doc.get("__line__", doc.get("__line__", 1))
+                + int(field_doc.get("__line__") or doc.get("__line__") or 1)
                 - 1,
             )
         )
@@ -234,7 +234,9 @@ def _check_multifield_no_label_usage(
             continue
 
         field_line = (
-            document_start_line + field_doc.get("__line__", doc.get("__line__", 1)) - 1
+            document_start_line
+            + int(field_doc.get("__line__") or doc.get("__line__") or 1)
+            - 1
         )
         no_label_value = field_doc.get("no label")
         has_no_label = _is_truthy(no_label_value)
@@ -623,7 +625,7 @@ def _iter_fields(doc: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 def _is_code_only_field(field: dict[str, Any]) -> bool:
-    keys = {str(key).strip() for key in field if key != "__line__"}
+    keys = {key.strip() for key in field if key != "__line__"}
     return keys == {"code"}
 
 
@@ -658,7 +660,7 @@ def _extract_field_label(field: dict[str, Any]) -> str:
     if explicit:
         return explicit
     for key in field:
-        key_text = str(key).strip()
+        key_text = key.strip()
         if key_text and key_text not in FIELD_NON_LABEL_KEYS:
             return key_text
     return ""
@@ -676,7 +678,7 @@ def _is_truthy(value: Any) -> bool:
 
 def _attachment_uses_docx(attachment: dict[str, Any]) -> bool:
     for key, value in attachment.items():
-        key_text = str(key or "").strip().lower()
+        key_text = (key or "").strip().lower()
         value_text = str(value or "").strip().lower()
         if "docx" in key_text:
             return True

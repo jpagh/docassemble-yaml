@@ -47,7 +47,7 @@ from docassemble_lsp.core.yaml_shared import (
     _value_range,
 )
 
-_PYTHON_VALUE_KEY_SUFFIXES = {
+_PYTHON_VALUE_KEY_SUFFIXES: set[tuple[str, ...]] = {
     ("if",),
     ("prevent going back",),
     ("back button",),
@@ -97,7 +97,7 @@ _PYTHON_VALUE_KEY_SUFFIXES = {
     ("manual code",),
     ("code",),
 }
-_PYTHON_LIST_VALUE_SUFFIXES = {
+_PYTHON_LIST_VALUE_SUFFIXES: set[tuple[str, ...]] = {
     ("need",),
     ("need", "pre"),
     ("need", "post"),

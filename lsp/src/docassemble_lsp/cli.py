@@ -101,7 +101,10 @@ class _CliArgumentParser(argparse.ArgumentParser):
         self, args: Iterable[str] | None = None, namespace: _NamespaceT | None = None
     ) -> argparse.Namespace | _NamespaceT:
         normalized_args = _normalize_multi_value_code_options(_materialize_args(args))
-        return super().parse_args(normalized_args, namespace)
+        result = super().parse_args(normalized_args, namespace)
+        if result is None:
+            raise AssertionError("argparse.parse_args() returned None")
+        return result
 
     @overload
     def parse_known_args(
@@ -122,7 +125,10 @@ class _CliArgumentParser(argparse.ArgumentParser):
         self, args: Iterable[str] | None = None, namespace: _NamespaceT | None = None
     ) -> tuple[argparse.Namespace | _NamespaceT, list[str]]:
         normalized_args = _normalize_multi_value_code_options(_materialize_args(args))
-        return super().parse_known_args(normalized_args, namespace)
+        result, unknown_args = super().parse_known_args(normalized_args, namespace)
+        if result is None:
+            raise AssertionError("argparse.parse_known_args() returned None")
+        return result, unknown_args
 
 
 def _build_bootstrap_parser() -> argparse.ArgumentParser:

@@ -1,7 +1,6 @@
 __pycache__/
 .#*
 .dir-locals.el
-.dmypy.json
 .DS_Store
 .eggs/
 .env
@@ -10,7 +9,6 @@ __pycache__/
 .history/
 .idea
 .installed.cfg
-.mypy_cache/
 .Python
 .ruff_cache/
 .venv
