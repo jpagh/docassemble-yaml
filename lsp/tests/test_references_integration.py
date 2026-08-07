@@ -442,3 +442,55 @@ def test_reference_locations_demo_package_include_url_action_event_references() 
             ),
         ),
     ]
+
+
+def test_definition_locations_parent_root_workspace_resolves_same_package_function(
+    tmp_path,
+) -> None:
+    """Go-to-definition works when the workspace root is the parent folder of
+    the package (index built without ``current_path``, like the LSP server)."""
+    pkg_root = tmp_path / "alpha_pkg"
+    pkg_dir = pkg_root / "docassemble" / "alpha"
+    questions_dir = pkg_dir / "data" / "questions"
+    questions_dir.mkdir(parents=True)
+    (pkg_root / "pyproject.toml").write_text(
+        "[project]\nname = 'alpha'\n", encoding="utf-8"
+    )
+    (pkg_dir / "__init__.py").write_text("", encoding="utf-8")
+    basic_settings = pkg_dir / "basic_settings.py"
+    basic_settings.write_text(
+        "def get_client_config(client_key) -> dict:\n"
+        '    """Return the per-client config dict."""\n'
+        "    return {}\n",
+        encoding="utf-8",
+    )
+
+    source_path = questions_dir / "main.yml"
+    source = (
+        "question: Test\n"
+        "---\n"
+        'if get_client_config(wfd_client_key).get("legalserver upload pdf"):\n'
+        "  x = 1\n"
+    )
+    source_path.write_text(source, encoding="utf-8")
+    source_lines = source.splitlines()
+    target_line = _line_index(source, "get_client_config")
+
+    index = build_workspace_index([tmp_path])
+    locations = core_build_definition_locations(
+        source_path.as_uri(),
+        source,
+        target_line,
+        source_lines[target_line].index("get_client_config") + 1,
+        workspace_index=index,
+    )
+
+    assert [
+        (
+            Path(location.target_uri.removeprefix("file://")).name,
+            location.target_range.start.line,
+        )
+        for location in locations
+    ] == [
+        ("basic_settings.py", 0),
+    ]

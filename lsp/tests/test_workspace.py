@@ -545,3 +545,83 @@ def test_workspace_index_from_current_document_sets_package_root(tmp_path) -> No
     yaml_file.write_text("question: Hi\n", encoding="utf-8")
     idx = WorkspaceIndex.from_current_document(yaml_file, "question: Hi\n")
     assert idx.package_root == tmp_path
+
+
+def test_workspace_index_modules_multi_package_parent_root(tmp_path) -> None:
+    """Python modules from all nested packages are indexed when the workspace
+    root is the parent folder containing them (LSP server path: no
+    ``current_path`` is available for package detection)."""
+    # Package A: docassemble/alpha with a function module.
+    alpha_root = tmp_path / "alpha_pkg"
+    alpha_pkg = alpha_root / "docassemble" / "alpha"
+    (alpha_pkg / "data" / "questions").mkdir(parents=True)
+    (alpha_root / "pyproject.toml").write_text(
+        "[project]\nname = 'alpha'\n", encoding="utf-8"
+    )
+    (alpha_pkg / "__init__.py").write_text("", encoding="utf-8")
+    (alpha_pkg / "basic_settings.py").write_text(
+        "def get_client_config(client_key) -> dict:\n    return {}\n",
+        encoding="utf-8",
+    )
+    # Docassemble packages are collected top-level only, so nested modules
+    # are not indexed.
+    alpha_nested = alpha_pkg / "nested" / "deep.py"
+    alpha_nested.parent.mkdir(parents=True)
+    alpha_nested.write_text(
+        "def alpha_deep() -> int:\n    return 1\n", encoding="utf-8"
+    )
+
+    # Package B: docassemble/beta with a function module.
+    beta_root = tmp_path / "beta_pkg"
+    beta_pkg = beta_root / "docassemble" / "beta"
+    (beta_pkg / "data" / "questions").mkdir(parents=True)
+    (beta_root / "pyproject.toml").write_text(
+        "[project]\nname = 'beta'\n", encoding="utf-8"
+    )
+    (beta_pkg / "__init__.py").write_text("", encoding="utf-8")
+    (beta_pkg / "helpers.py").write_text(
+        "def beta_helper() -> bool:\n    return True\n", encoding="utf-8"
+    )
+
+    # Package C: docassemble/gamma without data/questions/ and a nested
+    # module.  Non-docassemble packages are collected recursively.
+    gamma_root = tmp_path / "gamma_pkg"
+    gamma_pkg = gamma_root / "docassemble" / "gamma"
+    (gamma_pkg / "data").mkdir(parents=True)
+    (gamma_root / "pyproject.toml").write_text(
+        "[project]\nname = 'gamma'\n", encoding="utf-8"
+    )
+    (gamma_pkg / "__init__.py").write_text("", encoding="utf-8")
+    gamma_nested = gamma_pkg / "sub" / "deep.py"
+    gamma_nested.parent.mkdir(parents=True)
+    gamma_nested.write_text(
+        "def gamma_deep() -> int:\n    return 1\n", encoding="utf-8"
+    )
+
+    # Package A's YAML references package B so cross-package discovery also
+    # runs against the multi-root workspace.
+    (alpha_pkg / "data" / "questions" / "main.yml").write_text(
+        "question: Alpha\nmodules:\n  - docassemble.beta\n", encoding="utf-8"
+    )
+
+    index = build_workspace_index([tmp_path])
+
+    assert index.package_root is None
+    assert alpha_pkg / "basic_settings.py" in index.all_module_paths
+    assert alpha_nested not in index.all_module_paths
+    assert beta_pkg / "helpers.py" in index.all_module_paths
+    assert gamma_nested in index.all_module_paths
+
+    alpha_settings = (alpha_pkg / "basic_settings.py").resolve()
+    beta_helpers = (beta_pkg / "helpers.py").resolve()
+    gamma_deep = gamma_nested.resolve()
+    assert any(
+        target.path == alpha_settings
+        for target in index.symbol_registry["get_client_config"]
+    )
+    assert any(
+        target.path == beta_helpers for target in index.symbol_registry["beta_helper"]
+    )
+    assert any(
+        target.path == gamma_deep for target in index.symbol_registry["gamma_deep"]
+    )

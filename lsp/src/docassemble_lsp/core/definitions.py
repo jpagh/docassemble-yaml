@@ -3,7 +3,7 @@ from __future__ import annotations
 import ast
 import logging
 import re
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -180,15 +180,25 @@ def _extract_symbol_at_position(source: str, line: int, character: int) -> str |
     return word
 
 
-def _collect_python_modules(package_root: Path) -> frozenset[Path]:
-    """Collect top-level .py files in the docassemble package's Python directory.
+def _package_module_files(pkg_dir: Path) -> frozenset[Path]:
+    """Collect Python files for a docassemble package directory.
 
-    Only collects ``*.py`` files directly inside ``docassemble/<pkg>/``,
-    not subdirectories.  This avoids indexing alembic migrations, test
+    Docassemble packages (those with a ``data/questions/`` directory)
+    are collected top-level only to avoid alembic migrations, test
     utilities, or other nested Python files that aren't part of the
-    application module surface.  Cross-package discovery
-    (``_discover_cross_package_modules``) uses ``rglob`` because we
-    don't control external package layout.
+    application module surface.  Any other package is collected
+    recursively.
+    """
+    if (pkg_dir / "data" / "questions").is_dir():
+        return frozenset(py_file.resolve() for py_file in pkg_dir.glob("*.py"))
+    return frozenset(py_file.resolve() for py_file in pkg_dir.rglob("*.py"))
+
+
+def _collect_python_modules(package_root: Path) -> frozenset[Path]:
+    """Collect Python files from every package in *package_root*.
+
+    See :func:`_package_module_files` for the top-level vs recursive
+    distinction.
     """
     docassemble_dir = package_root / "docassemble"
     if not docassemble_dir.is_dir():
@@ -197,8 +207,7 @@ def _collect_python_modules(package_root: Path) -> frozenset[Path]:
     for pkg_dir in safe_iterdir(docassemble_dir):
         if not pkg_dir.is_dir() or not (pkg_dir / "__init__.py").is_file():
             continue
-        for py_file in pkg_dir.glob("*.py"):
-            modules.add(py_file.resolve())
+        modules.update(_package_module_files(pkg_dir))
     return frozenset(modules)
 
 
@@ -218,7 +227,7 @@ def python_discovery_signature(source: str) -> frozenset[str]:
 
 def _discover_cross_package_modules(
     yaml_sources: WorkspaceYamlSources,
-    package_root: Path,
+    package_roots: Iterable[Path],
     search_roots: tuple[Path, ...] = (),
 ) -> frozenset[Path]:
     """Discover Python modules from external docassemble packages.
@@ -226,13 +235,15 @@ def _discover_cross_package_modules(
     Scans ``modules:``, ``imports:``, and ``include:`` list items in all
     YAML sources for ``docassemble.<pkg>`` references, then resolves each
     unique package from the Python environment and returns all its Python
-    module paths.
+    module paths.  Packages located inside any of *package_roots* are
+    treated as local and skipped.
 
     Only the directive contexts listed above are scanned — code blocks
     and string values are ignored to avoid false positives.
     """
     seen_pkgs: set[str] = set()
     external_paths: set[Path] = set()
+    local_roots = [root.resolve() for root in package_roots]
     for source in yaml_sources.sources:
         for pkg_name in sorted(python_discovery_signature(source.text)):
             if pkg_name in seen_pkgs:
@@ -269,22 +280,11 @@ def _discover_cross_package_modules(
                 continue
 
             pkg_dir = resolution.path.resolve().parent
-            # Skip if this is our own package.
-            try:
-                pkg_dir.relative_to(package_root)
+            # Skip if this is one of our own packages.
+            if any(pkg_dir.is_relative_to(root) for root in local_roots):
                 continue
-            except ValueError:
-                pass
 
-            # If it's a docassemble package (has data/questions/), collect only
-            # top-level .py files to avoid alembic, tests, etc. Otherwise,
-            # fall back to a full recursive scan.
-            if (pkg_dir / "data" / "questions").is_dir():
-                for py_file in pkg_dir.glob("*.py"):
-                    external_paths.add(py_file.resolve())
-            else:
-                for py_file in pkg_dir.rglob("*.py"):
-                    external_paths.add(py_file.resolve())
+            external_paths.update(_package_module_files(pkg_dir))
 
     return frozenset(external_paths)
 
@@ -472,7 +472,7 @@ def build_workspace_index(
     # Collect ALL package roots in the workspace.
     all_package_roots: list[Path] = []
     if package_root is not None:
-        all_package_roots.append(package_root)
+        all_package_roots.append(package_root.resolve())
     if search_roots:
         discovered = _discover_package_roots(search_roots)
         for pr in discovered:
@@ -566,12 +566,28 @@ def build_workspace_index(
     workspace_registry: dict[str, frozenset[DefinitionTarget]] = {}
     workspace_docstrings: dict[str, str] = {}
 
-    if package_root is not None:
-        workspace_module_paths = _collect_python_modules(package_root)
-        cross_module_paths = _discover_cross_package_modules(
-            index.yaml_sources, package_root, index.search_roots
+    # Collect Python modules from every package root in the workspace, not
+    # just the one detected from the workspace root itself.  When the
+    # workspace root is a parent folder containing packages (e.g. a folder
+    # with ``docassemble-Foo`` and ``docassemble-Bar`` side by side),
+    # ``package_root`` is None but ``all_package_roots`` still finds them.
+    # Discovery is limited to the search root and its immediate
+    # subdirectories (``_discover_package_roots``), so packages nested
+    # deeper are not indexed.  Docassemble packages are collected
+    # top-level only (``_collect_python_modules``), while packages that
+    # lack ``data/questions/`` are collected recursively, matching
+    # external-package discovery.
+    module_roots = all_package_roots
+    if module_roots:
+        collected_modules: set[Path] = set()
+        for pr in module_roots:
+            collected_modules.update(_collect_python_modules(pr))
+        collected_modules.update(
+            _discover_cross_package_modules(
+                index.yaml_sources, module_roots, index.search_roots
+            )
         )
-        workspace_module_paths = workspace_module_paths | cross_module_paths
+        workspace_module_paths = frozenset(collected_modules)
         (
             workspace_class_names,
             workspace_non_exception,
