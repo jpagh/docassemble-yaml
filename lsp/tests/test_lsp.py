@@ -488,6 +488,22 @@ def test_completion_list_marks_property_insert_text_as_snippet() -> None:
     assert fields.insert_text_format == InsertTextFormat.Snippet
 
 
+def test_completion_list_text_edit_replaces_full_key_prefix() -> None:
+    """Two-word keys get an explicit textEdit spanning the whole typed prefix,
+    so accepting 'disable if' after 'disable i' yields 'disable if:' instead of
+    'disable disable if:'."""
+    source = "question: Hi\nfields:\n  - disable i\n"
+    completions = build_completion_list(source, 2, 13)
+
+    item = next(item for item in completions.items if item.label == "disable if")
+    assert item.text_edit is not None
+    assert item.text_edit.new_text == "disable if: $0"
+    assert item.text_edit.range.start.line == 2
+    assert item.text_edit.range.start.character == 4
+    assert item.text_edit.range.end.line == 2
+    assert item.text_edit.range.end.character == 13
+
+
 def test_completion_list_no_block_scalar_variant_for_question() -> None:
     completions = build_completion_list("", 0, 0)
 

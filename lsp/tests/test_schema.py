@@ -1970,6 +1970,80 @@ def test_modules_item_non_relative_prefix_shows_workspace_modules(tmp_path) -> N
     )  # cursor at col 6 replaces from value start
 
 
+def _apply_edit(source: str, line: int, start: int, end: int, new_text: str) -> str:
+    """Apply a completion edit at (start, end) on one line, like a client would."""
+    lines = source.splitlines()
+    lines[line] = lines[line][:start] + new_text + lines[line][end:]
+    result = "\n".join(lines)
+    if source.endswith("\n"):
+        result += "\n"
+    return result
+
+
+def test_multi_word_key_completion_replaces_full_typed_prefix() -> None:
+    """Accepting 'disable if' after typing 'disable i' must not duplicate the
+    first word: the text edit range covers the whole typed key."""
+    source = "question: Hi\nfields:\n  - disable i\n"
+    completions = get_completions(source, 2, 13)
+    item = next(c for c in completions if c.label == "disable if")
+    assert item.insert_text == "disable if: $0"
+    assert item.text_edit_range == (4, 13)
+
+    result = _apply_edit(
+        source, 2, *item.text_edit_range, item.insert_text.replace("$0", "")
+    )
+    assert result == "question: Hi\nfields:\n  - disable if: \n"
+
+
+def test_multi_word_key_completion_at_top_level_replaces_full_typed_prefix() -> None:
+    """Same guarantee for top-level keys without a list-item marker."""
+    source = "css cl\n"
+    completions = get_completions(source, 0, 6)
+    item = next(c for c in completions if c.label == "css class")
+    assert item.text_edit_range == (0, 6)
+
+    result = _apply_edit(
+        source, 0, *item.text_edit_range, item.insert_text.replace("$0", "")
+    )
+    assert result == "css class: \n"
+
+
+def test_shorthand_completion_replaces_full_typed_prefix() -> None:
+    """Multi-word shorthand snippets also get a range spanning the typed text."""
+    source = "question: Hi\nfields:\n  - lab\n"
+    completions = get_completions(source, 2, 7)
+    item = next(c for c in completions if c.label == "label: value")
+    assert item.text_edit_range == (4, 7)
+
+
+def test_value_completion_replaces_from_value_start() -> None:
+    """Value completions replace from the start of the typed value, so a
+    multi-word key value can't be corrupted by word-boundary heuristics."""
+    source = "question: Hi\nfields:\n  - none of the above: Tru\n"
+    completions = get_completions(source, 2, 26)
+    item = next(c for c in completions if c.label == "True")
+    assert item.text_edit_range == (23, 26)
+
+    result = _apply_edit(source, 2, *item.text_edit_range, item.insert_text)
+    assert result == "question: Hi\nfields:\n  - none of the above: True\n"
+
+
+def test_show_if_variable_completion_replaces_from_value_start() -> None:
+    """variable: values in show-if blocks replace from the value start."""
+    source = (
+        "question: Hi\n"
+        "fields:\n"
+        "  - Are the fruits taxed?: fruits_taxed_yn\n"
+        "    datatype: yesnoradio\n"
+        "  - Taste: fruit_taste\n"
+        "    show if:\n"
+        "      variable: fru\n"
+    )
+    completions = get_completions(source, 6, len("      variable: fru"))
+    item = next(c for c in completions if c.label == "fruits_taxed_yn")
+    assert item.text_edit_range == (len("      variable: "), len("      variable: fru"))
+
+
 def test_modules_item_relative_prefix_snippets_without_workspace(tmp_path) -> None:
     """Without workspace modules, a dot prefix still shows snippet templates
     (module_name, .relative_module) — the regex in property_completion_provider

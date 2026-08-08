@@ -20,6 +20,7 @@
 - [LSP] The document-link cache key is now deterministic (SHA-1 of source) instead of process-salted `hash()`, removing a cross-process serialization trap.
 - [LSP] The workspace-index overlay cache now invalidates on a content-derived stamp (built-in `hash()`) of the open documents, and `_WorkspaceIndexStore` mutations are guarded by a lock.
 - [LSP] Python module index caching now uses nanosecond-resolution mtimes, so rapid back-to-back rewrites of the same file reliably invalidate the cache.
+- [LSP] Autocomplete now replaces your typed text as you'd expect for multi-word options. Typing `disable i` and accepting `disable if` gives you `disable if:` instead of `disable disable if:`. This applies everywhere in the YAML — keys, values, and file/module names.
 
 ## [26.7.0] - 2026-07-09
 

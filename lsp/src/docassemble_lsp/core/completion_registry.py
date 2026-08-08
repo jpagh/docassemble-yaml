@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import re
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 from docassemble_lsp.core import field_keys
@@ -79,6 +79,45 @@ class CompletionRegistry:
             if candidates is not None:
                 return candidates
         return []
+
+
+def _completion_token_range(line_prefix: str, character: int) -> tuple[int, int] | None:
+    """TextEdit range covering the YAML token being completed.
+
+    Returns ``(start, character)`` where *start* is the column where the typed
+    key or value begins (after indentation and list markers), or ``None`` when
+    the prefix is not a YAML key/value position. Without an explicit range,
+    VS Code replaces only the current word, so multi-word keys like
+    ``disable if`` get duplicated ("disable disable if:").
+    """
+    value_match = _VALUE_RE.match(line_prefix)
+    if value_match is not None:
+        return (value_match.start(3), character)
+    key_match = re.match(r"\s*(?:-\s*)?", line_prefix)
+    assert (
+        key_match is not None
+    )  # every group is optional, so the pattern always matches
+    key_start = len(key_match.group(0))
+    if re.fullmatch(r"[\w/.-][\w /.-]*", line_prefix[key_start:]):
+        return (key_start, character)
+    return None
+
+
+def _with_completion_range(
+    candidates: list[CompletionCandidate],
+    line_prefix: str,
+    character: int,
+) -> list[CompletionCandidate]:
+    """Fill in a client-side-safe text edit range for candidates that lack one."""
+    token_range = _completion_token_range(line_prefix, character)
+    if token_range is None:
+        return candidates
+    return [
+        candidate
+        if candidate.text_edit_range is not None
+        else replace(candidate, text_edit_range=token_range)
+        for candidate in candidates
+    ]
 
 
 def property_type(rule: PropertyRule) -> str:
@@ -268,7 +307,9 @@ def value_completion_provider(
             context.line_prefix,
         )
         if show_if_variable_candidates:
-            return show_if_variable_candidates
+            return _with_completion_range(
+                show_if_variable_candidates, context.line_prefix, context.character
+            )
         prop = scope_properties.get(key) or context.metadata.all_known_properties.get(
             key
         )
@@ -358,13 +399,17 @@ def value_completion_provider(
                             )
                         )
 
-            return candidates
+            return _with_completion_range(
+                candidates, context.line_prefix, context.character
+            )
 
         button_command_candidates = context.button_command_candidates(
             context.source, context.line, context.line_prefix
         )
         if button_command_candidates:
-            return button_command_candidates
+            return _with_completion_range(
+                button_command_candidates, context.line_prefix, context.character
+            )
     return None
 
 
@@ -413,7 +458,7 @@ def property_completion_provider(
         shorthand_candidates + property_candidates,
         indent_unit=context.indent,
     )
-    return result
+    return _with_completion_range(result, context.line_prefix, context.character)
 
 
 def _list_item_partial_value(context: CompletionContext) -> str:
@@ -498,7 +543,11 @@ def _complete_file_paths(
                 c.label,
             )
         )
-    return candidates if candidates else None
+    return (
+        _with_completion_range(candidates, context.line_prefix, context.character)
+        if candidates
+        else None
+    )
 
 
 def _complete_module_names(
@@ -518,6 +567,10 @@ def _complete_module_names(
     is_relative = partial.startswith(".")
     match_partial = partial.lstrip(".") if is_relative else partial
 
+    # Compute once: TextEdit range from start of list-item value to cursor,
+    # bypassing VS Code's word-boundary heuristics for "." and multi-word names.
+    token_range = _completion_token_range(context.line_prefix, context.character)
+
     seen: set[str] = set()
     candidates: list[CompletionCandidate] = []
 
@@ -527,18 +580,16 @@ def _complete_module_names(
             if match_partial.lower() in mod.lower() and mod not in seen:
                 seen.add(mod)
                 candidates.append(
-                    CompletionCandidate(label=mod, insert_text=mod, is_value=True)
+                    CompletionCandidate(
+                        label=mod,
+                        insert_text=mod,
+                        is_value=True,
+                        text_edit_range=token_range,
+                    )
                 )
 
     # Workspace Python module paths.
-    text_edit_range: tuple[int, int] | None = None
     for mod_path in sorted(context.workspace_index.all_module_paths):
-        if text_edit_range is None:
-            # Compute lazily: TextEdit range from start of list-item value
-            # to cursor, bypassing VS Code's word-boundary heuristics for ".".
-            list_match = _LIST_ITEM_VALUE_RE.match(context.line_prefix)
-            value_start_col = list_match.start(2) if list_match else context.character
-            text_edit_range = (value_start_col, context.character)
         name = mod_path.stem
         if name == "__init__":
             name = mod_path.parent.name
@@ -550,7 +601,7 @@ def _complete_module_names(
                     label=dotted,
                     insert_text=dotted,
                     is_value=True,
-                    text_edit_range=text_edit_range,
+                    text_edit_range=token_range,
                 )
             )
 
@@ -596,7 +647,11 @@ def _complete_variable_names(
     candidates.sort(
         key=lambda c: (0 if c.label.lower().startswith(partial.lower()) else 1, c.label)
     )
-    return candidates if candidates else None
+    return (
+        _with_completion_range(candidates, context.line_prefix, context.character)
+        if candidates
+        else None
+    )
 
 
 def _complete_block_ids(context: CompletionContext) -> list[CompletionCandidate] | None:
@@ -614,7 +669,11 @@ def _complete_block_ids(context: CompletionContext) -> list[CompletionCandidate]
                 c.label,
             )
         )
-    return candidates if candidates else None
+    return (
+        _with_completion_range(candidates, context.line_prefix, context.character)
+        if candidates
+        else None
+    )
 
 
 _ATTACHMENT_KEY_EXTENSIONS: dict[str, tuple[str, ...]] = {
@@ -663,4 +722,8 @@ def _complete_attachment_template_paths(
                 c.label,
             )
         )
-    return candidates if candidates else None
+    return (
+        _with_completion_range(candidates, context.line_prefix, context.character)
+        if candidates
+        else None
+    )
