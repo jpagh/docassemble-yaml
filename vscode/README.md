@@ -51,7 +51,7 @@ mise run //vscode:bundle:server  # bundle step only
 mise run //vscode:package  # packages the VSIX
 ```
 
-The `bundled/` directory is git-ignored and regenerated on every build. The build is platform-specific — it embeds a specific CPython version, OS, and architecture, so contributors on a different platform must rebuild before running the real-LSP tests. The mise tasks handle this: `mise run //vscode:test` and `mise run //vscode:test:real-lsp` both depend on `//vscode:build` and rebuild the bundle as a side effect. The default `mise run //vscode:test` (mock server) does not need the bundle — only `//vscode:test:real-lsp` does.
+The `bundled/` directory is git-ignored and regenerated on every build. The build is platform-specific — it embeds a specific CPython version, OS, and architecture, so contributors on a different platform must rebuild before running the real-LSP tests. The mise tasks handle this: both `mise run //vscode:test` and `mise run //vscode:test:real-lsp` depend on `//vscode:build`, so the bundle is rebuilt as a side effect of either — even though the default mock-server test never loads it.
 
 ## Commands
 

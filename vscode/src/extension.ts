@@ -232,9 +232,14 @@ class DocassembleLspController {
       // Register a local DocumentLinkProvider so VS Code draws persistent
       // underlines for module/include/static/template references. The LSP client
       // auto-registers a provider too, but VS Code only renders underlines from
-      // local providers — not from LSP-delegated ones.
+      // local providers — not from LSP-delegated ones. Registered for both
+      // `file` and `untitled` (unsaved scratch) documents; the middleware below
+      // suppresses the client's own provider since this one covers both schemes.
       this.linkRegistration = vscode.languages.registerDocumentLinkProvider(
-        { language: "docassemble", scheme: "file" },
+        [
+          { language: "docassemble", scheme: "file" },
+          { language: "docassemble", scheme: "untitled" },
+        ],
         {
           provideDocumentLinks: async (document) => {
             if (!this.client || this.client.state !== ClientState.Running) {
@@ -696,6 +701,11 @@ class DocassembleLspController {
     const configWatcher = vscode.workspace.createFileSystemWatcher(
       "**/{docassemble-lsp.toml,.docassemble-lsp.toml,pyproject.toml}",
     );
+    // `**` does not descend into dot-prefixed directories, so the `.config/`
+    // variant (a supported config location) needs its own watcher.
+    const configDirWatcher = vscode.workspace.createFileSystemWatcher(
+      "**/.config/docassemble-lsp.toml",
+    );
 
     const sendChange = (uri: vscode.Uri, type: FileChangeType): void => {
       client.sendNotification("workspace/didChangeWatchedFiles", {
@@ -707,6 +717,7 @@ class DocassembleLspController {
       yamlWatcher,
       pyWatcher,
       configWatcher,
+      configDirWatcher,
       yamlWatcher.onDidChange((uri) => sendChange(uri, FileChangeType.Changed)),
       yamlWatcher.onDidCreate((uri) => sendChange(uri, FileChangeType.Created)),
       yamlWatcher.onDidDelete((uri) => sendChange(uri, FileChangeType.Deleted)),
@@ -716,6 +727,9 @@ class DocassembleLspController {
       configWatcher.onDidChange((uri) => sendChange(uri, FileChangeType.Changed)),
       configWatcher.onDidCreate((uri) => sendChange(uri, FileChangeType.Created)),
       configWatcher.onDidDelete((uri) => sendChange(uri, FileChangeType.Deleted)),
+      configDirWatcher.onDidChange((uri) => sendChange(uri, FileChangeType.Changed)),
+      configDirWatcher.onDidCreate((uri) => sendChange(uri, FileChangeType.Created)),
+      configDirWatcher.onDidDelete((uri) => sendChange(uri, FileChangeType.Deleted)),
     );
 
     this.log(

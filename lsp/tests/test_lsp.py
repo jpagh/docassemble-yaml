@@ -1263,6 +1263,32 @@ def test_completion_list_in_code_block_includes_python_symbols(tmp_path) -> None
     assert "plus_one" in labels
 
 
+def test_completion_list_on_blank_code_block_line_has_no_previous_line_prefix(
+    tmp_path,
+) -> None:
+    package_dir = tmp_path / "docassemble" / "demo"
+    questions_dir = package_dir / "data" / "questions"
+    questions_dir.mkdir(parents=True)
+    (package_dir / "helpers.py").write_text(
+        "def plus_one(value):\n    return value + 1\n", encoding="utf-8"
+    )
+    source_path = questions_dir / "main.yml"
+    source = "modules:\n  - .helpers\n---\ncode: |\n  plu\n\n  x = 2\n"
+
+    completions = build_completion_list(
+        source,
+        5,
+        0,
+        uri_or_path=source_path.as_uri(),
+        workspace_paths=[str(tmp_path)],
+    )
+
+    # The cursor sits on a blank line inside the code block; the previous
+    # line's text must not leak in as the completion prefix.
+    labels = {item.label for item in completions.items}
+    assert "plus_one" not in labels
+
+
 def test_completion_list_in_if_value_includes_python_symbols(tmp_path) -> None:
     package_dir = tmp_path / "docassemble" / "demo"
     questions_dir = package_dir / "data" / "questions"

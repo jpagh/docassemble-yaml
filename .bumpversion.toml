@@ -16,11 +16,17 @@
 
     [[tool.bumpversion.files]]
         filename = "lsp/pyproject.toml"
-        replace  = 'version = "{new_version}"'
-        search   = 'version = "{current_version}"'
+        key_path = "project.version"
+        replace  = "{new_version}"
+        search   = "{current_version}"
 
     [[tool.bumpversion.files]]
         filename = "vscode/package.json"
+        replace  = '"version": "{new_version}"'
+        search   = '"version": "{current_version}"'
+
+    [[tool.bumpversion.files]]
+        filename = "vscode/package-lock.json"
         replace  = '"version": "{new_version}"'
         search   = '"version": "{current_version}"'
 

@@ -644,6 +644,12 @@ def _python_completion_prefix_at_position(
             return ((), "")
         return None
     code_lines = code.splitlines() or [""]
+    # `splitlines()` drops the trailing empty line when the cursor sits at the
+    # start of a line (text ends in "\n"); without it the previous line's text
+    # is treated as the current line's prefix. Keep the empty line so a blank
+    # code line yields an empty prefix instead of inheriting the prior line.
+    if code.endswith("\n"):
+        code_lines.append("")
     return _python_completion_prefix_in_text(code, len(code_lines), len(code_lines[-1]))
 
 
