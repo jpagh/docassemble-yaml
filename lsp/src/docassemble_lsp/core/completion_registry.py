@@ -286,10 +286,13 @@ def _value_supports_block_scalar(context: CompletionContext, key: str) -> bool:
 
 
 def _should_offer_block_scalar_pipe(prop: PropertyRule, partial_value: str) -> bool:
+    # Only a bare "|" (or nothing) is offered: "|-", "|+", "|2" etc. are
+    # already complete chomping/indent markers, and rewriting them to a
+    # plain "|" would silently drop their semantics.
     return (
         "string" in prop.value_types
         and prop.insert_kind == "scalar"
-        and (partial_value == "" or partial_value.startswith("|"))
+        and partial_value in ("", "|")
     )
 
 

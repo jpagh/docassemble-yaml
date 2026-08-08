@@ -72,6 +72,17 @@ _DAYAML_CONFIG_FILENAMES: tuple[str, ...] = (
     ".config/docassemble-lsp.toml",
 )
 
+_DAYAML_CONFIG_BASENAMES = frozenset(
+    {Path(filename).name for filename in _DAYAML_CONFIG_FILENAMES}
+) | {"pyproject.toml"}
+
+
+def is_dayaml_config_file(path: Path) -> bool:
+    """True when *path* is a config source: a dedicated docassemble-lsp file
+    or a ``pyproject.toml`` that may carry a ``[tool.docassemble-lsp]``
+    section."""
+    return path.name in _DAYAML_CONFIG_BASENAMES
+
 
 def _dayaml_config_mapping(
     project_dir: Path,

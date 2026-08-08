@@ -652,6 +652,53 @@ def test_lsp_process_nested_project_config_replaces_root(tmp_path: Path) -> None
     # C103 (project) replaces C102 (root): the label: value shorthand is not
     # suppressed by the root's C102.
     assert "label: value" in labels
+
+
+def test_lsp_process_reloads_config_on_config_change(tmp_path: Path) -> None:
+    """Editing docassemble-lsp.toml mid-session takes effect without a
+    restart: the per-document config cache is invalidated on watched-file
+    changes."""
+    source_path = tmp_path / "interview.yml"
+    source = "question: Hi\nfields:\n  - \n"
+    source_path.write_text(source, encoding="utf-8")
+
+    def request_completions(session) -> set[str]:
+        completions = session.request(
+            "textDocument/completion",
+            {
+                "textDocument": {"uri": source_path.resolve().as_uri()},
+                "position": {"line": 2, "character": 4},
+            },
+        )
+        return {item["label"] for item in completions["items"]}
+
+    with _LspSession(cwd=tmp_path) as session:
+        session.initialize(tmp_path)
+        session.notify("textDocument/didOpen", _did_open_params(source_path, source))
+
+        # No config: shorthand is offered.
+        assert "label: value" in request_completions(session)
+
+        # Add a config enabling C102 and notify the server of the change.
+        config_path = tmp_path / "docassemble-lsp.toml"
+        config_path.write_text('conventions = ["C102"]\n', encoding="utf-8")
+        session.notify(
+            "workspace/didChangeWatchedFiles",
+            {
+                "changes": [
+                    {
+                        "uri": config_path.resolve().as_uri(),
+                        "type": 2,  # FileChangeType.Changed
+                    }
+                ]
+            },
+        )
+
+        # Without a restart, the shorthand completion is now suppressed.
+        labels = request_completions(session)
+        assert "label: value" not in labels
+        assert "label" in labels
+        assert "field" in labels
     source_path = tmp_path / "metadata.yml"
     source = "metadata:\n  "
     source_path.write_text(source, encoding="utf-8")

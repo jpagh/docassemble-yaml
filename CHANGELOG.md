@@ -23,7 +23,8 @@
 - [LSP] The workspace-index overlay cache now invalidates on a content-derived stamp (built-in `hash()`) of the open documents, and `_WorkspaceIndexStore` mutations are guarded by a lock.
 - [LSP] Python module index caching now uses nanosecond-resolution mtimes, so rapid back-to-back rewrites of the same file reliably invalidate the cache.
 - [LSP] Autocomplete now replaces your typed text as you'd expect for multi-word options. Typing `disable i` and accepting `disable if` gives you `disable if:` instead of `disable disable if:`. This applies everywhere in the YAML — keys, values, and file/module names.
-- [VSCODE] The language server now starts in your workspace folder, so conventions enabled in the project's configuration actually take effect. Restart the language server after changing or adding a configuration.
+- [VSCODE] The language server now starts in your workspace folder, so conventions enabled in the project's configuration actually take effect. Configuration changes (e.g. editing `docassemble-lsp.toml` or the `[tool.docassemble-lsp]` pyproject section) are picked up on save without a restart.
+- [LSP] Autocomplete no longer rewrites a typed block-scalar marker (`|-`, `|+`, `|2`) into a plain `|` — the block-scalar completion is only offered for an empty value or a bare `|`.
 
 ## [26.7.0] - 2026-07-09
 

@@ -106,6 +106,7 @@ from docassemble_lsp.core.files import (
     DayamlProjectConfig,
     clear_detect_package_cache,
     find_nearest_dayaml_config_dir,
+    is_dayaml_config_file,
     load_dayaml_project_config,
 )
 from docassemble_lsp.core.fixes import (
@@ -1282,18 +1283,20 @@ def create_server(
         ls: LanguageServer,
         params: DidChangeWatchedFilesParams,
     ) -> None:
+        changed_paths = [
+            p
+            for change in params.changes
+            if (p := path_from_uri_or_path(change.uri)) is not None
+        ]
+        if any(is_dayaml_config_file(p) for p in changed_paths):
+            # Conventions/ignored codes are resolved per document and cached;
+            # drop the cache so config edits take effect without a restart.
+            _project_config_for.cache_clear()
         relevant = any(
             change.uri.endswith((".py", ".yml", ".yaml")) for change in params.changes
         )
         if relevant:
             workspace_indexes.clear()
-            changed_paths = list(
-                dict.fromkeys(
-                    p
-                    for change in params.changes
-                    if (p := path_from_uri_or_path(change.uri)) is not None
-                )
-            )
             if changed_paths:
                 clear_detect_package_cache(changed_paths)
             workspace_indexes.for_workspace(ls.workspace.root_path)

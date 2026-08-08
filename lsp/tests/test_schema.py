@@ -1274,6 +1274,31 @@ def test_fields_item_none_of_the_above_pipe_value_completion() -> None:
     assert pipe.is_snippet is True
 
 
+@pytest.mark.parametrize(
+    ("partial", "cursor"),
+    [
+        ("|-", 25),  # chomping: strip
+        ("|+", 25),  # chomping: keep
+        ("|2", 25),  # explicit indentation indicator
+        ("|2-", 26),  # combined marker
+    ],
+)
+def test_fields_item_pipe_completion_not_offered_for_complete_markers(
+    partial: str, cursor: int
+) -> None:
+    """Typed block-scalar markers (|- |+ |2 ...) must not be rewritten to a
+    plain '|' by the completion."""
+    source = (
+        "question: Hi\n"
+        "fields:\n"
+        "  - label: Pick\n"
+        "    datatype: checkboxes\n"
+        f"    none of the above: {partial}"
+    )
+    completions = get_completions(source, 4, cursor)
+    assert not any(c.label == "|" for c in completions)
+
+
 def test_fields_item_question_pipe_value_completion() -> None:
     source = "question: |"
     completions = get_completions(source, 0, 11)

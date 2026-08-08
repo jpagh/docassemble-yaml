@@ -150,10 +150,10 @@ class DocassembleLspController {
       options: {
         env: resolvedCommand.env,
         shell: resolvedCommand.shell,
-        // The server discovers docassemble-lsp config (e.g. enabled
-        // conventions like C102) from the pyproject.toml in its working
-        // directory, so launch it in the workspace root instead of wherever
-        // the extension host happened to start.
+        // Conventions and ignored codes resolve per document (each file walks
+        // up to its own project's config), so the cwd only supplies the
+        // global args/lsp_args keys; launch in the workspace root rather than
+        // wherever the extension host happened to start.
         ...(workspaceFolder ? { cwd: workspaceFolder } : {}),
       },
     };
@@ -691,6 +691,11 @@ class DocassembleLspController {
   private registerFileWatchers(client: LanguageClient): void {
     const yamlWatcher = vscode.workspace.createFileSystemWatcher("**/*.{yml,yaml}");
     const pyWatcher = vscode.workspace.createFileSystemWatcher("**/*.py");
+    // Config edits must reach the server so per-document conventions and
+    // ignored codes refresh without a restart.
+    const configWatcher = vscode.workspace.createFileSystemWatcher(
+      "**/{docassemble-lsp.toml,.docassemble-lsp.toml,pyproject.toml}",
+    );
 
     const sendChange = (uri: vscode.Uri, type: FileChangeType): void => {
       client.sendNotification("workspace/didChangeWatchedFiles", {
@@ -701,15 +706,21 @@ class DocassembleLspController {
     this.fileWatchers.push(
       yamlWatcher,
       pyWatcher,
+      configWatcher,
       yamlWatcher.onDidChange((uri) => sendChange(uri, FileChangeType.Changed)),
       yamlWatcher.onDidCreate((uri) => sendChange(uri, FileChangeType.Created)),
       yamlWatcher.onDidDelete((uri) => sendChange(uri, FileChangeType.Deleted)),
       pyWatcher.onDidChange((uri) => sendChange(uri, FileChangeType.Changed)),
       pyWatcher.onDidCreate((uri) => sendChange(uri, FileChangeType.Created)),
       pyWatcher.onDidDelete((uri) => sendChange(uri, FileChangeType.Deleted)),
+      configWatcher.onDidChange((uri) => sendChange(uri, FileChangeType.Changed)),
+      configWatcher.onDidCreate((uri) => sendChange(uri, FileChangeType.Created)),
+      configWatcher.onDidDelete((uri) => sendChange(uri, FileChangeType.Deleted)),
     );
 
-    this.log("File watchers registered for **/*.{yml,yaml} and **/*.py");
+    this.log(
+      "File watchers registered for **/*.{yml,yaml}, **/*.py, and docassemble-lsp config files",
+    );
   }
 
   private disposeFileWatchers(): void {
