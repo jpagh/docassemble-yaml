@@ -64,12 +64,12 @@
 [tasks.package]
     description = "Package the VSIX"
     depends     = ["build"]
-    run         = "vsce package"
+    run         = "vsce package --no-dependencies"
 
 [tasks.publish]
     description = "Publish the VSIX to the marketplace"
     depends     = ["package"]
-    run         = "vsce publish"
+    run         = "vsce publish --no-dependencies"
 
 [tasks."check:metadata"]
     description = "Fail if vscode/package.json contains a __metadata block"
