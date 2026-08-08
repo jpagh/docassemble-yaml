@@ -63,47 +63,85 @@ def _tool_config_section(
     return None
 
 
-def load_dayaml_project_config(project_dir: Path) -> DayamlProjectConfig | None:
+# Config discovery mirrors ruff/mise: a dedicated file in the project root
+# (or any ancestor), or the [tool.docassemble-lsp] pyproject section.
+# Within a directory the dedicated files win over the pyproject section.
+_DAYAML_CONFIG_FILENAMES: tuple[str, ...] = (
+    "docassemble-lsp.toml",
+    ".docassemble-lsp.toml",
+    ".config/docassemble-lsp.toml",
+)
+
+
+def _dayaml_config_mapping(
+    project_dir: Path,
+) -> tuple[dict[str, object], Path] | None:
+    """Return (config mapping, source file) for *project_dir*, or None.
+
+    Dedicated files (``docassemble-lsp.toml``, ``.docassemble-lsp.toml``,
+    ``.config/docassemble-lsp.toml``) are read as bare mappings; otherwise
+    the ``[tool.docassemble-lsp]`` (or ``[tool.docassemble_lsp]``) section of
+    ``pyproject.toml`` is used.
+    """
+    for filename in _DAYAML_CONFIG_FILENAMES:
+        candidate = project_dir / filename
+        if candidate.is_file():
+            with candidate.open("rb") as stream:
+                mapping = tomllib.load(stream)
+            if isinstance(mapping, dict):
+                return (mapping, candidate)
     pyproject_path = project_dir / "pyproject.toml"
-    if not pyproject_path.is_file():
-        return None
+    if pyproject_path.is_file():
+        with pyproject_path.open("rb") as stream:
+            pyproject = tomllib.load(stream)
+        section = _tool_config_section(
+            _tool_mapping(pyproject), "docassemble-lsp", "docassemble_lsp"
+        )
+        if section is not None:
+            return (section, pyproject_path)
+    return None
 
-    with pyproject_path.open("rb") as stream:
-        pyproject = tomllib.load(stream)
 
-    tool_section = _tool_mapping(pyproject)
-    docassemble_lsp_section = _tool_config_section(
-        tool_section, "docassemble-lsp", "docassemble_lsp"
-    )
-    if docassemble_lsp_section is None:
+def load_dayaml_project_config(project_dir: Path) -> DayamlProjectConfig | None:
+    loaded = _dayaml_config_mapping(project_dir)
+    if loaded is None:
         return None
+    config, _source = loaded
 
     yaml_path: Path | None = None
-    yaml_path_value = docassemble_lsp_section.get("yaml_path")
+    yaml_path_value = config.get("yaml_path")
     if isinstance(yaml_path_value, str) and yaml_path_value.strip():
         yaml_path = Path(yaml_path_value)
     if yaml_path is not None and not yaml_path.is_absolute():
         yaml_path = project_dir / yaml_path
 
-    ignore_codes_raw = docassemble_lsp_section.get(
-        "ignore-codes", docassemble_lsp_section.get("ignore_codes", ())
-    )
+    ignore_codes_raw = config.get("ignore-codes", config.get("ignore_codes", ()))
     return DayamlProjectConfig(
         project_root=project_dir,
         yaml_path=yaml_path,
-        conventions=_normalize_ignore_codes(
-            docassemble_lsp_section.get("conventions", ())
-        ),
+        conventions=_normalize_ignore_codes(config.get("conventions", ())),
         ignore_codes=_normalize_ignore_codes(ignore_codes_raw),
-        cli_args=_normalize_cli_args(docassemble_lsp_section.get("args", ())),
-        check_cli_args=_normalize_cli_args(
-            docassemble_lsp_section.get("check_args", ())
-        ),
-        format_cli_args=_normalize_cli_args(
-            docassemble_lsp_section.get("format_args", ())
-        ),
-        lsp_cli_args=_normalize_cli_args(docassemble_lsp_section.get("lsp_args", ())),
+        cli_args=_normalize_cli_args(config.get("args", ())),
+        check_cli_args=_normalize_cli_args(config.get("check_args", ())),
+        format_cli_args=_normalize_cli_args(config.get("format_args", ())),
+        lsp_cli_args=_normalize_cli_args(config.get("lsp_args", ())),
     )
+
+
+def find_nearest_dayaml_config_dir(path: Path) -> Path | None:
+    """Nearest ancestor directory containing a docassemble-lsp config file.
+
+    Walks up from *path*; the first directory holding a dedicated config file
+    (``docassemble-lsp.toml``, ``.docassemble-lsp.toml``,
+    ``.config/docassemble-lsp.toml``) or a ``pyproject.toml`` with a
+    ``[tool.docassemble-lsp]`` section wins. A ``pyproject.toml`` without the
+    section does not stop the search.
+    """
+    candidate = path if path.is_dir() else path.parent
+    for directory in (candidate, *candidate.parents):
+        if _dayaml_config_mapping(directory) is not None:
+            return directory
+    return None
 
 
 def find_nearest_pyproject_dir(path: Path) -> Path | None:
@@ -389,7 +427,7 @@ def collect_dayaml_ignore_codes(paths: Iterable[Path]) -> frozenset[str]:
     seen_projects: set[Path] = set()
 
     for path in paths:
-        project_dir = find_nearest_pyproject_dir(path.resolve())
+        project_dir = find_nearest_dayaml_config_dir(path.resolve())
         if project_dir is None:
             continue
         project_dir = project_dir.resolve()
@@ -408,7 +446,7 @@ def collect_dayaml_conventions(paths: Iterable[Path]) -> frozenset[str]:
     seen_projects: set[Path] = set()
 
     for path in paths:
-        project_dir = find_nearest_pyproject_dir(path.resolve())
+        project_dir = find_nearest_dayaml_config_dir(path.resolve())
         if project_dir is None:
             continue
         project_dir = project_dir.resolve()
@@ -429,7 +467,7 @@ def collect_dayaml_cli_args(
     seen_projects: set[Path] = set()
 
     for path in paths:
-        project_dir = find_nearest_pyproject_dir(path.resolve())
+        project_dir = find_nearest_dayaml_config_dir(path.resolve())
         if project_dir is None:
             continue
         project_dir = project_dir.resolve()

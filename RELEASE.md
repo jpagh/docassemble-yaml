@@ -1,7 +1,6 @@
 # Release Contract
 
-Release contract for `docassemble-yaml` (LSP + VS Code extension).
-Internal-facing — for longer docs see `lsp/docs/`.
+Release contract for `docassemble-yaml` (LSP + VS Code extension). Internal-facing — for longer docs see `lsp/docs/`.
 
 ## How to Release
 
@@ -11,8 +10,7 @@ mise run //vscode:test       # extension tests (mock server)
 DOCASSEMBLE_LSP_ENABLE_REAL_TEST=1 mise run //vscode:test:real-lsp  # full real-server extension tests
 ```
 
-`mise run bump` updates `lsp/pyproject.toml`, `vscode/package.json`,
-`CHANGELOG.md`, then commits and tags (`v{new_version}`).
+`mise run bump` updates `lsp/pyproject.toml`, `vscode/package.json`, `CHANGELOG.md`, then commits and tags (`v{new_version}`).
 
 Build the VSIX from `vscode/`:
 ```bash
@@ -27,8 +25,7 @@ The automated gate must be green:
 mise run //lsp:check
 ```
 
-This runs ruff, pyrefly, and the full pytest suite across all supported
-Python versions. The following test areas are the gate:
+This runs ruff, pyrefly, and the full pytest suite across all supported Python versions. The following test areas are the gate:
 
 - Diagnostics + validator parity: `test_diagnostics.py`, `test_cli.py`
 - Completion + hover + schema parity: `test_schema.py`, `test_lsp.py`
@@ -40,9 +37,7 @@ Python versions. The following test areas are the gate:
 
 ## Extension Status
 
-The VS Code extension lives at `vscode/` in this monorepo. 1.0.0 has
-been shipped (VSIX built, version bumped). The extension test suite
-has 13 tests covering:
+The VS Code extension lives at `vscode/` in this monorepo. 1.0.0 has been shipped (VSIX built, version bumped). The extension test suite has 13 tests covering:
 
 | Feature | Coverage |
 |---------|----------|
@@ -57,9 +52,7 @@ has 13 tests covering:
 | Disabled-state health | 1 test |
 | Empty command handling | 1 test |
 
-**Gaps**: definitions, references, workspace symbols, document links,
-rename, semantic tokens, folding, signature help — no extension-level
-test coverage.
+**Gaps**: definitions, references, workspace symbols, document links, rename, semantic tokens, folding, signature help — no extension-level test coverage.
 
 ## Extension Gate
 
@@ -68,14 +61,11 @@ Run before each release. Current gate:
 - `mise run //vscode:test` — runs all 13 tests against mock server
 - `DOCASSEMBLE_LSP_ENABLE_REAL_TEST=1 mise run //vscode:test:real-lsp` — runs real-server tests
 
-A full extension gate (matching the aspirational assertion list in the
-v0 RELEASE_GATE) remains future work. See the gaps above.
+A full extension gate (matching the aspirational assertion list in the v0 RELEASE_GATE) remains future work. See the gaps above.
 
 ## Capability Matrix
 
-Ratings: `yes` = supported, `partial` = exists but needs sharper
-coverage/UX, `planned` = good fit for architecture, `no` = out of
-scope.
+Ratings: `yes` = supported, `partial` = exists but needs sharper coverage/UX, `planned` = good fit for architecture, `no` = out of scope.
 
 | Concept | Completion | Diagnostic | Hover | Definition | References | Notes |
 |---------|-----------|-----------|-------|-----------|-----------|-------|
@@ -98,14 +88,10 @@ scope.
 
 Current implementation:
 
-- `WorkspaceIndex`: workspace YAML sources, multi-document overlays,
-  document facts, package roots, Python/module caches
-- `DocumentFacts`: reusable YAML document structure (blocks, fields,
-  events, defs, includes, assets, Python/template regions)
+- `WorkspaceIndex`: workspace YAML sources, multi-document overlays, document facts, package roots, Python/module caches
+- `DocumentFacts`: reusable YAML document structure (blocks, fields, events, defs, includes, assets, Python/template regions)
 - `CompletionRegistry`: scopes, rules, snippets, duplicate-key policy
-- Feature services (diagnostics, completion, hover, definition,
-  references, workspace symbols, document links, formatting) share the
-  common index — `lsp/server.py` is a thin protocol adapter
+- Feature services (diagnostics, completion, hover, definition, references, workspace symbols, document links, formatting) share the common index — `lsp/server.py` is a thin protocol adapter
 
 ## Release Boundary
 
@@ -119,11 +105,8 @@ The current gate assumes this surface:
 - formatting (whole-document and on-type indentation)
 - small deterministic code actions
 
-Not in scope: speculative type inference, runtime execution,
-unbounded refactors.
+Not in scope: speculative type inference, runtime execution, unbounded refactors.
 
 ## README Policy
 
-Keep `README.md` aligned with the capability matrix. If a feature
-moves from `partial`/`planned` to `yes`, update the README to reflect
-it.
+Keep `README.md` aligned with the capability matrix. If a feature moves from `partial`/`planned` to `yes`, update the README to reflect it.

@@ -5,6 +5,7 @@ import logging
 import re
 import threading
 from difflib import get_close_matches
+from functools import lru_cache
 from pathlib import Path
 
 from lsprotocol.types import (
@@ -101,7 +102,12 @@ from docassemble_lsp.core.definitions import (
     python_discovery_signature,
 )
 from docassemble_lsp.core.document_links import resolve_document_link_targets
-from docassemble_lsp.core.files import clear_detect_package_cache
+from docassemble_lsp.core.files import (
+    DayamlProjectConfig,
+    clear_detect_package_cache,
+    find_nearest_dayaml_config_dir,
+    load_dayaml_project_config,
+)
 from docassemble_lsp.core.fixes import (
     SourceEdit,
     resolve_diagnostic_fixes,
@@ -978,6 +984,45 @@ def _workspace_roots(root_path: str | None) -> list[Path]:
     return [Path(root_path)] if root_path else []
 
 
+@lru_cache(maxsize=128)
+def _project_config_for(path: Path) -> DayamlProjectConfig | None:
+    """Nearest docassemble-lsp project config for *path*, cached per path."""
+    project_dir = find_nearest_dayaml_config_dir(path)
+    if project_dir is None:
+        return None
+    return load_dayaml_project_config(project_dir)
+
+
+def _document_runtime_options(
+    uri: str, base: RuntimeOptions | None
+) -> RuntimeOptions | None:
+    """Session options merged with the document's nearest project config.
+
+    The document's own project config (walked up from the document path)
+    supplies conventions and ignored codes, so multi-project workspaces get
+    per-project behavior instead of one global config. Explicit session
+    options (e.g. ``--conventions`` on the CLI) still apply to every document.
+    """
+    path = path_from_uri_or_path(uri)
+    if path is None:
+        return base
+    config = _project_config_for(path)
+    if config is None:
+        return base
+    if base is None:
+        return RuntimeOptions(
+            enabled_conventions=config.conventions,
+            ignore_codes=config.ignore_codes,
+        )
+    return RuntimeOptions(
+        accessibility_error_on_widgets=base.accessibility_error_on_widgets,
+        enabled_conventions=base.enabled_conventions | config.conventions,
+        ignore_codes=base.ignore_codes | config.ignore_codes,
+        show_warnings=base.show_warnings,
+        indent=base.indent,
+    )
+
+
 class _WorkspaceIndexStore:
     def __init__(self) -> None:
         self._open_sources: dict[Path, str] = {}
@@ -1168,7 +1213,7 @@ def create_server(
                 diagnostics=build_lsp_diagnostics(
                     uri,
                     document.source,
-                    runtime_options=runtime_options,
+                    runtime_options=_document_runtime_options(uri, runtime_options),
                     workspace_index=index,
                 ),
             )
@@ -1272,7 +1317,9 @@ def create_server(
                 params.text_document.uri,
                 document.source,
             ),
-            runtime_options=runtime_options,
+            runtime_options=_document_runtime_options(
+                params.text_document.uri, runtime_options
+            ),
         )
 
     @server.feature(TEXT_DOCUMENT_HOVER)
@@ -1350,7 +1397,9 @@ def create_server(
             only_kinds=list(params.context.only)
             if params.context.only is not None
             else None,
-            runtime_options=runtime_options,
+            runtime_options=_document_runtime_options(
+                params.text_document.uri, runtime_options
+            ),
             workspace_index=workspace_indexes.for_document(
                 ls.workspace.root_path,
                 params.text_document.uri,
@@ -1467,26 +1516,10 @@ def run_server(
     configure_logging(level=log_level)
     _configure_pygls_logging()
 
-    if runtime_options is None:
-        from docassemble_lsp.core.files import (
-            collect_dayaml_conventions,
-            collect_dayaml_ignore_codes,
-        )
-
-        conventions = collect_dayaml_conventions([Path.cwd()])
-        ignore_codes = collect_dayaml_ignore_codes([Path.cwd()])
-        if conventions or ignore_codes:
-            logger.info(
-                "Auto-detected docassemble-lsp config: conventions=%s ignore_codes=%s",
-                sorted(conventions),
-                sorted(ignore_codes),
-            )
-            runtime_options = RuntimeOptions(
-                enabled_conventions=conventions,
-                ignore_codes=ignore_codes,
-            )
-        else:
-            logger.debug("No docassemble-lsp config found in %s", Path.cwd())
+    # Project config (conventions, ignored codes) is resolved per document
+    # against the document's own path, so multi-project workspaces get
+    # per-project behavior; runtime_options carries only explicit session
+    # options such as --conventions/--ignore-codes from the CLI.
 
     for module_name in ("docassemble.base.util", "docassemble.base.functions"):
         resolution = resolve_python_module_source(

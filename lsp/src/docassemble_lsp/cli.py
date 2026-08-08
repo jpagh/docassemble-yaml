@@ -167,7 +167,6 @@ def _config_cli_args_for_argv(argv: Sequence[str]) -> tuple[str, ...]:
     cli_args = list(collect_dayaml_cli_args(config_paths, command_name=command))
     if command == "check":
         cli_args = [arg for arg in cli_args if arg not in _FORMATTING_SHARED_FLAGS]
-    if command in {"check", "lsp"}:
         conventions = collect_dayaml_conventions(config_paths)
         if conventions:
             cli_args.extend(["--conventions", *sorted(conventions)])

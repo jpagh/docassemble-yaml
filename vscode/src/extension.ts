@@ -143,12 +143,18 @@ class DocassembleLspController {
       `Starting server (${resolvedCommand.shell ? "command" : importStrategy}): ${resolvedCommand.display}`,
     );
 
+    const workspaceFolder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
     const serverOptions: ServerOptions = {
       command: resolvedCommand.command,
       args: resolvedCommand.args,
       options: {
         env: resolvedCommand.env,
         shell: resolvedCommand.shell,
+        // The server discovers docassemble-lsp config (e.g. enabled
+        // conventions like C102) from the pyproject.toml in its working
+        // directory, so launch it in the workspace root instead of wherever
+        // the extension host happened to start.
+        ...(workspaceFolder ? { cwd: workspaceFolder } : {}),
       },
     };
 

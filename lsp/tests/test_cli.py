@@ -196,6 +196,24 @@ def test_check_command_reads_conventions_from_pyproject(tmp_path: Path) -> None:
     assert exit_code == 1
 
 
+@pytest.mark.parametrize(
+    "filename",
+    ["docassemble-lsp.toml", ".docassemble-lsp.toml", ".config/docassemble-lsp.toml"],
+)
+def test_check_command_reads_conventions_from_dedicated_config_files(
+    tmp_path: Path, filename: str
+) -> None:
+    config_path = tmp_path / filename
+    config_path.parent.mkdir(parents=True, exist_ok=True)
+    config_path.write_text('conventions = ["C102"]\n', encoding="utf-8")
+    source = tmp_path / "convention.yml"
+    source.write_text("question: Hi\nfields:\n  - Name: user.name\n", encoding="utf-8")
+
+    exit_code = main(["check", "--quiet", "--strict", str(source)])
+
+    assert exit_code == 1
+
+
 def test_check_command_reads_ignore_codes_from_pyproject(tmp_path: Path) -> None:
     pyproject = tmp_path / "pyproject.toml"
     pyproject.write_text(
@@ -544,9 +562,11 @@ def test_lsp_command_accepts_convert_tabs_to_spaces(
     assert formatter_config.convert_tabs_to_spaces is True
 
 
-def test_lsp_command_reads_runtime_options_from_pyproject(
+def test_lsp_command_does_not_resolve_project_config_at_argv_level(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
+    """The lsp command leaves project config to per-document resolution in
+    the server; only explicit CLI flags land in runtime_options."""
     pyproject = tmp_path / "pyproject.toml"
     pyproject.write_text(
         '[tool.docassemble-lsp]\nconventions = ["C102", "C103"]\nignore-codes = ["E301"]\n',
@@ -568,11 +588,37 @@ def test_lsp_command_reads_runtime_options_from_pyproject(
     assert main(["lsp"]) == 29
     runtime_options = captured.get("runtime_options")
     assert isinstance(runtime_options, RuntimeOptions)
-    assert runtime_options.enabled_conventions == frozenset({"C102", "C103"})
-    assert runtime_options.ignore_codes == frozenset({"E301"})
+    assert runtime_options.enabled_conventions == frozenset()
+    assert runtime_options.ignore_codes == frozenset()
     formatter_config = captured.get("formatter_config")
     assert isinstance(formatter_config, FormatterConfig)
     assert formatter_config.convert_tabs_to_spaces is False
+
+
+def test_lsp_command_explicit_conventions_still_apply_globally(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    pyproject = tmp_path / "pyproject.toml"
+    pyproject.write_text(
+        '[tool.docassemble-lsp]\nconventions = ["C102"]\n',
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path)
+
+    captured: dict[str, object] = {}
+
+    def fake_run_server(
+        *, runtime_options=None, formatter_config=None, log_level="WARNING"
+    ):
+        captured["runtime_options"] = runtime_options
+        return 29
+
+    monkeypatch.setattr(cli, "run_server", fake_run_server)
+
+    assert main(["lsp", "--conventions", "C103"]) == 29
+    runtime_options = captured.get("runtime_options")
+    assert isinstance(runtime_options, RuntimeOptions)
+    assert runtime_options.enabled_conventions == frozenset({"C103"})
 
 
 def test_lsp_command_reads_convert_tabs_to_spaces_from_shared_args(

@@ -516,7 +516,142 @@ def test_lsp_process_reads_conventions_from_pyproject(tmp_path: Path) -> None:
     assert [diagnostic["code"] for diagnostic in diagnostics] == ["C102"]
 
 
-def test_lsp_process_returns_completions_for_open_document(tmp_path: Path) -> None:
+@pytest.mark.parametrize(
+    "filename",
+    ["docassemble-lsp.toml", ".docassemble-lsp.toml", ".config/docassemble-lsp.toml"],
+)
+def test_lsp_process_reads_conventions_from_dedicated_config_files(
+    tmp_path: Path, filename: str
+) -> None:
+    config_path = tmp_path / filename
+    config_path.parent.mkdir(parents=True, exist_ok=True)
+    config_path.write_text('conventions = ["C102"]\n', encoding="utf-8")
+    source_path = tmp_path / "shorthand.yml"
+    source = "question: Hi\nfields:\n  - Name: user.name\n"
+    source_path.write_text(source, encoding="utf-8")
+
+    with _LspSession(cwd=tmp_path) as session:
+        session.initialize(tmp_path)
+        session.notify("textDocument/didOpen", _did_open_params(source_path, source))
+
+        publish = session.wait_for_notification(
+            "textDocument/publishDiagnostics",
+            predicate=lambda message: (
+                message["params"]["uri"] == source_path.resolve().as_uri()
+            ),
+        )
+
+    diagnostics = publish["params"]["diagnostics"]
+    assert [diagnostic["code"] for diagnostic in diagnostics] == ["C102"]
+
+
+def test_lsp_process_suppresses_shorthand_completion_with_c102_config(
+    tmp_path: Path,
+) -> None:
+    """C102 enabled via a dedicated config file: the label: value shorthand
+    completion is suppressed while plain keys are still offered."""
+    (tmp_path / "docassemble-lsp.toml").write_text(
+        'conventions = ["C102"]\n', encoding="utf-8"
+    )
+    source_path = tmp_path / "fields.yml"
+    source = "question: Hi\nfields:\n  - \n"
+    source_path.write_text(source, encoding="utf-8")
+
+    with _LspSession(cwd=tmp_path) as session:
+        session.initialize(tmp_path)
+        session.notify("textDocument/didOpen", _did_open_params(source_path, source))
+
+        completions = session.request(
+            "textDocument/completion",
+            {
+                "textDocument": {"uri": source_path.resolve().as_uri()},
+                "position": {"line": 2, "character": 4},
+            },
+        )
+
+    labels = {item["label"] for item in completions["items"]}
+    assert "label: value" not in labels
+    assert "label" in labels
+    assert "field" in labels
+
+
+def test_lsp_process_applies_config_per_project(tmp_path: Path) -> None:
+    """Multi-project workspace: each document gets its own project's config.
+
+    Project A enables C102 (no label: value shorthand completion), project B
+    does not — the shorthand must be suppressed in A but offered in B."""
+    project_a = tmp_path / "project_a"
+    project_b = tmp_path / "project_b"
+    project_a.mkdir()
+    project_b.mkdir()
+    (project_a / "docassemble-lsp.toml").write_text(
+        'conventions = ["C102"]\n', encoding="utf-8"
+    )
+    source_a = project_a / "interview.yml"
+    source_b = project_b / "interview.yml"
+    source = "question: Hi\nfields:\n  - \n"
+    source_a.write_text(source, encoding="utf-8")
+    source_b.write_text(source, encoding="utf-8")
+
+    with _LspSession(cwd=tmp_path) as session:
+        session.initialize(tmp_path)
+        session.notify("textDocument/didOpen", _did_open_params(source_a, source))
+        session.notify("textDocument/didOpen", _did_open_params(source_b, source))
+
+        completions_a = session.request(
+            "textDocument/completion",
+            {
+                "textDocument": {"uri": source_a.resolve().as_uri()},
+                "position": {"line": 2, "character": 4},
+            },
+        )
+        completions_b = session.request(
+            "textDocument/completion",
+            {
+                "textDocument": {"uri": source_b.resolve().as_uri()},
+                "position": {"line": 2, "character": 4},
+            },
+        )
+
+    labels_a = {item["label"] for item in completions_a["items"]}
+    labels_b = {item["label"] for item in completions_b["items"]}
+    assert "label: value" not in labels_a
+    assert "label: value" in labels_b
+    assert "label" in labels_a
+    assert "field" in labels_b
+
+
+def test_lsp_process_nested_project_config_replaces_root(tmp_path: Path) -> None:
+    """A project nested under a root with its own config uses ONLY the
+    project config — the root's conventions must not leak into it."""
+    (tmp_path / "docassemble-lsp.toml").write_text(
+        'conventions = ["C102"]\n', encoding="utf-8"
+    )
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "docassemble-lsp.toml").write_text(
+        'conventions = ["C103"]\n', encoding="utf-8"
+    )
+    source_path = project / "interview.yml"
+    source = "question: Hi\nfields:\n  - \n"
+    source_path.write_text(source, encoding="utf-8")
+
+    with _LspSession(cwd=tmp_path) as session:
+        session.initialize(tmp_path)
+        session.notify("textDocument/didOpen", _did_open_params(source_path, source))
+
+        completions = session.request(
+            "textDocument/completion",
+            {
+                "textDocument": {"uri": source_path.resolve().as_uri()},
+                "position": {"line": 2, "character": 4},
+            },
+        )
+
+    labels = {item["label"] for item in completions["items"]}
+    # C103 (project) replaces C102 (root): the label: value shorthand is not
+    # suppressed by the root's C102.
+    assert "label: value" in labels
     source_path = tmp_path / "metadata.yml"
     source = "metadata:\n  "
     source_path.write_text(source, encoding="utf-8")

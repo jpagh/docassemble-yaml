@@ -1,26 +1,16 @@
 # Docassemble YAML
 
-Provides syntax highlighting for
-[Docassemble](https://docassemble.org/) YAML files that incorporate
-Python, Mako, and Jinja.
+Provides syntax highlighting for [Docassemble](https://docassemble.org/) YAML files that incorporate Python, Mako, and Jinja.
 
-The extension ships with the `docassemble-lsp` language server bundled
-inside the VSIX. It runs automatically when you open a Docassemble
-file — no separate install needed.
+The extension ships with the `docassemble-lsp` language server bundled inside the VSIX. It runs automatically when you open a Docassemble file — no separate install needed.
 
-The language server provides diagnostics, completion, hover,
-definitions, references, symbols, formatting, and code actions. It is
-optional — without it the extension still provides full syntax
-highlighting.
+The language server provides diagnostics, completion, hover, definitions, references, symbols, formatting, and code actions. It is optional — without it the extension still provides full syntax highlighting.
 
 ![yaml](https://raw.githubusercontent.com/jpagh/vscode-docassemble/main/demo.png)
 
 ## Language Server
 
-Python 3.10+ must be available on `PATH` or installed via the
-[Python extension](https://marketplace.visualstudio.com/items?itemName=ms-python.python).
-The bundled server uses Python to launch even though its dependencies
-are self-contained.
+Python 3.10+ must be available on `PATH` or installed via the [Python extension](https://marketplace.visualstudio.com/items?itemName=ms-python.python). The bundled server uses Python to launch even though its dependencies are self-contained.
 
 Controlled by `docassemble-lsp.importStrategy`:
 
@@ -53,10 +43,7 @@ Levels: `DEBUG`, `INFO`, `WARNING` (default), `ERROR`, `CRITICAL`.
 
 ## Development
 
-**Build dependencies:** `uv` or `python3` + `pip` must be on `PATH` to
-build. The bundle script copies the Python server from `lsp/src/` and
-installs its dependencies into `bundled/libs/` using `uv pip install`
-(falling back to `pip`).
+**Build dependencies:** `uv` or `python3` + `pip` must be on `PATH` to build. The bundle script copies the Python server from `lsp/src/` and installs its dependencies into `bundled/libs/` using `uv pip install` (falling back to `pip`).
 
 ```sh
 mise run //vscode:build  # bundles server, installs deps, compiles TypeScript
@@ -64,14 +51,7 @@ mise run //vscode:bundle:server  # bundle step only
 mise run //vscode:package  # packages the VSIX
 ```
 
-The `bundled/` directory is git-ignored and regenerated on every
-build. The build is platform-specific — it embeds a specific
-CPython version, OS, and architecture, so contributors on a
-different platform must rebuild before running the real-LSP tests.
-The mise tasks handle this: `mise run //vscode:test` and
-`mise run //vscode:test:real-lsp` both depend on `//vscode:build` and rebuild
-the bundle as a side effect. The default `mise run //vscode:test` (mock server)
-does not need the bundle — only `//vscode:test:real-lsp` does.
+The `bundled/` directory is git-ignored and regenerated on every build. The build is platform-specific — it embeds a specific CPython version, OS, and architecture, so contributors on a different platform must rebuild before running the real-LSP tests. The mise tasks handle this: `mise run //vscode:test` and `mise run //vscode:test:real-lsp` both depend on `//vscode:build` and rebuild the bundle as a side effect. The default `mise run //vscode:test` (mock server) does not need the bundle — only `//vscode:test:real-lsp` does.
 
 ## Commands
 
@@ -81,37 +61,22 @@ does not need the bundle — only `//vscode:test:real-lsp` does.
 
 ## Notes
 
-- This extension still associates `.yml` files with the `docassemble`
-  language.
-- On-type formatting only runs through the Docassemble LSP when the
-  active document language id is `docassemble`. If a docassemble file
-  opens as plain `yaml`, switch the language mode before debugging
-  formatter behavior.
-- The TextMate grammars remain the base syntax layer for YAML, Python,
-  Mako, and Jinja regions.
-- The language server is additive and does not replace the
-  grammar-based highlighting.
-- A status bar item shows whether the language server is running,
-  missing, disabled, or failed to start.
-- The extension now declares itself as the default formatter for
-  `[docassemble]`, enables `editor.formatOnType`, and defaults
-  docassemble indentation to 2 spaces with `editor.insertSpaces`; user
-  settings can still override those values.
+- This extension still associates `.yml` files with the `docassemble` language.
+- On-type formatting only runs through the Docassemble LSP when the active document language id is `docassemble`. If a docassemble file opens as plain `yaml`, switch the language mode before debugging formatter behavior.
+- The TextMate grammars remain the base syntax layer for YAML, Python, Mako, and Jinja regions.
+- The language server is additive and does not replace the grammar-based highlighting.
+- A status bar item shows whether the language server is running, missing, disabled, or failed to start.
+- The extension now declares itself as the default formatter for `[docassemble]`, enables `editor.formatOnType`, and defaults docassemble indentation to 2 spaces with `editor.insertSpaces`; user settings can still override those values.
 
 ## Validation
 
 - `mise run //vscode:test` runs the default extension-host smoke suite.
 - `mise run //vscode:test:real-lsp` runs the opt-in extension-host real-server path.
-- The extension-host suite includes an Enter/on-type regression test
-  that verifies the client sends `textDocument/onTypeFormatting` and
-  applies the returned edit.
+- The extension-host suite includes an Enter/on-type regression test that verifies the client sends `textDocument/onTypeFormatting` and applies the returned edit.
 
 ### Headless tests
 
-Tests pass `--headless` on all platforms by default. On Linux and
-Windows the VS Code window is fully suppressed. On macOS the window
-still appears because headless extension tests are not supported there
-([microsoft/vscode-test#290](https://github.com/microsoft/vscode-test/issues/290)).
+Tests pass `--headless` on all platforms by default. On Linux and Windows the VS Code window is fully suppressed. On macOS the window still appears because headless extension tests are not supported there ([microsoft/vscode-test#290](https://github.com/microsoft/vscode-test/issues/290)).
 
 To opt out and show the window for debugging, set:
 
@@ -119,5 +84,4 @@ To opt out and show the window for debugging, set:
 DOCASSEMBLE_LSP_SHOW_WINDOW=1 mise run //vscode:test
 ```
 
-This controls the `--headless` flag — useful on Linux/Windows for
-debugging; no visible effect on macOS (the window is already visible).
+This controls the `--headless` flag — useful on Linux/Windows for debugging; no visible effect on macOS (the window is already visible).

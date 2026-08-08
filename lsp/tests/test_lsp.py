@@ -324,10 +324,12 @@ def test_run_server_debug_log_level_emits_log_message(monkeypatch, caplog) -> No
     assert "Log level set to DEBUG" in caplog.text
 
 
-def test_run_server_reads_runtime_options_from_pyproject_when_not_provided(
+def test_run_server_does_not_resolve_project_config_at_startup(
     monkeypatch,
     tmp_path,
 ) -> None:
+    """Project config (conventions, ignored codes) is resolved per document,
+    not baked into a global session config at startup."""
     reset_logging()
 
     pyproject = tmp_path / "pyproject.toml"
@@ -353,10 +355,7 @@ def test_run_server_reads_runtime_options_from_pyproject_when_not_provided(
     exit_code = lsp_server.run_server(log_level="INFO")
 
     assert exit_code == 0
-    runtime_options = captured.get("runtime_options")
-    assert isinstance(runtime_options, RuntimeOptions)
-    assert runtime_options.enabled_conventions == frozenset({"C102"})
-    assert runtime_options.ignore_codes == frozenset({"E301"})
+    assert captured.get("runtime_options") is None
 
 
 def test_run_server_uses_default_runtime_options_when_no_pyproject(
@@ -384,6 +383,60 @@ def test_run_server_uses_default_runtime_options_when_no_pyproject(
 
     assert exit_code == 0
     assert captured.get("runtime_options") is None
+
+
+def test_document_runtime_options_merges_nearest_project_config(tmp_path: Path) -> None:
+    """A document picks up its project's config by walking up from its path."""
+    project = tmp_path / "project"
+    nested = project / "interviews"
+    nested.mkdir(parents=True)
+    (project / "docassemble-lsp.toml").write_text(
+        'conventions = ["C102"]\nignore-codes = ["E301"]\n', encoding="utf-8"
+    )
+    source_path = nested / "interview.yml"
+    uri = source_path.as_uri()
+
+    options = lsp_server._document_runtime_options(uri, None)
+
+    assert options is not None
+    assert options.enabled_conventions == frozenset({"C102"})
+    assert options.ignore_codes == frozenset({"E301"})
+
+
+def test_document_runtime_options_without_config_keeps_session_options(
+    tmp_path: Path,
+) -> None:
+    source_path = tmp_path / "interview.yml"
+    uri = source_path.as_uri()
+
+    assert lsp_server._document_runtime_options(uri, None) is None
+
+    base = RuntimeOptions(enabled_conventions=frozenset({"C103"}))
+    options = lsp_server._document_runtime_options(uri, base)
+    assert options is base
+
+
+def test_document_runtime_options_merges_session_and_project_config(
+    tmp_path: Path,
+) -> None:
+    """Explicit session conventions apply to every document; the document's
+    project config adds to them."""
+    (tmp_path / "docassemble-lsp.toml").write_text(
+        'conventions = ["C102"]\n', encoding="utf-8"
+    )
+    uri = (tmp_path / "interview.yml").as_uri()
+
+    base = RuntimeOptions(
+        enabled_conventions=frozenset({"C103"}),
+        ignore_codes=frozenset({"E301"}),
+    )
+    options = lsp_server._document_runtime_options(uri, base)
+
+    assert options is not None
+    assert options.enabled_conventions == frozenset({"C102", "C103"})
+    assert options.ignore_codes == frozenset({"E301"})
+    assert options.show_warnings is base.show_warnings
+    assert options.indent == base.indent
 
 
 def test_completion_list_covers_example_corpora_top_level_keys() -> None:

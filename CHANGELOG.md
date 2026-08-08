@@ -5,6 +5,8 @@
 ### Added
 
 - [LSP] Add `|` value completion for string-typed keys; remove `key (block)` property completions.
+- [LSP] Project configuration can now live in a dedicated file in addition to `pyproject.toml` — `docassemble-lsp.toml`, `.docassemble-lsp.toml`, or `.config/docassemble-lsp.toml`, found by walking up from the workspace root. Works for convention settings, ignored codes, `yaml_path`, and CLI args.
+- [LSP] Config is now resolved per document: each file uses the config of its own project, so in a multi-project workspace every project's files follow their own `conventions`/`ignore-codes` settings instead of sharing one global config. `--conventions`/`--ignore-codes` passed to the `lsp` command still apply to every document.
 
 ### Changed
 
@@ -21,6 +23,7 @@
 - [LSP] The workspace-index overlay cache now invalidates on a content-derived stamp (built-in `hash()`) of the open documents, and `_WorkspaceIndexStore` mutations are guarded by a lock.
 - [LSP] Python module index caching now uses nanosecond-resolution mtimes, so rapid back-to-back rewrites of the same file reliably invalidate the cache.
 - [LSP] Autocomplete now replaces your typed text as you'd expect for multi-word options. Typing `disable i` and accepting `disable if` gives you `disable if:` instead of `disable disable if:`. This applies everywhere in the YAML — keys, values, and file/module names.
+- [VSCODE] The language server now starts in your workspace folder, so conventions enabled in the project's configuration actually take effect. Restart the language server after changing or adding a configuration.
 
 ## [26.7.0] - 2026-07-09
 
