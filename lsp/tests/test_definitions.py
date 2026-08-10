@@ -133,7 +133,7 @@ def test_resolve_python_module_source_prefers_workspace_package(tmp_path) -> Non
 
 
 def test_resolve_python_module_source_falls_back_to_vendored(monkeypatch) -> None:
-    monkeypatch.setattr(python_modules.importlib.util, "find_spec", lambda _name: None)
+    monkeypatch.setattr(python_modules, "_environment_module_path", lambda _name: None)
 
     resolution = python_modules.resolve_python_module_source(
         "docassemble.base.util",
@@ -148,7 +148,7 @@ def test_resolve_python_module_source_falls_back_to_vendored(monkeypatch) -> Non
 def test_resolve_python_module_source_falls_back_to_vendored_functions(
     monkeypatch,
 ) -> None:
-    monkeypatch.setattr(python_modules.importlib.util, "find_spec", lambda _name: None)
+    monkeypatch.setattr(python_modules, "_environment_module_path", lambda _name: None)
 
     resolution = python_modules.resolve_python_module_source(
         "docassemble.base.functions",
@@ -582,7 +582,7 @@ def test_python_call_kwarg_completions_nested_brace_mako(tmp_path: Path) -> None
 def test_python_call_kwarg_completions_vendored_util(
     tmp_path: Path, monkeypatch: Any
 ) -> None:
-    monkeypatch.setattr(python_modules.importlib.util, "find_spec", lambda _name: None)
+    monkeypatch.setattr(python_modules, "_environment_module_path", lambda _name: None)
     expression = "${action_button_html(}"
     source, source_path = _call_kwarg_workspace(tmp_path, "x = 1\n", expression)
     line = 4

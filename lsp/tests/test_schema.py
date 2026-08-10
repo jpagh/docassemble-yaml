@@ -2811,7 +2811,7 @@ def test_get_completions_in_objects_value_include_vendored_docassemble_base_clas
 ) -> None:
     source = "objects:\n  - physical_address: Ad\n"
 
-    monkeypatch.setattr(python_modules.importlib.util, "find_spec", lambda _name: None)
+    monkeypatch.setattr(python_modules, "_environment_module_path", lambda _name: None)
     labels = {
         item.label
         for item in get_completions(
@@ -2898,7 +2898,7 @@ def test_get_completions_in_code_block_include_vendored_docassemble_base_functio
 ) -> None:
     source = "code: |\n  act\n"
 
-    monkeypatch.setattr(python_modules.importlib.util, "find_spec", lambda _name: None)
+    monkeypatch.setattr(python_modules, "_environment_module_path", lambda _name: None)
     labels = {
         item.label
         for item in get_completions(
@@ -2919,7 +2919,7 @@ def test_get_completions_in_code_block_exclude_non_exported_vendored_helpers(
 ) -> None:
     source = "code: |\n  c\n"
 
-    monkeypatch.setattr(python_modules.importlib.util, "find_spec", lambda _name: None)
+    monkeypatch.setattr(python_modules, "_environment_module_path", lambda _name: None)
     labels = {
         item.label
         for item in get_completions(

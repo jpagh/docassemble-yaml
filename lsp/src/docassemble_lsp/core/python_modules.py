@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import ast
-import importlib.util
 import logging
+import sys
 from collections.abc import Iterable
 from pathlib import Path
 
@@ -159,6 +159,32 @@ def python_search_paths(
     return _yaml_search_paths(current_path, workspace_index)
 
 
+def _environment_module_path(normalized: str) -> Path | None:
+    """Locate a module's source file on ``sys.path`` without importing it.
+
+    ``importlib.util.find_spec`` executes the ``__init__.py`` of every parent
+    package, and docassemble packages have import-time side effects that can
+    kill the server (``docassemble.webapp.config`` calls ``config.load()``,
+    which exits the process when no docassemble config file exists). A
+    language server must never execute third-party code, so resolve the file
+    directly from ``sys.path`` instead — same source path, no side effects.
+    """
+    parts = normalized.split(".")
+    for entry in sys.path:
+        try:
+            root = Path(entry) if entry else Path.cwd()
+            base = root.joinpath(*parts)
+        except (TypeError, OSError):
+            continue
+        for candidate in (base.with_suffix(".py"), base / "__init__.py"):
+            try:
+                if candidate.is_file():
+                    return candidate
+            except OSError:
+                continue
+    return None
+
+
 def resolve_python_module_source(
     module_name: str,
     *,
@@ -189,41 +215,21 @@ def resolve_python_module_source(
                 source_kind="workspace",
             )
 
-    try:
-        spec = importlib.util.find_spec(normalized)
-    except (ImportError, ValueError):
-        spec = None
-    if spec is None or spec.origin in {None, "built-in", "frozen"}:
-        if vendored_path is not None and vendored_path.is_file():
-            return PythonModuleResolution(
-                module_name=normalized,
-                path=vendored_path.resolve(),
-                source_kind="vendored",
-            )
+    environment_path = _environment_module_path(normalized)
+    if environment_path is not None:
         return PythonModuleResolution(
-            module_name=normalized, path=None, source_kind="unresolved"
+            module_name=normalized,
+            path=environment_path.resolve(),
+            source_kind="environment",
         )
-
-    origin_str = spec.origin
-    if origin_str is None:
+    if vendored_path is not None and vendored_path.is_file():
         return PythonModuleResolution(
-            module_name=normalized, path=None, source_kind="unresolved"
-        )
-    origin = Path(origin_str)
-    if not origin.exists() or origin.suffix != ".py":
-        if vendored_path is not None and vendored_path.is_file():
-            return PythonModuleResolution(
-                module_name=normalized,
-                path=vendored_path.resolve(),
-                source_kind="vendored",
-            )
-        return PythonModuleResolution(
-            module_name=normalized, path=None, source_kind="unresolved"
+            module_name=normalized,
+            path=vendored_path.resolve(),
+            source_kind="vendored",
         )
     return PythonModuleResolution(
-        module_name=normalized,
-        path=origin.resolve(),
-        source_kind="environment",
+        module_name=normalized, path=None, source_kind="unresolved"
     )
 
 
