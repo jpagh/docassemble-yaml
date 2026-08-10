@@ -1,7 +1,7 @@
 {
   "name": "vscode-docassemble",
   "displayName": "Docassemble YAML",
-  "version": "26.8.0",
+  "version": "26.8.1",
   "description": "Syntax highlighting for Docassemble YAML with optional docassemble-lsp integration.",
   "categories": [
     "Programming Languages"
