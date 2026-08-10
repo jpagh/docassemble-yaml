@@ -33,7 +33,11 @@ monorepo_root = true
 [tasks.bump]
     description = "Bump the patch digit (CalVer YY.MM.patch → YY.MM.patch+1) and push"
     tools       = { node = "latest", uv = "latest" }
-    run         = "bump-my-version bump patch && git push --follow-tags"
+    # The version-bump commit only touches version metadata, the changelog,
+    # and lockfiles; `mise run gate` already validated the tree right before
+    # this in `publish`. Skip the git pre-commit hook so the VS Code test
+    # suite and the rest of `check` don't run a second time.
+    run         = "MISE_SKIP_PRE_COMMIT=1 bump-my-version bump patch && git push --follow-tags"
 
 [tasks.publish]
     description = "Full release: gate, bump patch, package VSIX, publish to marketplace"
