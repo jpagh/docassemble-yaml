@@ -4,6 +4,10 @@
 
 ## [26.8.1] - 2026-08-10
 
+### Fixed
+
+- [LSP] Fixed a crash that could kill the language server when resolving a Python module (e.g. go-to-definition on an import). Module sources are now located directly from `sys.path` without importing them.
+
 ## [26.8.0] - 2026-08-08
 
 ### Added
