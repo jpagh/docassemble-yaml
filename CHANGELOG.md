@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- [LSP] Narrowed `E933` (`list collect` field label Mako check) to only flag Mako that references a same-screen variable or list iterator (`i`/`j`/`k`/`l`/`m`/`n`/`x`). For example, a label containing only an off-screen variable (e.g. `${ some_var }`) with `list collect: True` no longer produces a false positive.
+
 ## [26.8.1] - 2026-08-10
 
 ### Fixed

@@ -1125,9 +1125,10 @@ MESSAGE_DEFINITIONS: dict[str, MessageDefinition] = {
     # List collect
     MessageCode.LIST_COLLECT_LABEL_HAS_MAKO: MessageDefinition(
         code=MessageCode.LIST_COLLECT_LABEL_HAS_MAKO,
-        summary="field label contains Mako templating while list collect is active",
-        template="Field label {label!r} contains Mako templating (${{...}}). "
-        "Docassemble does not support Mako in field labels when 'list collect' is active.",
+        summary="field label contains Mako templating that references same-screen data while list collect is active",
+        template="Field label {label!r} contains Mako templating (${{...}}) that references "
+        "a same-screen variable or list iterator (i/j/k/x) while 'list collect' is active. "
+        "Move per-item text to 'list collect: {{ label: ... }}' or use only off-screen variables.",
     ),
     # Packet 15: Markup
     MessageCode.MARKUP_BRACKET_EMPTY: MessageDefinition(
