@@ -54,6 +54,21 @@ code: |
     assert exit_code == 0
 
 
+def test_check_command_reports_off_screen_validation_read(
+    tmp_path: Path, capsys
+) -> None:
+    source = tmp_path / "offscreen.yml"
+    source.write_text(
+        """question: Review\nfields:\n  - Hearing date: hearing_date\nvalidation code: |\n  if hearing_date <= termination_date:\n    validation_error(\"Later date required\")\n""",
+        encoding="utf-8",
+    )
+
+    exit_code = main(["check", "--json", str(source)])
+
+    assert exit_code == 0
+    assert '"code": "W606"' in capsys.readouterr().out
+
+
 def test_check_command_warning_only_fails_in_strict_mode(tmp_path: Path) -> None:
     source = tmp_path / "warning.yml"
     source.write_text(

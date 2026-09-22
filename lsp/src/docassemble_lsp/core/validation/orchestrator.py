@@ -671,6 +671,24 @@ def find_errors_from_string(
                 )
             )
 
+        if _run_type_validators:
+            from docassemble_lsp.core.validation.validation_code_safety import (
+                find_unguarded_offscreen_reads,
+            )
+
+            for variable, ref_line in find_unguarded_offscreen_reads(doc):
+                all_errors.append(
+                    _yaml_error(
+                        code=MessageCode.VALIDATION_CODE_OFFSCREEN_READ,
+                        line_number=_absolute_document_line(
+                            line_number,
+                            _relative_value_line(doc, "validation code", ref_line),
+                        ),
+                        file_name=input_file,
+                        variable=variable,
+                    )
+                )
+
         from docassemble_lsp.core.validation.visibility import validate_nesting_depth
 
         all_errors.extend(validate_nesting_depth(doc, line_number, input_file))

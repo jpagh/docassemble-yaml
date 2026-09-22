@@ -4,7 +4,12 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from lsprotocol.types import CompletionItemKind, InsertTextFormat, MarkupContent
+from lsprotocol.types import (
+    CompletionItemKind,
+    DiagnosticSeverity,
+    InsertTextFormat,
+    MarkupContent,
+)
 
 from docassemble_lsp.core import FormatterConfig, build_workspace_index, reset_logging
 from docassemble_lsp.core.python_paths import path_from_uri_or_path
@@ -81,6 +86,23 @@ def test_workspace_index_store_reuses_and_invalidates_cached_index(
 
     store.update_source(uri, "question: Second\n")
     assert store.for_workspace(str(tmp_path)) is not first
+
+
+def test_lsp_diagnostics_report_off_screen_validation_read() -> None:
+    source = """question: Review
+fields:
+  - Hearing date: hearing_date
+validation code: |
+  if hearing_date <= termination_date:
+    validation_error("Later date required")
+"""
+
+    diagnostics = build_lsp_diagnostics("file:///sample.yml", source)
+
+    offscreen = next(item for item in diagnostics if item.code == "W606")
+    assert offscreen.severity == DiagnosticSeverity.Warning
+    assert offscreen.range.start.line == 4
+    assert "termination_date" in offscreen.message
 
 
 def test_document_link_cache_key_is_deterministic() -> None:

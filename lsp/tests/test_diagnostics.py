@@ -731,6 +731,95 @@ validation code: |
     assert c101.line == 6
 
 
+def test_validation_code_warns_for_unguarded_off_screen_read() -> None:
+    source = """---
+question: Hearing
+fields:
+  - Hearing date: M.landlord.hearing_date
+---
+question: Review
+fields:
+  - Hearing date: M.landlord.hearing_date
+validation code: |
+  if M.landlord.hearing_date <= M.landlord.tot_termination_date:
+    validation_error("Later date required")
+"""
+    findings = [d for d in analyze_text(source, path="sample.yml") if d.code == "W606"]
+    assert len(findings) == 1
+    assert findings[0].line == 10
+    assert "M.landlord.tot_termination_date" in findings[0].message
+    assert findings[0].severity == "warning"
+
+
+def test_validation_code_safe_reads_and_supported_fields() -> None:
+    source = """question: Hearing
+fields:
+  - Hearing date: M.landlord.hearing_date
+  - field: other_date
+  - Indexed value: records[0].date
+validation code: |
+  local = M.landlord.hearing_date
+  if defined("M.landlord.tot_termination_date") and local <= M.landlord.tot_termination_date:
+    validation_error("Later date required")
+  if M.landlord.hasattr("tot_termination_date") and other_date <= M.landlord.tot_termination_date:
+    validation_error("Later date required")
+  if records[0].date < other_date:
+    validation_error("Date mismatch")
+"""
+    assert not [d for d in analyze_text(source, path="sample.yml") if d.code == "W606"]
+
+
+def test_validation_code_skips_jinja_affected_screen() -> None:
+    source = """# use jinja
+---
+question: "{{ 'Review' }}"
+fields:
+  - Hearing date: hearing_date
+validation code: |
+  if hearing_date < termination_date:
+    validation_error("Later date required")
+"""
+
+    assert not [d for d in analyze_text(source, path="sample.yml") if d.code == "W606"]
+
+
+def test_validation_code_does_not_apply_later_short_circuit_guards_backward() -> None:
+    source = """question: Hearing
+field: hearing_date
+validation code: |
+  if prior_reference and defined("prior_reference"):
+    validation_error("Invalid date")
+"""
+
+    findings = [d for d in analyze_text(source, path="sample.yml") if d.code == "W606"]
+
+    assert len(findings) == 1
+    assert "prior_reference" in findings[0].message
+    assert findings[0].line == 4
+
+
+def test_validation_code_need_and_branch_guard_suppress_warning() -> None:
+    source = """question: Hearing
+field: hearing_date
+need:
+  - pre: termination_date
+validation code: |
+  if defined("optional_date"):
+    if optional_date < termination_date:
+      validation_error("Later date required")
+  if hearing_date < termination_date:
+    validation_error("Later date required")
+  if not defined("reverse_guard"):
+    pass
+  else:
+    if reverse_guard:
+      validation_error("Reverse guard")
+  if not defined("short_circuit_guard") or short_circuit_guard:
+    pass
+"""
+    assert not [d for d in analyze_text(source, path="sample.yml") if d.code == "W606"]
+
+
 def test_yaml_parse_error_anchors_to_problem_line() -> None:
     diagnostics = analyze_text(
         "---\nquestion: Hello\nfield: x\nbad: [unclosed\n",

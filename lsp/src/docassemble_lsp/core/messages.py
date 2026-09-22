@@ -41,6 +41,7 @@ class MessageCode(str, Enum):
     NO_POSSIBLE_TYPES = "E306"
     TOO_MANY_TYPES = "E307"
     INTERVIEW_ORDER_UNMATCHED_GUARD = "W603"
+    VALIDATION_CODE_OFFSCREEN_READ = "W606"
     BOOLEAN_DATATYPE_CHOICES_IGNORED = "E534"
     VISIBILITY_MODIFIER_CONFLICT = "E535"
     VISIBILITY_JS_NON_JS_MIX = "E536"
@@ -872,6 +873,11 @@ MESSAGE_DEFINITIONS: dict[str, MessageDefinition] = {
         code=MessageCode.INTERVIEW_ORDER_UNMATCHED_GUARD,
         summary="Interview-order block missing matching guard",
         template='interview-order style block references "{field_var}" without a matching guard for that field\'s show/hide logic; this can cause the interview to get stuck',
+    ),
+    MessageCode.VALIDATION_CODE_OFFSCREEN_READ: MessageDefinition(
+        code=MessageCode.VALIDATION_CODE_OFFSCREEN_READ,
+        summary="Validation code may read an off-screen variable",
+        template='validation code reads "{variable}" which is not a field on this screen or demanded with need:; guard the read with defined() or .hasattr(), or add it to need:',
     ),
     MessageCode.NESTED_VISIBILITY_LOGIC: MessageDefinition(
         code=MessageCode.NESTED_VISIBILITY_LOGIC,
