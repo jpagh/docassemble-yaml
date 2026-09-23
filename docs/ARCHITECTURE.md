@@ -25,7 +25,7 @@ the system easier to extend and reason about.
 ## Design Principles
 
 1. Share one semantic model across CLI and LSP.
-2. Keep `lsp/server.py` as a thin protocol adapter.
+2. Keep `lsp/src/docassemble_lsp/lsp/server.py` as a thin protocol adapter.
 3. Prefer focused core services over feature-local rescans.
 4. Use `WorkspaceIndex` as the source of truth for workspace-aware
    behavior.
@@ -40,8 +40,8 @@ the system easier to extend and reason about.
 
 ### CLI And LSP Entry Points
 
-- `src/docassemble_lsp/cli.py`
-- `src/docassemble_lsp/lsp/server.py`
+- `lsp/src/docassemble_lsp/cli.py`
+- `lsp/src/docassemble_lsp/lsp/server.py`
 
 These entry points should do orchestration, argument/protocol
 translation, and formatting of results. They should not become the
@@ -49,8 +49,8 @@ place where Docassemble semantics live.
 
 ### Shared Project Model
 
-- `src/docassemble_lsp/core/workspace.py`
-- `src/docassemble_lsp/core/document_facts.py`
+- `lsp/src/docassemble_lsp/core/workspace.py`
+- `lsp/src/docassemble_lsp/core/document_facts.py`
 
 This layer provides the shared model used by semantic features.
 
@@ -74,12 +74,12 @@ without reparsing the same shape independently.
 
 ### Semantic Routing And Focused Services
 
-- `src/docassemble_lsp/core/definitions.py`
-- `src/docassemble_lsp/core/workspace_navigation.py`
-- `src/docassemble_lsp/core/workspace_symbols.py`
-- `src/docassemble_lsp/core/python_navigation.py`
-- `src/docassemble_lsp/core/python_modules.py`
-- `src/docassemble_lsp/core/document_links.py`
+- `lsp/src/docassemble_lsp/core/definitions.py`
+- `lsp/src/docassemble_lsp/core/workspace_navigation.py`
+- `lsp/src/docassemble_lsp/core/workspace_symbols.py`
+- `lsp/src/docassemble_lsp/core/python_navigation.py`
+- `lsp/src/docassemble_lsp/core/python_modules.py`
+- `lsp/src/docassemble_lsp/core/document_links.py`
 
 This layer routes requests into focused services.
 
@@ -97,11 +97,11 @@ deeper logic should keep moving into focused services.
 
 #### Completion And Hover
 
-- `src/docassemble_lsp/core/schema.py`
-- `src/docassemble_lsp/core/completion_context.py`
-- `src/docassemble_lsp/core/completion_registry.py`
-- `src/docassemble_lsp/core/completion_rules.py`
-- `src/docassemble_lsp/core/field_keys.py`
+- `lsp/src/docassemble_lsp/core/schema.py`
+- `lsp/src/docassemble_lsp/core/completion_context.py`
+- `lsp/src/docassemble_lsp/core/completion_registry.py`
+- `lsp/src/docassemble_lsp/core/completion_rules.py`
+- `lsp/src/docassemble_lsp/core/field_keys.py`
 
 The completion subsystem is split into three responsibilities:
 
@@ -119,10 +119,10 @@ provider layer rather than growing `schema.py` again.
 
 #### Diagnostics, Fixes, And Formatting
 
-- `src/docassemble_lsp/core/diagnostics.py`
-- `src/docassemble_lsp/core/validation.py`
-- `src/docassemble_lsp/core/fixes.py`
-- `src/docassemble_lsp/core/formatting.py`
+- `lsp/src/docassemble_lsp/core/diagnostics.py`
+- `lsp/src/docassemble_lsp/core/validation/orchestrator.py`
+- `lsp/src/docassemble_lsp/core/fixes.py`
+- `lsp/src/docassemble_lsp/core/formatting.py`
 
 Diagnostics and fixes are shared by CLI and LSP. Validation remains a
 relatively large subsystem, but the intended direction is still the
@@ -201,7 +201,7 @@ from shared indexing.
 
 ### 2. The LSP Server Is A Translator, Not A Brain
 
-`src/docassemble_lsp/lsp/server.py` should mainly do three things:
+`lsp/src/docassemble_lsp/lsp/server.py` should mainly do three things:
 
 - maintain index lifecycle for the active workspace
 - call core feature entry points
@@ -232,7 +232,7 @@ around one single feature addition.
 ### 5. Tests Define The Actual Behavioral Contract
 
 The intended v1 contract is enforced by the committed tests and
-summarized in `RELEASE_GATE.md`. New work should usually extend the
+summarized in `RELEASE.md`. New work should usually extend the
 most specific test family first, then graduate to broader coverage if
 the feature affects shared behavior.
 
@@ -272,7 +272,7 @@ restructuring.
 
 ## Public Surface Guidance
 
-`src/docassemble_lsp/core/__init__.py` should continue to expose
+`lsp/src/docassemble_lsp/core/__init__.py` should continue to expose
 high-value public entry points and keep internal helpers private by
 default.
 
@@ -292,5 +292,5 @@ A good rule is:
   family.
 - Use `docs/ROADMAP.md` to choose the next release-readiness or
   hardening slice.
-- Use `RELEASE_GATE.md` for release contract, capability matrix, and
+- Use `RELEASE.md` for release contract, capability matrix, and
   implementation-status tracking.

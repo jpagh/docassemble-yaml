@@ -15,12 +15,12 @@ This document explains how to add each major feature family in
 
 ### Main Files
 
-- `src/docassemble_lsp/core/completion_context.py`
-- `src/docassemble_lsp/core/completion_registry.py`
-- `src/docassemble_lsp/core/completion_rules.py`
-- `src/docassemble_lsp/core/schema.py`
-- `tests/test_schema.py`
-- `tests/test_lsp.py`
+- `lsp/src/docassemble_lsp/core/completion_context.py`
+- `lsp/src/docassemble_lsp/core/completion_registry.py`
+- `lsp/src/docassemble_lsp/core/completion_rules.py`
+- `lsp/src/docassemble_lsp/core/schema.py`
+- `lsp/tests/test_schema.py`
+- `lsp/tests/test_lsp.py`
 
 ### Block scalar (`|`) value completion
 
@@ -42,7 +42,7 @@ This document explains how to add each major feature family in
 
 ### Avoid
 
-- adding completion semantics directly to `lsp/server.py`
+- adding completion semantics directly to `lsp/src/docassemble_lsp/lsp/server.py`
 - putting new long-lived logic back into `schema.py`
 - adding new property vocabularies in multiple places instead of
   centralizing them
@@ -60,9 +60,9 @@ This document explains how to add each major feature family in
 
 ### Main Files
 
-- `src/docassemble_lsp/core/schema.py`
-- `src/docassemble_lsp/core/completion_registry.py`
-- `tests/test_lsp.py`
+- `lsp/src/docassemble_lsp/core/schema.py`
+- `lsp/src/docassemble_lsp/core/completion_registry.py`
+- `lsp/tests/test_lsp.py`
 
 ### Avoid
 
@@ -80,14 +80,14 @@ This document explains how to add each major feature family in
 
 ### Main Files
 
-- `src/docassemble_lsp/core/definitions.py`
-- `src/docassemble_lsp/core/workspace_navigation.py`
-- `src/docassemble_lsp/core/workspace_symbols.py`
-- `src/docassemble_lsp/core/python_navigation.py`
-- `src/docassemble_lsp/core/python_modules.py`
-- `tests/test_definitions.py`
-- `tests/test_references_integration.py`
-- `tests/test_lsp.py`
+- `lsp/src/docassemble_lsp/core/definitions.py`
+- `lsp/src/docassemble_lsp/core/workspace_navigation.py`
+- `lsp/src/docassemble_lsp/core/workspace_symbols.py`
+- `lsp/src/docassemble_lsp/core/python_navigation.py`
+- `lsp/src/docassemble_lsp/core/python_modules.py`
+- `lsp/tests/test_definitions.py`
+- `lsp/tests/test_references_integration.py`
+- `lsp/tests/test_lsp.py`
 
 ### Use This Pattern When
 
@@ -114,13 +114,13 @@ This document explains how to add each major feature family in
 
 ### Main Files
 
-- `src/docassemble_lsp/core/diagnostics.py`
-- `src/docassemble_lsp/core/validation.py`
-- `src/docassemble_lsp/core/messages.py`
-- `src/docassemble_lsp/core/fixes.py`
-- `tests/test_diagnostics.py`
-- `tests/test_cli.py`
-- `tests/test_lsp.py`
+- `lsp/src/docassemble_lsp/core/diagnostics.py`
+- `lsp/src/docassemble_lsp/core/validation/orchestrator.py`
+- `lsp/src/docassemble_lsp/core/messages.py`
+- `lsp/src/docassemble_lsp/core/fixes.py`
+- `lsp/tests/test_diagnostics.py`
+- `lsp/tests/test_cli.py`
+- `lsp/tests/test_lsp.py`
 
 ### Avoid
 
@@ -138,10 +138,10 @@ This document explains how to add each major feature family in
 
 ### Main Files
 
-- `src/docassemble_lsp/core/fixes.py`
-- `src/docassemble_lsp/lsp/server.py`
-- `tests/test_lsp.py`
-- `tests/test_cli.py`
+- `lsp/src/docassemble_lsp/core/fixes.py`
+- `lsp/src/docassemble_lsp/lsp/server.py`
+- `lsp/tests/test_lsp.py`
+- `lsp/tests/test_cli.py`
 
 ### Avoid
 
@@ -160,12 +160,12 @@ This document explains how to add each major feature family in
 
 ### Main Files
 
-- `src/docassemble_lsp/core/formatting.py`
-- `src/docassemble_lsp/core/indentation.py`
-- `src/docassemble_lsp/lsp/server.py`
-- `tests/test_formatting.py`
-- `tests/test_lsp.py`
-- `tests/test_lsp_process.py`
+- `lsp/src/docassemble_lsp/core/formatting.py`
+- `lsp/src/docassemble_lsp/core/indentation.py`
+- `lsp/src/docassemble_lsp/lsp/server.py`
+- `lsp/tests/test_formatting.py`
+- `lsp/tests/test_lsp.py`
+- `lsp/tests/test_lsp_process.py`
 
 ### Avoid
 
@@ -184,10 +184,10 @@ This document explains how to add each major feature family in
 
 ### Main Files
 
-- `src/docassemble_lsp/core/document_links.py`
-- `src/docassemble_lsp/lsp/server.py`
-- `tests/test_lsp.py`
-- `tests/test_lsp_process.py`
+- `lsp/src/docassemble_lsp/core/document_links.py`
+- `lsp/src/docassemble_lsp/lsp/server.py`
+- `lsp/tests/test_lsp.py`
+- `lsp/tests/test_lsp_process.py`
 
 ### Avoid
 
@@ -208,12 +208,12 @@ This document explains how to add each major feature family in
 
 ### Main Files
 
-- `src/docassemble_lsp/core/python_navigation.py`
-- `src/docassemble_lsp/core/python_modules.py`
-- `src/docassemble_lsp/core/definitions.py`
-- `tests/test_definitions.py`
-- `tests/test_lsp.py`
-- `tests/test_references_integration.py`
+- `lsp/src/docassemble_lsp/core/python_navigation.py`
+- `lsp/src/docassemble_lsp/core/python_modules.py`
+- `lsp/src/docassemble_lsp/core/definitions.py`
+- `lsp/tests/test_definitions.py`
+- `lsp/tests/test_lsp.py`
+- `lsp/tests/test_references_integration.py`
 
 ### Avoid
 
@@ -235,9 +235,9 @@ This document explains how to add each major feature family in
 
 ### Main Files
 
-- `src/docassemble_lsp/lsp/server.py`
-- `tests/test_lsp.py`
-- `tests/test_lsp_process.py`
+- `lsp/src/docassemble_lsp/lsp/server.py`
+- `lsp/tests/test_lsp.py`
+- `lsp/tests/test_lsp_process.py`
 
 ### Avoid
 
@@ -248,8 +248,8 @@ This document explains how to add each major feature family in
 For any nontrivial feature family change:
 
 ```bash
-uv run pytest tests/test_<family>.py -q
-mise run //lsp:check
+cd lsp && uv run pytest tests/test_<family>.py -q
+cd .. && mise run //lsp:check
 ```
 
 Use the narrowest discriminating test family first, then graduate to

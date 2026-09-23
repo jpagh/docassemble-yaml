@@ -19,13 +19,13 @@ reading:
 
 - `docs/ARCHITECTURE.md`
 - `docs/FEATURE_PATTERNS.md`
-- `RELEASE_GATE.md`
+- `RELEASE.md`
 
 If the request is about Docassemble YAML keys, allowed values, invalid
 combinations, completions, hover, or parser-backed diagnostics,
-inspect `src/docassemble_lsp/core/completion_rules.py` and
-`src/docassemble_lsp/core/validation.py` for the current rule data
-before coding.
+inspect `lsp/src/docassemble_lsp/core/completion_rules.py` and the relevant
+modules in `lsp/src/docassemble_lsp/core/validation/` (especially
+`blocks.py` and `fields.py`) for the current rule data before coding.
 
 ## Repo Rules Of Thumb
 
@@ -37,7 +37,7 @@ should probably use `WorkspaceIndex`.
 
 ### Keep The Adapter Thin
 
-If you are working in `src/docassemble_lsp/lsp/server.py`, prefer to
+If you are working in `lsp/src/docassemble_lsp/lsp/server.py`, prefer to
 add a `build_*` adapter plus a call into `core/` rather than
 implementing semantic logic directly in the handler.
 
@@ -59,16 +59,16 @@ Examples:
 
 Prefer the smallest test family that can prove the feature.
 
-- `tests/test_schema.py` for scope detection and direct completion
+- `lsp/tests/test_schema.py` for scope detection and direct completion
   behavior
-- `tests/test_lsp.py` for LSP adapter builders and feature-family
+- `lsp/tests/test_lsp.py` for LSP adapter builders and feature-family
   behavior
-- `tests/test_definitions.py` for semantic navigation internals
-- `tests/test_references_integration.py` for realistic multi-file
+- `lsp/tests/test_definitions.py` for semantic navigation internals
+- `lsp/tests/test_references_integration.py` for realistic multi-file
   behavior
-- `tests/test_lsp_process.py` for protocol/session behavior
-- `tests/test_diagnostics.py` for validation rules
-- `tests/test_cli.py` for command-surface behavior
+- `lsp/tests/test_lsp_process.py` for protocol/session behavior
+- `lsp/tests/test_diagnostics.py` for validation rules
+- `lsp/tests/test_cli.py` for command-surface behavior
 
 ## Preferred Workflow For A Small Agent
 
@@ -77,11 +77,11 @@ Prefer the smallest test family that can prove the feature.
 3. Write or extend the focused test first when feasible.
 4. Implement in `core/` before touching the LSP adapter, unless the
    feature is purely protocol translation.
-5. Add or update adapter translation in `lsp/server.py`.
+5. Add or update adapter translation in `lsp/src/docassemble_lsp/lsp/server.py`.
 6. Run the smallest discriminating test family.
 7. Run `mise run //lsp:check` before declaring the slice
    done.
-8. Update `RELEASE_GATE.md` only if the implementation-status summary
+8. Update `RELEASE.md` only if the implementation-status summary
    or supported contract meaningfully changed.
 9. Update internal docs if the change creates a new reusable pattern
    or materially changes the architecture map.
@@ -90,35 +90,35 @@ Prefer the smallest test family that can prove the feature.
 
 ### Shared Model And Routing
 
-- `src/docassemble_lsp/core/workspace.py`
-- `src/docassemble_lsp/core/document_facts.py`
-- `src/docassemble_lsp/core/definitions.py`
+- `lsp/src/docassemble_lsp/core/workspace.py`
+- `lsp/src/docassemble_lsp/core/document_facts.py`
+- `lsp/src/docassemble_lsp/core/definitions.py`
 
 ### Completion And Hover
 
-- `src/docassemble_lsp/core/completion_context.py`
-- `src/docassemble_lsp/core/completion_registry.py`
-- `src/docassemble_lsp/core/completion_rules.py`
-- `src/docassemble_lsp/core/schema.py`
-- `src/docassemble_lsp/core/field_keys.py`
+- `lsp/src/docassemble_lsp/core/completion_context.py`
+- `lsp/src/docassemble_lsp/core/completion_registry.py`
+- `lsp/src/docassemble_lsp/core/completion_rules.py`
+- `lsp/src/docassemble_lsp/core/schema.py`
+- `lsp/src/docassemble_lsp/core/field_keys.py`
 
 ### Navigation And Symbol Features
 
-- `src/docassemble_lsp/core/workspace_navigation.py`
-- `src/docassemble_lsp/core/workspace_symbols.py`
-- `src/docassemble_lsp/core/python_navigation.py`
-- `src/docassemble_lsp/core/python_modules.py`
+- `lsp/src/docassemble_lsp/core/workspace_navigation.py`
+- `lsp/src/docassemble_lsp/core/workspace_symbols.py`
+- `lsp/src/docassemble_lsp/core/python_navigation.py`
+- `lsp/src/docassemble_lsp/core/python_modules.py`
 
 ### Validation, Fixes, Formatting
 
-- `src/docassemble_lsp/core/diagnostics.py`
-- `src/docassemble_lsp/core/validation.py`
-- `src/docassemble_lsp/core/fixes.py`
-- `src/docassemble_lsp/core/formatting.py`
+- `lsp/src/docassemble_lsp/core/diagnostics.py`
+- `lsp/src/docassemble_lsp/core/validation/orchestrator.py`
+- `lsp/src/docassemble_lsp/core/fixes.py`
+- `lsp/src/docassemble_lsp/core/formatting.py`
 
 ### Protocol Adapter
 
-- `src/docassemble_lsp/lsp/server.py`
+- `lsp/src/docassemble_lsp/lsp/server.py`
 
 ## Common Failure Modes
 
@@ -146,9 +146,9 @@ stale results for unsaved documents. Prefer the source and
 When a feature touches schema-backed meaning, check whether
 completion, hover, and diagnostics should all stay aligned.
 
-## When To Update RELEASE_GATE.md
+## When To Update RELEASE.md
 
-Update `RELEASE_GATE.md` when one of these is true:
+Update `RELEASE.md` when one of these is true:
 
 - a planned capability becomes implemented
 - the architecture-status summary materially changes

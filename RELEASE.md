@@ -1,6 +1,6 @@
 # Release Contract
 
-Release contract for `docassemble-yaml` (LSP + VS Code extension). Internal-facing — for longer docs see `lsp/docs/`.
+Release contract for `docassemble-yaml` (LSP + VS Code extension). Internal-facing — for longer docs see `docs/`.
 
 ## How to Release
 

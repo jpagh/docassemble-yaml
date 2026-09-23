@@ -4,10 +4,11 @@
 
 The internal architecture and implementation roadmap live under `docs/`:
 
-- `docs/ARCHITECTURE.md` explains the shared LSP/CLI architecture and service boundaries.
-- `docs/SUBAGENT_GUIDE.md` gives small implementation agents a safe workflow for future changes.
-- `docs/FEATURE_PATTERNS.md` documents where each feature family should be extended.
-- `docs/ROADMAP.md` tracks the current release-readiness and hardening plan.
+- [`../docs/ARCHITECTURE.md`](../docs/ARCHITECTURE.md) explains the shared LSP/CLI architecture and service boundaries.
+- [`../docs/SUBAGENT_GUIDE.md`](../docs/SUBAGENT_GUIDE.md) gives small implementation agents a safe workflow for future changes.
+- [`../docs/FEATURE_PATTERNS.md`](../docs/FEATURE_PATTERNS.md) documents where each feature family should be extended.
+- [`../docs/ROADMAP.md`](../docs/ROADMAP.md) tracks the current release-readiness and hardening plan.
+- [`../docs/INVENTORY.md`](../docs/INVENTORY.md) records the baseline Docassemble YAML key support surface.
 
 ## CLI
 

@@ -28,7 +28,7 @@ review/table, list collect, objects/data, language/terms, reserved
 names, and markup. Every packet was cross-checked against upstream
 docs and `docassemble.base.parse`.
 
-The implementation state is tracked in `RELEASE_GATE.md`, while this
+The implementation state is tracked in `RELEASE.md`, while this
 file tracks the remaining release-readiness work.
 
 ## Current Validation Baseline
@@ -49,13 +49,13 @@ are now part of the codebase. The work covered completions, hover,
 diagnostics, quick fixes, and validation for the full Docassemble YAML
 grammar, cross-checked against upstream docs and parser behavior. The
 packet descriptions and implementation notes have been retired; the
-current rule data lives in `src/docassemble_lsp/core/`.
+current rule data lives in `lsp/src/docassemble_lsp/core/`.
 
 ### 1. Execute The Extension Gate
 
 The highest-priority next step is outside this repository: implement
 or run the VS Code extension integration gate described in
-`RELEASE_GATE.md`.
+`RELEASE.md`.
 
 The extension gate should prove the shipped editor workflow against
 the canonical fixture, including diagnostics, completions, hover,
@@ -76,7 +76,7 @@ the release boundary:
 - confirm install instructions point to the actual extension delivery
   channel
 - confirm `README.md` matches the supported feature set
-- confirm `RELEASE_GATE.md` describes only current release blockers
+- confirm `RELEASE.md` describes only current release blockers
 - run `mise run //lsp:check` from a clean checkout or
   equivalent clean environment
 
@@ -95,7 +95,7 @@ extension gate unless the gate exposes a related defect:
   when new features reveal duplication
 - **composable validators** — extract OR/AND validator patterns for
   blocks that accept either a single-entry dict or a code block, to
-  reduce nesting in `validation.py`
+  reduce nesting in `lsp/src/docassemble_lsp/core/validation/blocks.py`
 - **`required_attrs`** — consider adding a required-attribute system to
   the block-type definitions so missing mandatory keys produce their
   own diagnostic instead of being silently skipped
@@ -115,8 +115,8 @@ blockers but should be resolved before the next major feature cycle:
 - Should validation handle the ``response`` block?
 - Can labels appear above a ``fields`` list item?
 
-## Relationship To RELEASE_GATE.md
+## Relationship To RELEASE.md
 
-`RELEASE_GATE.md` remains the release contract, capability matrix, and
+`RELEASE.md` remains the release contract, capability matrix, and
 status summary. Update it when the extension gate status, release
 blockers, or supported feature contract changes.

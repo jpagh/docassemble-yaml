@@ -15,14 +15,15 @@ Each entry uses the following fields:
 | **Hover** | `yes` = description text displayed; `no` = no hover text; `schema-only` = plain type info only |
 | **Diagnostics** | `yes` = invalid forms are caught; `no` = not validated; `partial` = some shapes checked |
 | **Quick fix** | `yes` = auto-fix available; `no` = none |
-| **Drift-tested** | `yes` = covered by a test in `tests/test_inventory.py`; `no` = not yet covered |
+| **Drift-tested** | `yes` = covered by a test in `lsp/tests/test_inventory.py`; `no` = not yet covered |
 
 Ground-truth sources (in priority order):
 1. `docassemble/base/parse.py` `Question.__init__` and `parse_fields`
    (last verified: 1.7.7, `4847360`)
 2. Official docassemble documentation (questions / fields / modifiers
    / features pages)
-3. Local `validation.py` `all_dict_keys` and `types_of_blocks`
+3. Local `lsp/src/docassemble_lsp/core/validation/blocks.py`
+   `all_dict_keys` and `types_of_blocks`
 
 
 
@@ -207,7 +208,7 @@ Keys that control the rendered question screen.
 ## Field item keys (`fields:` list entries)
 
 All field item keys are centralized in
-`src/docassemble_lsp/core/field_keys.py` and offered in the
+`lsp/src/docassemble_lsp/core/field_keys.py` and offered in the
 `fields_item` completion scope. The
 `test_field_item_known_keys_equals_subgroup_union` drift test guards
 this list.
@@ -340,7 +341,7 @@ deferred to later packets:
 
 ## Drift tests
 
-`tests/test_inventory.py` contains five tests that fail if the
+`lsp/tests/test_inventory.py` contains six tests that fail if the
 centralized lists change unexpectedly:
 
 | Test | What it guards |
@@ -350,3 +351,4 @@ centralized lists change unexpectedly:
 | `test_ml_field_keys_included_in_known_keys` | `using` and `keep for training` are in the composite set |
 | `test_top_level_completion_keys_are_valid_by_validation` | no top-level completion key would always produce E301 |
 | `test_all_dict_keys_baseline_coverage` | common keys are not accidentally removed from `all_dict_keys` |
+| `test_all_dict_keys_have_completions_or_are_explicitly_excluded` | every accepted key has a completion or a documented exclusion |
