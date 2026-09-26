@@ -3660,6 +3660,50 @@ def test_cross_doc_undefined_event_in_action() -> None:
     assert "nonexistent_event" in w601[0].err_str
 
 
+def test_cross_doc_url_actions_are_not_treated_as_events() -> None:
+    """W601 is skipped for URL action buttons (docassemble renders them as links)."""
+    from docassemble_lsp.core.validation import find_errors_from_string
+    from docassemble_lsp.core.workspace import WorkspaceIndex
+
+    source = (
+        "action buttons:\n"
+        "  - label: Search for a Matter\n"
+        "    action: /start/case_information\n"
+        "  - label: Query\n"
+        "    action: '?action=prefill'\n"
+        "  - label: External site\n"
+        "    action: https://docassemble.org\n"
+        "  - label: Script\n"
+        "    action: javascript:history.back()\n"
+    )
+    index = WorkspaceIndex.empty()
+    errors = find_errors_from_string(
+        source,
+        input_file="/tmp/test.yml",
+        workspace_index=index,
+    )
+
+    assert [e for e in errors if e.code == "W601"] == []
+
+
+def test_cross_doc_undefined_action_button_event_still_warns() -> None:
+    """A non-URL action button naming an undefined event still warns."""
+    from docassemble_lsp.core.validation import find_errors_from_string
+    from docassemble_lsp.core.workspace import WorkspaceIndex
+
+    source = "action buttons:\n  - label: More\n    action: typo_event\n"
+    index = WorkspaceIndex.empty()
+    errors = find_errors_from_string(
+        source,
+        input_file="/tmp/test.yml",
+        workspace_index=index,
+    )
+
+    w601 = [e for e in errors if e.code == "W601"]
+    assert len(w601) == 1
+    assert "typo_event" in w601[0].err_str
+
+
 def test_cross_doc_undefined_def_in_usedefs() -> None:
     """W602 when usedefs references a def not in any workspace doc."""
     from docassemble_lsp.core.validation import find_errors_from_string

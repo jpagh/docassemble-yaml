@@ -78,6 +78,17 @@ from docassemble_lsp.core.yaml_shared import (
 logger = logging.getLogger(__name__)
 
 
+def _is_url_action(value: str) -> bool:
+    """Return True for URL-style action values that cannot name an event.
+
+    docassemble documents action buttons whose action begins with ``http://``,
+    ``https://``, ``/``, ``?``, or ``javascript:`` as hyperlinks. The scheme
+    forms contain ``:`` and are filtered before this check; event names are
+    Python variable paths, so ``/`` and ``?`` prefixes are never events.
+    """
+    return value.startswith(("/", "?"))
+
+
 def _validate_cross_document(
     full_content: str,
     current_path: Path,
@@ -124,6 +135,7 @@ def _validate_cross_document(
             if key_name in _EVENT_REFERENCE_KEYS:
                 if (
                     not _contains_mako_syntax(value)
+                    and not _is_url_action(value)
                     and value not in workspace_index.all_event_names
                 ):
                     errors.append(
@@ -223,6 +235,7 @@ def _validate_cross_document(
             if parent in _EVENT_REFERENCE_KEYS:
                 if (
                     not _contains_mako_syntax(value)
+                    and not _is_url_action(value)
                     and value not in workspace_index.all_event_names
                 ):
                     errors.append(
