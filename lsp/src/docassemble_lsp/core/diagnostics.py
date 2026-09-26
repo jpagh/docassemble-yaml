@@ -51,12 +51,14 @@ def analyze_path(
     path: str | Path,
     *,
     runtime_options: RuntimeOptions | None = None,
+    workspace_index: WorkspaceIndex | None = None,
 ) -> list[Diagnostic]:
     return [
         _from_yaml_error(error)
         for error in find_errors(
             str(path),
             runtime_options=runtime_options,
+            workspace_index=workspace_index,
         )
     ]
 

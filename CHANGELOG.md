@@ -2,8 +2,14 @@
 
 ## [Unreleased]
 
+### Changed
+
+- [CLI] `check` now builds a workspace index once per run and passes it through diagnostics. As a result the CLI also reports the existing cross-document checks (`W601`/`W602`, file references) that previously ran only in the language server.
+
 ### Fixed
 
+- [LSP] `W606` no longer reports docassemble-provided names or declared paths it could not see: implicit list indices (`i`–`n`), `generic object:` `x`, `generic list object:` `x`/`i`, `objects:` keys and top-level `code:` globals from anywhere in the interview, singular `field:` shorthand, attribute bases under subscripts, and reads that extend a declared path at a `.` boundary (e.g. `uploaded_signature[0].mimetype`).
+- [CLI] `check` applies the same interview-wide `objects:`/`code:` definitions to `W606` as the language server.
 - [LSP] Narrowed `E933` (`list collect` field label Mako check) to only flag Mako that references a same-screen variable or list iterator (`i`/`j`/`k`/`l`/`m`/`n`/`x`). For example, a label containing only an off-screen variable (e.g. `${ some_var }`) with `list collect: True` no longer produces a false positive.
 
 ## [26.8.1] - 2026-08-10

@@ -70,6 +70,7 @@ from docassemble_lsp.core.yaml_shared import (
     _PYTHON_MODULE_REFERENCE_KEYS,
     _clean_value_and_range,
     _document_lines,
+    _iter_block_scalar_regions,
     _iter_mako_block_regions,
     _precompute_parent_keys,
 )
@@ -83,10 +84,7 @@ def _validate_cross_document(
     input_file: str | None,
     workspace_index: WorkspaceIndex,
 ) -> list[YAMLError]:
-    from docassemble_lsp.core.definitions import (
-        _event_helper_occurrences,
-        _iter_block_scalar_regions,
-    )
+    from docassemble_lsp.core.definitions import _event_helper_occurrences
     from docassemble_lsp.core.python_modules import resolve_python_module_path
     from docassemble_lsp.core.python_paths import (
         docassemble_package_name,
@@ -368,6 +366,7 @@ def find_errors_from_string(
             rendered_body,
             input_file=input_file,
             runtime_options=runtime_options,
+            workspace_index=workspace_index,
             _jinja_affected_sections=frozenset(jinja_affected),
         )
         rendered_line_map = _map_rendered_lines_to_source_lines(
@@ -676,7 +675,14 @@ def find_errors_from_string(
                 find_unguarded_offscreen_reads,
             )
 
-            for variable, ref_line in find_unguarded_offscreen_reads(doc):
+            for variable, ref_line in find_unguarded_offscreen_reads(
+                doc,
+                workspace_defined_names=(
+                    workspace_index.all_interview_defined_names
+                    if workspace_index is not None
+                    else frozenset()
+                ),
+            ):
                 all_errors.append(
                     _yaml_error(
                         code=MessageCode.VALIDATION_CODE_OFFSCREEN_READ,
@@ -716,6 +722,7 @@ def find_errors_from_string(
 def find_errors(
     input_file: str,
     runtime_options: RuntimeOptions | None = None,
+    workspace_index: WorkspaceIndex | None = None,
 ) -> list[YAMLError]:
     """Return list of YAMLError found in the given input_file."""
     with open(input_file, "r", encoding="utf-8") as f:
@@ -725,4 +732,5 @@ def find_errors(
         full_content,
         input_file=input_file,
         runtime_options=runtime_options,
+        workspace_index=workspace_index,
     )

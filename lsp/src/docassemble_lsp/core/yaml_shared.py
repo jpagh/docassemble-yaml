@@ -267,6 +267,28 @@ def _block_scalar_region_from_key_line(
     )
 
 
+def _iter_block_scalar_regions(source: str) -> list[BlockScalarRegion]:
+    lines = _document_lines(source)
+    regions: list[BlockScalarRegion] = []
+    line_index = 0
+    while line_index < len(lines):
+        text = lines[line_index]
+        match = _KEY_VALUE_RE.match(text)
+        if match is None:
+            line_index += 1
+            continue
+        raw_value = match.group(3).strip()
+        if raw_value not in _BLOCK_SCALAR_MARKERS:
+            line_index += 1
+            continue
+        region = _block_scalar_region_from_key_line(
+            lines, line_index, match.group(2).strip(), len(match.group(1))
+        )
+        regions.append(region)
+        line_index = max(region.end_line + 1, line_index + 1)
+    return regions
+
+
 def _line_col_to_offset(lines: list[str], line: int, character: int) -> int:
     offsets: list[int] = []
     cum = 0

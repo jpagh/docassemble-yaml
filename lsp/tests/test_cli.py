@@ -69,6 +69,28 @@ def test_check_command_reports_off_screen_validation_read(
     assert '"code": "W606"' in capsys.readouterr().out
 
 
+def test_check_command_uses_workspace_definitions(tmp_path: Path, capsys) -> None:
+    (tmp_path / "objects.yml").write_text(
+        'objects:\n  - nota: Thing.using(name="None of the above")\n',
+        encoding="utf-8",
+    )
+    (tmp_path / "screen.yml").write_text(
+        "question: Review\n"
+        "generic object: Individual\n"
+        "field: x.spouse\n"
+        "validation code: |\n"
+        "  if x.spouse is nota:\n"
+        "    x.spouse = None\n",
+        encoding="utf-8",
+    )
+
+    exit_code = main(["check", "--json", str(tmp_path)])
+
+    captured = capsys.readouterr().out
+    assert exit_code == 0
+    assert '"code": "W606"' not in captured
+
+
 def test_check_command_warning_only_fails_in_strict_mode(tmp_path: Path) -> None:
     source = tmp_path / "warning.yml"
     source.write_text(

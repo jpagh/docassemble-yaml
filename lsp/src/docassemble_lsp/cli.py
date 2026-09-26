@@ -13,6 +13,7 @@ from docassemble_lsp.core import (
     Diagnostic,
     FormatterConfig,
     analyze_text,
+    build_workspace_index,
     collect_yaml_files,
     configure_logging,
     fix_text,
@@ -24,9 +25,11 @@ from docassemble_lsp.core.files import (
     collect_dayaml_cli_args,
     collect_dayaml_conventions,
     collect_dayaml_ignore_codes,
+    resolve_collection_path,
 )
 from docassemble_lsp.core.messages import MESSAGE_DEFINITIONS, message_severity
 from docassemble_lsp.core.validation_config import RuntimeOptions, parse_ignore_codes
+from docassemble_lsp.core.workspace import WorkspaceYamlSources
 from docassemble_lsp.lsp.server import run_server
 
 _CODE_TOKEN_RE = re.compile(r"^[A-Za-z]\d+$")
@@ -241,16 +244,34 @@ def _codes_command(_args: argparse.Namespace) -> int:
 
 def _check_command(args: argparse.Namespace) -> int:
     configure_logging(level=args.log_level)
-    paths = collect_yaml_files(_default_paths(args.paths), check_all=args.check_all)
+    workspace_roots = [
+        resolve_collection_path(path) for path in _default_paths(args.paths)
+    ]
+    paths = collect_yaml_files(workspace_roots, check_all=args.check_all)
     results: list[dict[str, object]] = []
     has_failure = False
     runtime_options = _runtime_options_from_args(args)
     formatter_config = _formatter_config_from_args(args)
 
+    sources: dict[Path, str] = {}
+    read_errors: dict[Path, OSError] = {}
     for path in paths:
         try:
-            original = path.read_text(encoding="utf-8")
+            sources[path.resolve()] = path.read_text(encoding="utf-8")
         except OSError as exc:
+            read_errors[path.resolve()] = exc
+
+    workspace_index = None
+    if sources:
+        workspace_index = build_workspace_index(
+            workspace_roots,
+            existing_sources=WorkspaceYamlSources.from_source_dict(sources),
+        )
+
+    for path in paths:
+        original = sources.get(path.resolve())
+        if original is None:
+            exc = read_errors[path.resolve()]
             has_failure = True
             if args.json:
                 results.append({"path": str(path), "error": str(exc)})
@@ -266,7 +287,10 @@ def _check_command(args: argparse.Namespace) -> int:
             working = fix_result.text
 
         diagnostics = analyze_text(
-            working, path=str(path), runtime_options=runtime_options
+            working,
+            path=str(path),
+            runtime_options=runtime_options,
+            workspace_index=workspace_index,
         )
         error_findings = [d for d in diagnostics if d.severity == "error"]
 

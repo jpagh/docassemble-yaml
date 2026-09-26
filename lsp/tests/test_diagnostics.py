@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from functools import cache
 from pathlib import Path
 
-from docassemble_lsp.core import analyze_text
+from docassemble_lsp.core import WorkspaceIndex, analyze_text, build_workspace_index
 from docassemble_lsp.core.messages import MessageCode
 from docassemble_lsp.core.validation import all_dict_keys
 from docassemble_lsp.core.validation_config import RuntimeOptions
@@ -651,6 +652,33 @@ def test_validator_known_top_level_keys_cover_installed_example_corpus() -> None
     assert not missing
 
 
+def test_validation_code_workspace_definitions_suppress_warning(tmp_path: Path) -> None:
+    (tmp_path / "objects.yml").write_text(
+        'objects:\n  - nota: Thing.using(name="None of the above")\n',
+        encoding="utf-8",
+    )
+    (tmp_path / "globals.yml").write_text(
+        "code: |\n  client = make_client()\n", encoding="utf-8"
+    )
+    source = """question: Spouse
+generic object: Individual
+fields:
+  - Spouse: x.spouse
+validation code: |
+  if x.spouse is nota:
+    x.spouse = None
+  if client:
+    validation_error("Missing")
+"""
+    index = build_workspace_index([tmp_path])
+
+    diagnostics = analyze_text(
+        source, path=str(tmp_path / "screen.yml"), workspace_index=index
+    )
+
+    assert not [d for d in diagnostics if d.code == "W606"]
+
+
 def test_analyze_text_accepts_installed_example_standalone_block_forms() -> None:
     failures: list[str] = []
 
@@ -660,6 +688,33 @@ def test_analyze_text_accepts_installed_example_standalone_block_forms() -> None
             failures.append(f"{block_name} ({path})")
 
     assert not failures
+
+
+# Paths whose W606 is a genuine cross-screen read rather than a false positive.
+_CORPUS_W606_ALLOWLIST: frozenset[Path] = frozenset()
+
+
+@cache
+def _staged_example_corpus_index() -> WorkspaceIndex:
+    return build_workspace_index([repo_example_corpus_root()])
+
+
+def test_example_corpus_has_no_w606_diagnostics() -> None:
+    index = _staged_example_corpus_index()
+    failures: list[str] = []
+
+    for path in sorted(repo_example_corpus_root().rglob("*.yml")):
+        if path.resolve() in _CORPUS_W606_ALLOWLIST:
+            continue
+        text = path.read_text(encoding="utf-8")
+        diagnostics = analyze_text(text, path=str(path), workspace_index=index)
+        for diagnostic in diagnostics:
+            if diagnostic.code == "W606":
+                failures.append(
+                    f"{path}:{diagnostic.line}: {diagnostic.code} {diagnostic.message}"
+                )
+
+    assert not failures, "\n".join(failures)
 
 
 def test_example_corpus_has_no_error_diagnostics() -> None:
@@ -783,6 +838,29 @@ validation code: |
     assert not [d for d in analyze_text(source, path="sample.yml") if d.code == "W606"]
 
 
+def test_validation_code_workspace_definitions_apply_to_jinja_documents(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "objects.yml").write_text(
+        "objects:\n  - nota: Thing.using()\n", encoding="utf-8"
+    )
+    source = """# use jinja
+---
+question: Plain question
+field: hearing_date
+validation code: |
+  if nota:
+    validation_error("Missing")
+"""
+    index = build_workspace_index([tmp_path])
+
+    diagnostics = analyze_text(
+        source, path=str(tmp_path / "screen.yml"), workspace_index=index
+    )
+
+    assert not [d for d in diagnostics if d.code == "W606"]
+
+
 def test_validation_code_does_not_apply_later_short_circuit_guards_backward() -> None:
     source = """question: Hearing
 field: hearing_date
@@ -818,6 +896,116 @@ validation code: |
     pass
 """
     assert not [d for d in analyze_text(source, path="sample.yml") if d.code == "W606"]
+
+
+def test_validation_code_implicit_list_index_is_defined() -> None:
+    source = """question: Matters
+fields:
+  - Category: matters[i].category
+validation code: |
+  if not matters[i].category:
+    validation_error("Required")
+"""
+
+    assert not [d for d in analyze_text(source, path="sample.yml") if d.code == "W606"]
+
+
+def test_validation_code_singular_field_implicit_index_is_defined() -> None:
+    source = """question: Object
+field: obj[i].attr
+validation code: |
+  if not obj[i].attr:
+    validation_error("Required")
+"""
+
+    assert not [d for d in analyze_text(source, path="sample.yml") if d.code == "W606"]
+
+
+def test_validation_code_nested_subscripts_with_implicit_index() -> None:
+    source = """question: Parties
+fields:
+  - Attorney: M.parties[0][i].poa
+validation code: |
+  if not M.parties[0][i].poa.attr("revisit"):
+    validation_error("Missing")
+"""
+
+    assert not [d for d in analyze_text(source, path="sample.yml") if d.code == "W606"]
+
+
+def test_validation_code_generic_object_binds_x() -> None:
+    source = """question: Spouse
+generic object: Individual
+fields:
+  - Spouse: x.spouse
+validation code: |
+  x.spouse.marital_status = "married"
+"""
+
+    assert not [d for d in analyze_text(source, path="sample.yml") if d.code == "W606"]
+
+
+def test_validation_code_generic_list_object_binds_x_and_i() -> None:
+    source = """question: Children
+generic list object: Individual
+fields:
+  - Children: x
+validation code: |
+  for child in x:
+    if child[i].name:
+      pass
+"""
+
+    assert not [d for d in analyze_text(source, path="sample.yml") if d.code == "W606"]
+
+
+def test_validation_code_singular_indexed_field_is_owned() -> None:
+    source = """question: Buttons
+field: M.parties[1].button
+validation code: |
+  if M.parties[1].button:
+    pass
+"""
+
+    assert not [d for d in analyze_text(source, path="sample.yml") if d.code == "W606"]
+
+
+def test_validation_code_field_extending_read_is_owned() -> None:
+    source = """question: Signature
+fields:
+  - Signature: uploaded_signature
+validation code: |
+  if uploaded_signature.mimetype != "image/png":
+    validation_error("Wrong type")
+"""
+
+    assert not [d for d in analyze_text(source, path="sample.yml") if d.code == "W606"]
+
+
+def test_validation_code_unowned_sibling_attribute_still_warns() -> None:
+    source = """question: Hearing
+fields:
+  - Hearing date: M.landlord.hearing_date
+validation code: |
+  if M.landlord.tot_termination_date:
+    validation_error("Missing")
+"""
+    findings = [d for d in analyze_text(source, path="sample.yml") if d.code == "W606"]
+
+    assert len(findings) == 1
+    assert "M.landlord.tot_termination_date" in findings[0].message
+
+
+def test_validation_code_prefix_name_still_warns() -> None:
+    source = """question: Person
+fields:
+  - Person: person
+validation code: |
+  if person_fake:
+    validation_error("Missing")
+"""
+
+    assert [d for d in analyze_text(source, path="sample.yml") if d.code == "W606"]
 
 
 def test_yaml_parse_error_anchors_to_problem_line() -> None:

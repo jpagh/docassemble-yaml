@@ -10,6 +10,10 @@ from docassemble_lsp.core.field_keys import (
     FIELD_ITEM_KNOWN_KEYS as _FIELD_ITEM_KNOWN_KEYS,
 )
 from docassemble_lsp.core.files import collect_yaml_files, detect_docassemble_package
+from docassemble_lsp.core.interview_definitions import (
+    collect_interview_defined_names,
+    collect_interview_defined_names_from_source,
+)
 from docassemble_lsp.core.yaml_shared import (
     _KEY_VALUE_RE,
     _clean_value,
@@ -124,6 +128,7 @@ class WorkspaceIndex:
     def_declarations: dict[str, DefinitionTarget] = field(default_factory=dict)
     all_field_var_names: frozenset[str] = frozenset()
     field_var_declarations: dict[str, DefinitionTarget] = field(default_factory=dict)
+    all_interview_defined_names: frozenset[str] = frozenset()
     all_block_ids: frozenset[str] = frozenset()
     package_templates_dirs: dict[Path, Path] = field(default_factory=dict)
     template_file_names: frozenset[str] = frozenset()
@@ -171,6 +176,9 @@ class WorkspaceIndex:
             },
             search_roots=resolved_search_roots,
             package_root=package_root,
+            all_interview_defined_names=collect_interview_defined_names(
+                source.text for source in yaml_sources.sources
+            ),
         )
 
     @classmethod
@@ -229,6 +237,10 @@ class WorkspaceIndex:
         yaml_sources = self.yaml_sources.with_current_document(
             current_path, current_source
         )
+        interview_defined_names = set(self.all_interview_defined_names)
+        interview_defined_names.update(
+            collect_interview_defined_names_from_source(current_source)
+        )
         return WorkspaceIndex(
             yaml_sources=yaml_sources,
             facts_by_path={
@@ -250,6 +262,7 @@ class WorkspaceIndex:
             def_declarations=self.def_declarations,
             all_field_var_names=self.all_field_var_names,
             field_var_declarations=self.field_var_declarations,
+            all_interview_defined_names=frozenset(interview_defined_names),
             all_block_ids=self.all_block_ids,
             package_templates_dirs=self.package_templates_dirs,
             template_file_names=self.template_file_names,
@@ -297,10 +310,14 @@ class WorkspaceIndex:
         # Field_var declarations require a deeper line-level scan.
         # Use yaml_sources (post-overlay) so unsaved edits are reflected.
         source_by_path = {s.path: s.text for s in yaml_sources.sources}
+        interview_defined_names = set(self.all_interview_defined_names)
         for path in overlay_paths:
             source_text = source_by_path.get(path)
             if source_text is None:
                 continue
+            interview_defined_names.update(
+                collect_interview_defined_names_from_source(source_text)
+            )
             lines = _document_lines(source_text)
             parents = _precompute_parent_keys(source_text)
             for line_index, text in enumerate(lines):
@@ -345,6 +362,7 @@ class WorkspaceIndex:
             def_declarations=def_decls,
             all_field_var_names=frozenset(field_var_decls.keys()),
             field_var_declarations=field_var_decls,
+            all_interview_defined_names=frozenset(interview_defined_names),
             all_block_ids=frozenset(block_ids),
             package_templates_dirs=self.package_templates_dirs,
             template_file_names=self.template_file_names,

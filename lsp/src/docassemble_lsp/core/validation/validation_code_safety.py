@@ -9,11 +9,16 @@ from __future__ import annotations
 
 import ast
 import builtins
+import re
 from collections.abc import Mapping
 from typing import Any
 
 from docassemble_lsp.core.field_keys import FIELD_MODIFIER_KEYS
-from docassemble_lsp.core.line_helpers import _is_internal_metadata_key, _safe_ast_parse
+from docassemble_lsp.core.line_helpers import (
+    _is_internal_metadata_key,
+    _path,
+    _safe_ast_parse,
+)
 
 _BUILTIN_NAMES = frozenset(dir(builtins)) | {
     "defined",
@@ -21,18 +26,10 @@ _BUILTIN_NAMES = frozenset(dir(builtins)) | {
     "DAValidationError",
 }
 
-
-def _path(node: ast.AST) -> str | None:
-    parts: list[str] = []
-    current = node
-    while isinstance(current, (ast.Attribute, ast.Subscript)):
-        if isinstance(current, ast.Attribute):
-            parts.append(current.attr)
-        current = current.value
-    if not isinstance(current, ast.Name):
-        return None
-    parts.append(current.id)
-    return ".".join(reversed(parts))
+# docassemble binds these names as list-item indices while asking list
+# questions (``docassemble/base/parse.py``).
+_LIST_ITEM_INDICES = frozenset({"i", "j", "k", "l", "m", "n"})
+_SUBSCRIPT_INDEX_RE = re.compile(r"\[([A-Za-z_]\w*)\]")
 
 
 def _canonical_variable(value: str) -> str:
@@ -43,8 +40,8 @@ def _canonical_variable(value: str) -> str:
     return _path(expression) or value.strip()
 
 
-def _field_names(fields: Any) -> set[str] | None:
-    """Return known field targets, or None when fields are dynamically generated."""
+def _field_targets(fields: Any) -> list[str] | None:
+    """Return raw declared field strings, or None when fields are dynamic."""
     if isinstance(fields, Mapping):
         keys = {
             key
@@ -59,13 +56,13 @@ def _field_names(fields: Any) -> set[str] | None:
     else:
         return None
 
-    names: set[str] = set()
+    targets: list[str] = []
     for item in items:
         if not isinstance(item, Mapping):
             continue
         target = item.get("field")
         if isinstance(target, str):
-            names.add(_canonical_variable(target))
+            targets.append(target)
             continue
         for key, value in item.items():
             if (
@@ -74,17 +71,17 @@ def _field_names(fields: Any) -> set[str] | None:
                 and not _is_internal_metadata_key(key)
                 and isinstance(value, str)
             ):
-                names.add(_canonical_variable(value))
+                targets.append(value)
                 break
-    return names
+    return targets
 
 
-def _need_names(need: Any) -> set[str]:
-    names: set[str] = set()
+def _need_targets(need: Any) -> list[str]:
+    targets: list[str] = []
 
     def add(value: Any) -> None:
         if isinstance(value, str):
-            names.add(_canonical_variable(value))
+            targets.append(value)
         elif isinstance(value, list):
             for child in value:
                 add(child)
@@ -94,7 +91,22 @@ def _need_names(need: Any) -> set[str]:
                     add(child)
 
     add(need)
-    return names
+    return targets
+
+
+def _implicit_indices(targets: list[str]) -> set[str]:
+    """Return docassemble list-item index names referenced by declared targets."""
+    return {
+        name
+        for target in targets
+        for name in _SUBSCRIPT_INDEX_RE.findall(target)
+        if name in _LIST_ITEM_INDICES
+    }
+
+
+def _matches_declared(name: str, declared: set[str]) -> bool:
+    """Match *name* against declared paths using a ``.``-anchored prefix rule."""
+    return name in declared or any(name.startswith(path + ".") for path in declared)
 
 
 def _guarded_by_true(expr: ast.AST) -> set[str]:
@@ -242,7 +254,7 @@ def _iter_variable_reads(tree: ast.Module):
                 isinstance(parent, ast.Attribute) and parent.value is node
             )
             parent_is_call = isinstance(parent, ast.Call) and parent.func is node
-            if parent_is_attribute or parent_is_call:
+            if parent_is_attribute or parent_is_call or is_attribute_base(node):
                 continue
             value_path = _path(node)
             if value_path is None:
@@ -261,24 +273,35 @@ def _iter_variable_reads(tree: ast.Module):
             yield node.id, node.lineno, active_guards.get(id(node), set())
 
 
-def find_unguarded_offscreen_reads(doc: Mapping[str, Any]) -> list[tuple[str, int]]:
+def find_unguarded_offscreen_reads(
+    doc: Mapping[str, Any],
+    *,
+    workspace_defined_names: frozenset[str] = frozenset(),
+) -> list[tuple[str, int]]:
     """Return ``(variable, Python body line)`` for likely off-screen reads.
 
-    The check is limited to statically declared question fields. ``fields:
-    {code: ...}`` and malformed/dynamic blocks are skipped rather than
-    presenting incomplete static knowledge as certainty.
+    The check is limited to statically declared question fields plus names
+    defined by ``objects:`` / ``code:`` blocks elsewhere in the interview
+    (*workspace_defined_names*). ``fields: {code: ...}`` and malformed/dynamic
+    blocks are skipped rather than presenting incomplete static knowledge as
+    certainty.
     """
     normalized = {
         key.lower(): value for key, value in doc.items() if isinstance(key, str)
     }
     if "validation code" not in normalized:
         return []
+    raw_targets: list[str] = []
     if "fields" in normalized:
-        screen_fields = _field_names(normalized["fields"])
-        if screen_fields is None:
+        field_targets = _field_targets(normalized["fields"])
+        if field_targets is None:
             return []
+        screen_fields = {_canonical_variable(target) for target in field_targets}
+        raw_targets.extend(field_targets)
     elif isinstance(normalized.get("field"), str):
-        screen_fields = {normalized["field"].strip()}
+        singular_field = normalized["field"]
+        screen_fields = {_canonical_variable(singular_field)}
+        raw_targets.append(singular_field)
     else:
         return []
     if not isinstance(normalized["validation code"], str):
@@ -288,10 +311,21 @@ def find_unguarded_offscreen_reads(doc: Mapping[str, Any]) -> list[tuple[str, in
     except SyntaxError:
         return []
 
-    on_screen = screen_fields | _need_names(normalized.get("need"))
+    need_targets = _need_targets(normalized.get("need"))
+    raw_targets.extend(need_targets)
+    on_screen = (
+        screen_fields
+        | {_canonical_variable(target) for target in need_targets}
+        | _implicit_indices(raw_targets)
+        | set(workspace_defined_names)
+    )
+    if "generic object" in normalized or "generic list object" in normalized:
+        on_screen.add("x")
+    if "generic list object" in normalized:
+        on_screen.add("i")
     findings: dict[str, int] = {}
     for name, line, guards in _iter_variable_reads(tree):
-        if name in on_screen or name in guards:
+        if _matches_declared(name, on_screen) or _matches_declared(name, guards):
             continue
         if name.split(".", 1)[0] in _BUILTIN_NAMES:
             continue

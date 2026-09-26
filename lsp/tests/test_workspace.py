@@ -625,3 +625,124 @@ def test_workspace_index_modules_multi_package_parent_root(tmp_path) -> None:
     assert any(
         target.path == gamma_deep for target in index.symbol_registry["gamma_deep"]
     )
+
+
+def test_workspace_index_collects_objects_keys(tmp_path) -> None:
+    source = tmp_path / "main.yml"
+    source.write_text(
+        "objects:\n"
+        '  - nota: Thing.using(name="None of the above")\n'
+        "  - state.co_share_list: DAList.using()\n",
+        encoding="utf-8",
+    )
+
+    index = build_workspace_index([tmp_path])
+
+    assert {"nota", "state.co_share_list"} <= index.all_interview_defined_names
+
+
+def test_workspace_index_collects_module_scope_code_names(tmp_path) -> None:
+    source = tmp_path / "main.yml"
+    source.write_text(
+        "code: |\n"
+        "  import math as mathematics\n"
+        "  from datetime import date\n"
+        "  if True:\n"
+        "      nested_global = 1\n"
+        "  for item in []:\n"
+        "      loop_value = 2\n"
+        "  try:\n"
+        "      risky = 3\n"
+        "  except ValueError as caught:\n"
+        "      handled = 4\n"
+        '  with open("x") as handle:\n'
+        "      opened = 5\n"
+        "  state.client = make_client()\n"
+        "  def helper():\n"
+        "      inside_function = 6\n"
+        "      return inside_function\n"
+        "validation code: |\n"
+        "  inside_validation = 7\n",
+        encoding="utf-8",
+    )
+
+    index = build_workspace_index([tmp_path])
+
+    names = index.all_interview_defined_names
+    assert {
+        "mathematics",
+        "date",
+        "nested_global",
+        "item",
+        "loop_value",
+        "risky",
+        "caught",
+        "handled",
+        "handle",
+        "opened",
+        "state.client",
+        "helper",
+    } <= names
+    assert "inside_function" not in names
+    assert "inside_validation" not in names
+
+
+def test_workspace_index_skips_malformed_code_blocks(tmp_path) -> None:
+    source = tmp_path / "main.yml"
+    source.write_text(
+        "code: |\n  def broken(:\n    pass\n"
+        "---\n"
+        "objects:\n  - sentinel: Thing.using()\n",
+        encoding="utf-8",
+    )
+
+    index = build_workspace_index([tmp_path])
+
+    assert "sentinel" in index.all_interview_defined_names
+
+
+def test_workspace_index_interview_names_refresh_through_overlays(tmp_path) -> None:
+    source_a = tmp_path / "a.yml"
+    source_b = tmp_path / "b.yml"
+    source_a.write_text("question: A\n", encoding="utf-8")
+    source_b.write_text("question: B\n", encoding="utf-8")
+
+    base = WorkspaceIndex.from_yaml_roots([tmp_path])
+    assert base.all_interview_defined_names == frozenset()
+
+    overlaid = base.with_overlays(
+        {
+            source_a: "objects:\n  - sentinel: Thing.using()\n",
+            source_b: "code: |\n  client = make_client()\n",
+        }
+    )
+
+    assert "sentinel" in overlaid.all_interview_defined_names
+    assert "client" in overlaid.all_interview_defined_names
+
+
+def test_workspace_index_interview_names_refresh_for_current_document(
+    tmp_path,
+) -> None:
+    source = tmp_path / "main.yml"
+    source.write_text("question: Saved\n", encoding="utf-8")
+
+    index = WorkspaceIndex.from_yaml_roots([tmp_path])
+    updated = index.with_current_document(
+        source, "objects:\n  - live_sentinel: Thing.using()\n"
+    )
+
+    assert "live_sentinel" in updated.all_interview_defined_names
+
+
+def test_build_workspace_index_populates_interview_names_from_existing_sources(
+    tmp_path,
+) -> None:
+    source = tmp_path / "main.yml"
+    sources = WorkspaceYamlSources.from_source_dict(
+        {source: "code: |\n  shared_global = 1\n"}
+    )
+
+    index = build_workspace_index([tmp_path], existing_sources=sources)
+
+    assert "shared_global" in index.all_interview_defined_names

@@ -43,6 +43,20 @@ def _is_internal_metadata_key(key: Any) -> bool:
     return isinstance(key, str) and key in _INTERNAL_METADATA_KEYS
 
 
+def _path(node: ast.AST) -> str | None:
+    """Return the dotted name/attribute path for *node*, ignoring subscripts."""
+    parts: list[str] = []
+    current = node
+    while isinstance(current, (ast.Attribute, ast.Subscript)):
+        if isinstance(current, ast.Attribute):
+            parts.append(current.attr)
+        current = current.value
+    if not isinstance(current, ast.Name):
+        return None
+    parts.append(current.id)
+    return ".".join(reversed(parts))
+
+
 def _lc_line(obj: Any) -> int:
     """Return a 1-indexed line number from a ruamel.yaml object's position metadata.
 

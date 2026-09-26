@@ -24,6 +24,7 @@ from docassemble_lsp.core.files import (
     resolve_static_target,
     safe_iterdir,
 )
+from docassemble_lsp.core.interview_definitions import collect_interview_defined_names
 from docassemble_lsp.core.line_helpers import _safe_ast_parse
 from docassemble_lsp.core.python_modules import (
     VENDORED_MODULE_NAMES,
@@ -69,6 +70,7 @@ from docassemble_lsp.core.yaml_shared import (
     _clean_value,
     _clean_value_and_range,
     _document_lines,
+    _iter_block_scalar_regions,
     _iter_mako_block_regions,
     _iter_mako_expressions,
     _line_col_to_offset,
@@ -455,6 +457,9 @@ def build_workspace_index(
                 for source in sources.sources
             },
             search_roots=resolved_search_roots,
+            all_interview_defined_names=collect_interview_defined_names(
+                source.text for source in sources.sources
+            ),
         )
     else:
         index = WorkspaceIndex.from_yaml_roots(
@@ -899,28 +904,6 @@ def _enclosing_block_scalar_region(source: str, line: int) -> BlockScalarRegion 
         if region.content_start_line <= line <= region.end_line:
             return region
     return None
-
-
-def _iter_block_scalar_regions(source: str) -> list[BlockScalarRegion]:
-    lines = _document_lines(source)
-    regions: list[BlockScalarRegion] = []
-    line_index = 0
-    while line_index < len(lines):
-        text = lines[line_index]
-        match = _KEY_VALUE_RE.match(text)
-        if match is None:
-            line_index += 1
-            continue
-        raw_value = match.group(3).strip()
-        if raw_value not in _BLOCK_SCALAR_MARKERS:
-            line_index += 1
-            continue
-        region = _block_scalar_region_from_key_line(
-            lines, line_index, match.group(2).strip(), len(match.group(1))
-        )
-        regions.append(region)
-        line_index = max(region.end_line + 1, line_index + 1)
-    return regions
 
 
 def _resolve_local_file_reference(
