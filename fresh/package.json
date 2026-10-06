@@ -1,0 +1,29 @@
+{
+  "$schema": "https://raw.githubusercontent.com/sinelaw/fresh/main/crates/fresh-editor/plugins/schemas/package.schema.json",
+  "name": "docassemble",
+  "version": "0.1.0",
+  "description": "Docassemble YAML syntax highlighting (Mako/Jinja/Python aware) plus docassemble-lsp wiring for the Fresh editor",
+  "type": "language",
+  "author": "Jack Adamson",
+  "license": "Apache-2.0",
+  "repository": "https://github.com/jpagh/docassemble-yaml#fresh",
+  "keywords": ["docassemble", "yaml", "interview", "mako", "jinja", "lsp"],
+  "fresh": {
+    "min_version": "0.5.2",
+    "grammar": {
+      "file": "grammars/Docassemble.sublime-syntax",
+      "extensions": [],
+      "shortName": "docassemble"
+    },
+    "language": {
+      "commentPrefix": "#",
+      "tabSize": 2,
+      "autoIndent": true
+    },
+    "lsp": {
+      "command": "docassemble-lsp",
+      "args": ["lsp"],
+      "autoStart": true
+    }
+  }
+}

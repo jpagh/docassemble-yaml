@@ -1,0 +1,103 @@
+{
+  "$comment": "Maps a scope-stack to one highlight category, for both the vscode-textmate reference and the syntect candidate. The most specific scope (last in the stack) that matches a prefix wins; unmatched is \"other\". Keep this file in sync with the normalisation in src/main.rs and node/tokenize.mjs.",
+  "embedded": [
+    {
+      "scope": "source.python",
+      "category": "python"
+    },
+    {
+      "scope": "source.js",
+      "category": "js"
+    },
+    {
+      "scope": "text.html.basic",
+      "category": "html"
+    },
+    {
+      "scope": "text.html.derivative",
+      "category": "html"
+    }
+  ],
+  "rules": [
+    {
+      "prefix": "comment.",
+      "category": "comment"
+    },
+    {
+      "prefix": "string.",
+      "category": "string"
+    },
+    {
+      "prefix": "unquoted.plain",
+      "category": "string"
+    },
+    {
+      "prefix": "constant.character.escape",
+      "category": "escape"
+    },
+    {
+      "prefix": "constant.numeric",
+      "category": "number"
+    },
+    {
+      "prefix": "constant.language",
+      "category": "constant"
+    },
+    {
+      "prefix": "constant.other.color",
+      "category": "constant"
+    },
+    {
+      "prefix": "constant.",
+      "category": "constant"
+    },
+    {
+      "prefix": "keyword.operator",
+      "category": "operator"
+    },
+    {
+      "prefix": "keyword.",
+      "category": "keyword"
+    },
+    {
+      "prefix": "storage.type",
+      "category": "type"
+    },
+    {
+      "prefix": "support.type",
+      "category": "type"
+    },
+    {
+      "prefix": "support.class",
+      "category": "type"
+    },
+    {
+      "prefix": "entity.name.type",
+      "category": "type"
+    },
+    {
+      "prefix": "entity.name.function",
+      "category": "function"
+    },
+    {
+      "prefix": "entity.name.tag",
+      "category": "tag"
+    },
+    {
+      "prefix": "entity.other.attribute-name",
+      "category": "attribute"
+    },
+    {
+      "prefix": "entity.other.jinja.delimiter",
+      "category": "punctuation"
+    },
+    {
+      "prefix": "variable.",
+      "category": "variable"
+    },
+    {
+      "prefix": "punctuation.",
+      "category": "punctuation"
+    }
+  ]
+}

@@ -1,0 +1,46 @@
+---
+# Scope-parity fixture: deliberately exercises every Docassemble/Mako/Jinja/
+# Python construct the Fresh grammar lowers. Keep it ASCII-only: the Node
+# tokenizer reports UTF-16 offsets while syntect reports byte offsets.
+metadata:
+  title: Scope parity  # trailing comment
+  author: "Quoted string"
+  count: 42
+  enabled: true
+---
+id: parity test
+mandatory: True
+question: |
+  Hello ${ client_name }
+  Total is ${ count + 1 }
+  <%doc>a mako doc block</%doc>
+  {{ jinja_var }} and {% if flag %}yes{% endif %}
+---
+code: |
+  def greet(name):
+      return "Hello " + name
+  values = [1, 2, 3]
+---
+if: user_is_admin and not user_banned
+need:
+  - admin
+---
+show if: |
+  user_logged_in
+---
+on change:
+  - reset_variables
+---
+script: |
+  var total = 1 + 2;
+---
+fields:
+  - First name: first_name
+    datatype: text
+  - Age: age
+    datatype: integer
+    min: 0
+plain: value
+flow: {a: 1, b: [x, y]}
+# a normal comment
+event: parity_reset

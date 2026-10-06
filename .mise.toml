@@ -8,7 +8,7 @@ monorepo_root = true
     "pipx:bump-my-version" = "latest"
 
 [monorepo]
-    config_roots = ["lsp", "vscode"]
+    config_roots = ["fresh", "lsp", "vscode", "tools/scope-parity"]
 
 [tasks."format:toml"]
     description = "Format TOML files with tombi (uses root .tombi.toml)"
@@ -24,11 +24,23 @@ monorepo_root = true
 
 [tasks.check]
     description = "Check formatting, lint, type, and test the whole monorepo"
-    depends     = ["//:format:toml:check", "//lsp:check", "//vscode:check"]
+    depends     = [
+        "//:format:toml:check",
+        "//lsp:check",
+        "//vscode:check",
+        "//fresh:check",
+        "//tools/scope-parity:check",
+    ]
 
 [tasks.gate]
     description = "Full pre-release gate for the whole monorepo"
-    depends     = ["//:format:toml:check", "//lsp:gate", "//vscode:gate"]
+    depends     = [
+        "//:format:toml:check",
+        "//lsp:gate",
+        "//vscode:gate",
+        "//fresh:check",
+        "//tools/scope-parity:gate",
+    ]
 
 [tasks.bump]
     description = "Bump the patch digit (CalVer YY.MM.patch → YY.MM.patch+1) and push"

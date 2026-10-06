@@ -1,9 +1,12 @@
 # docassemble-yaml
 
-Monorepo for the docassemble-lsp language server and its VS Code extension.
+Monorepo for the docassemble-lsp language server, its VS Code extension, and
+optional support for the Fresh terminal editor.
 
 - **`lsp/`** — Python language server (CalVer versioned)
 - **`vscode/`** — VS Code extension (same version as lsp/)
+- **`fresh/`** — Fresh language pack (syntax highlighting + LSP wiring); see
+  [`docs/FRESH.md`](docs/FRESH.md) for the investigation and setup
 
 ## Required tools
 

@@ -1,0 +1,20 @@
+[package]
+    name    = "scope-parity"
+    version = "0.1.0"
+    edition = "2021"
+    publish = false
+
+[dependencies]
+    serde      = { version = "1", features = ["derive"] }
+    serde_json = "1"
+    syntect    = {
+        version          = "5.3",
+        default-features = false,
+        features         = [
+            "default-syntaxes",
+            "dump-load",
+            "parsing",
+            "regex-onig",
+            "yaml-load",
+        ]
+    }

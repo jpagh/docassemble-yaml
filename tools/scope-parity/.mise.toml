@@ -1,0 +1,42 @@
+[tools]
+    node        = "latest"
+    "pipx:ruff" = "latest"
+    rust        = "latest"
+    uv          = "latest"
+
+[tasks."format"]
+    description = "Format Rust and Python sources"
+    run         = ["cargo fmt", "ruff format compare.py lint.py"]
+
+[tasks."format:check"]
+    description = "Check Rust, JS, and Python formatting (and TOML)"
+    depends     = ["//:format:toml:check"]
+    run         = [
+        "cargo fmt --check",
+        "node --check node/tokenize.mjs",
+        "ruff format --check compare.py lint.py",
+    ]
+
+[tasks.lint]
+    description = "Lint Python and validate the JSON/YAML inputs (and TOML)"
+    depends     = ["//:lint:toml"]
+    run         = [
+        "ruff check compare.py lint.py",
+        "uv run --quiet --no-project --with pyyaml python lint.py",
+    ]
+
+[tasks."lint:rust"]
+    description = "Clippy; compiles the syntect harness, so pre-release only"
+    run         = "cargo clippy --release --all-targets -- -D warnings"
+
+[tasks.check]
+    description = "Fast checks: formatting, lint, and input validation"
+    depends     = ["format:check", "lint"]
+
+[tasks.test]
+    description = "Scope parity: vscode-textmate reference vs the generated Fresh grammar"
+    run         = "./run.sh"
+
+[tasks.gate]
+    description = "Fast checks, clippy, and the parity run"
+    depends     = ["check", "lint:rust", "test"]
