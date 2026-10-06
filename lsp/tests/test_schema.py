@@ -2020,6 +2020,40 @@ def test_multi_word_key_completion_replaces_full_typed_prefix() -> None:
     assert result == "question: Hi\nfields:\n  - disable if: \n"
 
 
+def test_key_completion_replaces_leftover_separator() -> None:
+    """Replacing an existing key word and accepting a completion must not
+    leave the old ':' behind.
+
+    Selecting `hint` and typing `under ` leaves `under : ...`; accepting
+    `under text` used to produce `under text: : ...`."""
+    source = (
+        "fields:\n"
+        "  - label: Payee\n"
+        "    field: payee\n"
+        "  - label: Check number\n"
+        "    field: check_number\n"
+        "    required: False\n"
+        "    under : Leave blank to print a blank line\n"
+    )
+    completions = get_completions(source, 6, len("    under "))
+    item = next(c for c in completions if c.label == "under text")
+    assert item.insert_text == "under text: $0"
+    assert item.text_edit_range == (4, len("    under : "))
+
+    result = _apply_edit(
+        source, 6, *item.text_edit_range, item.insert_text.replace("$0", "")
+    )
+    assert result == (
+        "fields:\n"
+        "  - label: Payee\n"
+        "    field: payee\n"
+        "  - label: Check number\n"
+        "    field: check_number\n"
+        "    required: False\n"
+        "    under text: Leave blank to print a blank line\n"
+    )
+
+
 def test_multi_word_key_completion_at_top_level_replaces_full_typed_prefix() -> None:
     """Same guarantee for top-level keys without a list-item marker."""
     source = "css cl\n"

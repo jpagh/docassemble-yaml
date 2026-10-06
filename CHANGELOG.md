@@ -8,6 +8,7 @@
 
 ### Fixed
 
+- [LSP] Accepting a key completion after replacing an existing key word in place no longer duplicates the separator. Selecting `hint` and typing `under ` used to produce `under text: : ...`; the completion's text edit now replaces the leftover `: ` as well.
 - [LSP] `W601` no longer reports URL-style action buttons as undefined events. `action` values beginning with `/` or `?` (documented docassemble hyperlink actions, e.g. `/start/case_information`) are treated as links, not event references.
 - [LSP] `W606` no longer reports docassemble-provided names or declared paths it could not see: implicit list indices (`i`–`n`), `generic object:` `x`, `generic list object:` `x`/`i`, `objects:` keys and top-level `code:` globals from anywhere in the interview, singular `field:` shorthand, attribute bases under subscripts, and reads that extend a declared path at a `.` boundary (e.g. `uploaded_signature[0].mimetype`).
 - [CLI] `check` applies the same interview-wide `objects:`/`code:` definitions to `W606` as the language server.

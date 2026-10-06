@@ -50,6 +50,9 @@ class CompletionContext:
     button_command_candidates: ButtonCommandCandidates
     filter_property_candidates: PropertyCandidateFilter
     should_suppress_shorthand: ShorthandSuppression
+    # Text after the cursor on the completion line, for ranges that must
+    # swallow a stale separator.
+    line_suffix: str = ""
     current_field_datatype: str = ""
     runtime_options: RuntimeOptions | None = None
     indent: str = "  "
@@ -81,7 +84,9 @@ class CompletionRegistry:
         return []
 
 
-def _completion_token_range(line_prefix: str, character: int) -> tuple[int, int] | None:
+def _completion_token_range(
+    line_prefix: str, character: int, line_suffix: str = ""
+) -> tuple[int, int] | None:
     """TextEdit range covering the YAML token being completed.
 
     Returns ``(start, character)`` where *start* is the column where the typed
@@ -89,6 +94,11 @@ def _completion_token_range(line_prefix: str, character: int) -> tuple[int, int]
     the prefix is not a YAML key/value position. Without an explicit range,
     VS Code replaces only the current word, so multi-word keys like
     ``disable if`` get duplicated ("disable disable if:").
+
+    For keys the range also swallows a leftover separator after the cursor:
+    replacing an existing key word in place (select ``hint``, type ``under ``)
+    leaves ``under : ...``, and the inserted ``under text: `` must replace the
+    old ``: `` instead of producing ``under text: : ...``.
     """
     value_match = _VALUE_RE.match(line_prefix)
     if value_match is not None:
@@ -99,17 +109,22 @@ def _completion_token_range(line_prefix: str, character: int) -> tuple[int, int]
     )  # every group is optional, so the pattern always matches
     key_start = len(key_match.group(0))
     if re.fullmatch(r"[\w/.-][\w /.-]*", line_prefix[key_start:]):
-        return (key_start, character)
+        end = character
+        separator = re.match(r"[ \t]*:[ \t]*", line_suffix)
+        if separator is not None:
+            end += separator.end()
+        return (key_start, end)
     return None
 
 
 def _with_completion_range(
     candidates: list[CompletionCandidate],
-    line_prefix: str,
-    character: int,
+    context: CompletionContext,
 ) -> list[CompletionCandidate]:
     """Fill in a client-side-safe text edit range for candidates that lack one."""
-    token_range = _completion_token_range(line_prefix, character)
+    token_range = _completion_token_range(
+        context.line_prefix, context.character, context.line_suffix
+    )
     if token_range is None:
         return candidates
     return [
@@ -310,9 +325,7 @@ def value_completion_provider(
             context.line_prefix,
         )
         if show_if_variable_candidates:
-            return _with_completion_range(
-                show_if_variable_candidates, context.line_prefix, context.character
-            )
+            return _with_completion_range(show_if_variable_candidates, context)
         prop = scope_properties.get(key) or context.metadata.all_known_properties.get(
             key
         )
@@ -402,17 +415,13 @@ def value_completion_provider(
                             )
                         )
 
-            return _with_completion_range(
-                candidates, context.line_prefix, context.character
-            )
+            return _with_completion_range(candidates, context)
 
         button_command_candidates = context.button_command_candidates(
             context.source, context.line, context.line_prefix
         )
         if button_command_candidates:
-            return _with_completion_range(
-                button_command_candidates, context.line_prefix, context.character
-            )
+            return _with_completion_range(button_command_candidates, context)
     return None
 
 
@@ -461,7 +470,7 @@ def property_completion_provider(
         shorthand_candidates + property_candidates,
         indent_unit=context.indent,
     )
-    return _with_completion_range(result, context.line_prefix, context.character)
+    return _with_completion_range(result, context)
 
 
 def _list_item_partial_value(context: CompletionContext) -> str:
@@ -546,11 +555,7 @@ def _complete_file_paths(
                 c.label,
             )
         )
-    return (
-        _with_completion_range(candidates, context.line_prefix, context.character)
-        if candidates
-        else None
-    )
+    return _with_completion_range(candidates, context) if candidates else None
 
 
 def _complete_module_names(
@@ -650,11 +655,7 @@ def _complete_variable_names(
     candidates.sort(
         key=lambda c: (0 if c.label.lower().startswith(partial.lower()) else 1, c.label)
     )
-    return (
-        _with_completion_range(candidates, context.line_prefix, context.character)
-        if candidates
-        else None
-    )
+    return _with_completion_range(candidates, context) if candidates else None
 
 
 def _complete_block_ids(context: CompletionContext) -> list[CompletionCandidate] | None:
@@ -672,11 +673,7 @@ def _complete_block_ids(context: CompletionContext) -> list[CompletionCandidate]
                 c.label,
             )
         )
-    return (
-        _with_completion_range(candidates, context.line_prefix, context.character)
-        if candidates
-        else None
-    )
+    return _with_completion_range(candidates, context) if candidates else None
 
 
 _ATTACHMENT_KEY_EXTENSIONS: dict[str, tuple[str, ...]] = {
@@ -725,8 +722,4 @@ def _complete_attachment_template_paths(
                 c.label,
             )
         )
-    return (
-        _with_completion_range(candidates, context.line_prefix, context.character)
-        if candidates
-        else None
-    )
+    return _with_completion_range(candidates, context) if candidates else None

@@ -197,6 +197,7 @@ def build_completion_context(
         metadata=metadata,
         scope=scope,
         line_prefix=line_at(source, line)[:character],
+        line_suffix=line_at(source, line)[character:],
         show_if_variable_candidates=lambda callback_source, callback_line, line_prefix: (
             _show_if_variable_candidates(
                 callback_source,

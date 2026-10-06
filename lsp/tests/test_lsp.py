@@ -579,6 +579,27 @@ def test_completion_list_text_edit_replaces_full_key_prefix() -> None:
     assert item.text_edit.range.end.character == 13
 
 
+def test_completion_list_text_edit_swallows_leftover_separator() -> None:
+    """Replacing a key word in place leaves its ':' after the cursor; the
+    emitted textEdit must replace it so 'under ' + accept 'under text' yields
+    'under text: ...' and not 'under text: : ...'."""
+    source = (
+        "fields:\n"
+        "  - label: Check number\n"
+        "    field: check_number\n"
+        "    under : Leave blank to print a blank line\n"
+    )
+    completions = build_completion_list(source, 3, len("    under "))
+
+    item = next(item for item in completions.items if item.label == "under text")
+    assert item.text_edit is not None
+    assert item.text_edit.new_text == "under text: $0"
+    assert item.text_edit.range.start.line == 3
+    assert item.text_edit.range.start.character == 4
+    assert item.text_edit.range.end.line == 3
+    assert item.text_edit.range.end.character == len("    under : ")
+
+
 def test_completion_list_no_block_scalar_variant_for_question() -> None:
     completions = build_completion_list("", 0, 0)
 
