@@ -108,6 +108,21 @@ directory Fresh passes in `initialize`. The nearest ancestor containing one of
 the markers wins; without a marker, only the file's own directory is indexed
 and cross-file navigation misses the rest of the package.
 
+## Completions
+
+Fresh shows the completion popup on request by default — press `Ctrl+Space`.
+For VS Code-style suggestions while typing, enable auto-show in
+`~/.config/fresh/config.json`:
+
+```json
+{ "editor": { "completion_popup_auto_show": true } }
+```
+
+With auto-show on, word characters trigger after `quick_suggestions_delay_ms`
+(150 ms default) and the server's trigger characters (`:`, space, `.`) trigger
+immediately. Set `quick_suggestions: false` to trigger only on those
+characters.
+
 ## Enable semantic highlighting
 
 Fresh disables LSP semantic tokens by default. Enable them in
