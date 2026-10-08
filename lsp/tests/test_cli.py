@@ -236,6 +236,27 @@ def test_check_command_fix_adds_missing_question_id(tmp_path: Path) -> None:
     )
 
 
+def test_check_command_fix_renames_duplicate_block_ids(tmp_path: Path) -> None:
+    source = tmp_path / "duplicate_id.yml"
+    source.write_text(
+        "---\nid: shared\nquestion: First\n"
+        "---\nid: shared\nquestion: Second\n"
+        "---\nid: shared 2\nquestion: Third\n"
+        "---\nid: shared\nquestion: Fourth\n",
+        encoding="utf-8",
+    )
+
+    exit_code = main(["check", "--quiet", "--fix", str(source)])
+
+    assert exit_code == 0
+    assert source.read_text(encoding="utf-8") == (
+        "---\nid: shared\nquestion: First\n"
+        '---\nid: "shared 3"\nquestion: Second\n'
+        "---\nid: shared 2\nquestion: Third\n"
+        '---\nid: "shared 4"\nquestion: Fourth\n'
+    )
+
+
 def test_check_command_fix_reports_rejections_and_leaves_jinja_file_unchanged(
     tmp_path: Path, capsys
 ) -> None:

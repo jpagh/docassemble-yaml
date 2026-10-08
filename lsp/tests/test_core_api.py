@@ -175,6 +175,95 @@ def test_core_fix_text_declines_missing_id_in_jinja_template() -> None:
     assert result.text == source
 
 
+_DUPLICATE_ID_SOURCE = (
+    "---\nid: shared\nquestion: First\n"
+    "---\nid: shared\nquestion: Second\n"
+    "---\nid: shared\nquestion: Third\n"
+)
+
+
+def test_core_fix_text_renames_later_duplicate_ids_with_counter() -> None:
+    result = core.fix_text(_DUPLICATE_ID_SOURCE)
+
+    assert result.changed is True
+    assert result.applied_codes == ("W609", "W609")
+    # The first occurrence keeps its ID; later ones get a deterministic suffix.
+    assert result.text == (
+        "---\nid: shared\nquestion: First\n"
+        '---\nid: "shared 2"\nquestion: Second\n'
+        '---\nid: "shared 3"\nquestion: Third\n'
+    )
+
+
+def test_core_fix_text_duplicate_id_skips_taken_suffixes() -> None:
+    source = (
+        "---\nid: shared\nquestion: First\n"
+        "---\nid: shared 2\nquestion: Author suffix\n"
+        "---\nid: shared\nquestion: Second\n"
+    )
+    result = core.fix_text(source)
+
+    assert result.applied_codes == ("W609",)
+    assert 'id: "shared 3"\n' in result.text
+    assert "id: shared 2\n" in result.text
+
+
+def test_core_fix_text_duplicate_id_keeps_author_text() -> None:
+    source = (
+        "---\nid: Caf\u00e9 Question!\nquestion: First\n"
+        "---\nid: Caf\u00e9 Question!\nquestion: Second\n"
+    )
+    result = core.fix_text(source)
+
+    assert 'id: "Caf\u00e9 Question! 2"\n' in result.text
+
+
+def test_core_fix_text_duplicate_id_preserves_key_case_and_comment() -> None:
+    source = (
+        "---\nid: shared\nquestion: First\n"
+        "---\nID: shared  # keep me\nquestion: Second\n"
+    )
+    result = core.fix_text(source)
+
+    assert 'ID: "shared 2" # keep me\n' in result.text
+
+
+def test_core_fix_text_duplicate_id_fix_is_idempotent() -> None:
+    first = core.fix_text(_DUPLICATE_ID_SOURCE)
+    second = core.fix_text(first.text)
+
+    assert second.changed is False
+    assert second.text == first.text
+    assert second.applied_codes == ()
+
+
+def test_core_fix_text_duplicate_and_missing_ids_stay_unique() -> None:
+    source = (
+        "---\nid: x\nquestion: First\n---\nid: x\nquestion: Second\n---\nquestion: x\n"
+    )
+    result = core.fix_text(source)
+
+    assert result.changed is True
+    assert 'id: "x 2"\n' in result.text
+    assert 'id: "x 3"\n' in result.text
+    assert not [
+        diagnostic
+        for diagnostic in core.analyze_text(result.text, path="sample.yml")
+        if diagnostic.code in {"W608", "W609"}
+    ]
+
+
+def test_core_fix_text_renames_duplicate_ids_on_non_question_blocks() -> None:
+    source = (
+        "---\nid: shared\ncode: |\n  a = 1\n"
+        "---\nid: shared\nmandatory: True\ncode: |\n  b = 1\n"
+    )
+    result = core.fix_text(source)
+
+    assert result.applied_codes == ("W609",)
+    assert 'id: "shared 2"\n' in result.text
+
+
 _C102_SOURCE = "question: Hi\nfields:\n  - Name: user.name\n"
 _C102_OPTIONS = RuntimeOptions(
     enabled_conventions=frozenset({"C102"}), show_warnings=False

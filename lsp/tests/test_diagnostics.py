@@ -163,6 +163,61 @@ def test_missing_question_id_hidden_without_warnings() -> None:
     assert not [d for d in diagnostics if d.code == "W608"]
 
 
+def test_duplicate_block_id_reports_only_later_blocks() -> None:
+    source = (
+        "---\nid: shared\nquestion: First\n"
+        "---\nid: shared\nquestion: Second\n"
+        "---\nid: shared\nquestion: Third\n"
+        "---\nid: unique\nquestion: Fourth\n"
+    )
+    diagnostics = analyze_text(source, path="sample.yml")
+
+    findings = [d for d in diagnostics if d.code == "W609"]
+    assert [finding.line for finding in findings] == [5, 8]
+    assert all(finding.severity == "warning" for finding in findings)
+    assert findings[0].message == "block id 'shared' is already used on line 2"
+    assert findings[1].message == "block id 'shared' is already used on line 2"
+
+
+def test_duplicate_block_id_spans_block_types_and_key_case() -> None:
+    source = (
+        "---\nID: shared\nquestion: First\n"
+        "---\nid: shared\nmandatory: True\ncode: |\n  a\n"
+    )
+    diagnostics = analyze_text(source, path="sample.yml")
+
+    findings = [d for d in diagnostics if d.code == "W609"]
+    assert [finding.line for finding in findings] == [5]
+
+
+def test_duplicate_block_id_ignores_missing_empty_and_non_string_ids() -> None:
+    source = (
+        "---\nquestion: Missing id\n"
+        "---\nid:\nquestion: Empty id\n"
+        "---\nid: 42\nquestion: Numeric id\n"
+    )
+    diagnostics = analyze_text(source, path="sample.yml")
+
+    assert not [d for d in diagnostics if d.code == "W609"]
+
+
+def test_duplicate_block_id_is_case_sensitive() -> None:
+    source = "---\nid: Shared\nquestion: First\n---\nid: shared\nquestion: Second\n"
+    diagnostics = analyze_text(source, path="sample.yml")
+
+    assert not [d for d in diagnostics if d.code == "W609"]
+
+
+def test_duplicate_block_id_hidden_without_warnings() -> None:
+    source = "---\nid: shared\nquestion: First\n---\nid: shared\nquestion: Second\n"
+
+    diagnostics = analyze_text(
+        source, path="sample.yml", runtime_options=RuntimeOptions(show_warnings=False)
+    )
+
+    assert not [d for d in diagnostics if d.code == "W609"]
+
+
 def test_field_target_must_be_plain_text() -> None:
     diagnostics = analyze_text(
         "question: Hi\nfields:\n  - field:\n      x: 1\n    label: Name\n",

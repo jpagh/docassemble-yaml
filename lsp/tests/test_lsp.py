@@ -1672,6 +1672,53 @@ def test_build_code_actions_fix_all_includes_missing_question_id() -> None:
     ]
 
 
+def test_build_code_actions_renames_duplicate_block_id() -> None:
+    source = "---\nid: shared\nquestion: First\n---\nid: shared\nquestion: Second\n"
+    diagnostics = build_lsp_diagnostics("file:///sample.yml", source)
+
+    actions = build_code_actions("file:///sample.yml", source, 4, diagnostics)
+
+    fixes = [a for a in actions if a.title.startswith("Rename duplicate id")]
+    assert [a.title for a in fixes] == ['Rename duplicate id to "shared 2"']
+    fix = fixes[0]
+    assert fix.edit is not None and fix.edit.changes is not None
+    text_edits = fix.edit.changes["file:///sample.yml"]
+    assert len(text_edits) == 1
+    assert text_edits[0].new_text == 'id: "shared 2"'
+    assert text_edits[0].range.start.line == 4
+    assert text_edits[0].range.end.line == 4
+
+
+def test_build_code_actions_offers_no_duplicate_id_fix_for_unique_ids() -> None:
+    source = "---\nid: first\nquestion: First\n---\nid: second\nquestion: Second\n"
+    diagnostics = build_lsp_diagnostics("file:///sample.yml", source)
+
+    actions = build_code_actions("file:///sample.yml", source, 4, diagnostics)
+
+    assert actions == []
+
+
+def test_build_code_actions_fix_all_includes_duplicate_block_id() -> None:
+    source = "---\nid: shared\nquestion: First\n---\nid: shared\nquestion: Second\n"
+    diagnostics = build_lsp_diagnostics("file:///sample.yml", source)
+
+    actions = build_code_actions(
+        "file:///sample.yml",
+        source,
+        4,
+        diagnostics,
+        only_kinds=["source.fixAll"],
+    )
+
+    assert [action.title for action in actions] == [
+        "Fix all auto-fixable docassemble-lsp issues"
+    ]
+    fix = actions[0]
+    assert fix.edit is not None and fix.edit.changes is not None
+    text_edits = fix.edit.changes["file:///sample.yml"]
+    assert [text_edit.new_text for text_edit in text_edits] == ['id: "shared 2"']
+
+
 def test_build_code_actions_adds_missing_table_keys_for_e921() -> None:
     source = "table: fruit_table\nrows: fruit_list\n"
     diagnostics = build_lsp_diagnostics("file:///sample.yml", source)

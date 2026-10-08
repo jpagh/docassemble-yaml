@@ -31,7 +31,7 @@ from docassemble_lsp.core.line_helpers import (
 )
 from docassemble_lsp.core.messages import MessageCode
 from docassemble_lsp.core.python_paths import path_from_uri_or_path
-from docassemble_lsp.core.question_ids import shorten_question_text
+from docassemble_lsp.core.question_ids import shorten_question_text, usable_id
 from docassemble_lsp.core.validation.blocks import (
     _absolute_document_line,
     _allowed_top_level_keys,
@@ -446,6 +446,7 @@ def find_errors_from_string(
     prior_conditional_fields: list[dict[str, Any]] = []
     line_number = 1
     section_index = 0
+    seen_block_ids: dict[str, int] = {}
 
     file_wide_tagged_pdf = _detect_file_wide_tagged_pdf(full_content)
     accessibility_opts = dataclasses.replace(
@@ -632,6 +633,23 @@ def find_errors_from_string(
                                 file_name=input_file,
                             )
                         )
+        id_key = doc_keys_lower.get("id")
+        id_text = usable_id(doc.get(id_key)) if id_key is not None else None
+        if id_text is not None:
+            id_line = _absolute_document_line(line_number, _lc_key_line(doc, id_key))
+            first_use = seen_block_ids.get(id_text)
+            if first_use is None:
+                seen_block_ids[id_text] = id_line
+            else:
+                all_errors.append(
+                    _yaml_error(
+                        code=MessageCode.DUPLICATE_BLOCK_ID,
+                        line_number=id_line,
+                        file_name=input_file,
+                        id=id_text,
+                        first_line=first_use,
+                    )
+                )
         question_key = doc_keys_lower.get("question")
         if question_key is not None:
             id_value = _get_case_insensitive(doc, "id")

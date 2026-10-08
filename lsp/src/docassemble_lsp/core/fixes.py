@@ -15,7 +15,10 @@ from docassemble_lsp.core.diagnostics import Diagnostic, analyze_text
 from docassemble_lsp.core.field_keys import INPUT_TYPE_DATATYPES
 from docassemble_lsp.core.jinja import has_jinja_header
 from docassemble_lsp.core.messages import MessageCode
-from docassemble_lsp.core.question_ids import plan_missing_question_ids
+from docassemble_lsp.core.question_ids import (
+    plan_duplicate_question_ids,
+    plan_missing_question_ids,
+)
 from docassemble_lsp.core.schema import load_schema
 from docassemble_lsp.core.validation_config import RuntimeOptions
 from docassemble_lsp.core.workspace import WorkspaceIndex
@@ -312,6 +315,31 @@ _EMPTY_ID_LINE_RE = re.compile(
     re.IGNORECASE,
 )
 
+_DUPLICATE_ID_LINE_RE = re.compile(
+    r"""^(\s*)(?P<marker>-\s+)?(?P<key>id)\s*:\s*(?P<value>.*)$""",
+    re.IGNORECASE,
+)
+
+
+def _yaml_comment_start(text: str) -> int | None:
+    """Return the index where a trailing YAML comment starts, if any."""
+    quote: str | None = None
+    escaped = False
+    for index, char in enumerate(text):
+        if quote is not None:
+            if escaped:
+                escaped = False
+            elif char == "\\" and quote == '"':
+                escaped = True
+            elif char == quote:
+                quote = None
+            continue
+        if char in "\"'":
+            quote = char
+        elif char == "#" and (index == 0 or text[index - 1].isspace()):
+            return index
+    return None
+
 
 def _table_missing_keys_fixes(
     source: str, diagnostic: Diagnostic, preferred_line: int | None
@@ -427,6 +455,55 @@ def _missing_question_id_fixes(
                 end_line=line_index,
                 end_character=len(text),
                 new_text=f"{indent}id: {quoted}\n{text}",
+            ),
+        )
+    ]
+
+
+def _duplicate_block_id_fixes(
+    source: str, diagnostic: Diagnostic, preferred_line: int | None
+) -> list[ResolvedFix]:
+    """W609: rename a later duplicate id to its planned unique replacement."""
+    if diagnostic.code != "W609":
+        return []
+
+    plan = {entry.line: entry for entry in plan_duplicate_question_ids(source)}
+    target = diagnostic.line
+    if target not in plan and preferred_line is not None:
+        target = preferred_line + 1
+    entry = plan.get(target)
+    if entry is None:
+        return []
+
+    lines = _document_lines(source)
+    line_index = entry.line - 1
+    if line_index < 0 or line_index >= len(lines):
+        return []
+    text = lines[line_index]
+    match = _DUPLICATE_ID_LINE_RE.match(text)
+    if match is None:
+        return []
+
+    indent = match.group(1)
+    marker = match.group("marker") or ""
+    key = match.group("key")
+    value = match.group("value")
+    quoted = json.dumps(entry.replacement_id, ensure_ascii=False)
+    replacement = f"{indent}{marker}{key}: {quoted}"
+    comment_index = _yaml_comment_start(value)
+    if comment_index is not None:
+        replacement = f"{replacement} {value[comment_index:].rstrip()}"
+
+    return [
+        ResolvedFix(
+            code="W609",
+            title=f"Rename duplicate id to {quoted}",
+            edit=SourceEdit(
+                start_line=line_index,
+                start_character=0,
+                end_line=line_index,
+                end_character=len(text),
+                new_text=replacement,
             ),
         )
     ]
@@ -669,6 +746,7 @@ _FIX_PROVIDERS: dict[str, FixProvider] = {
     "E414": _field_label_without_target_fixes,
     "E415": _field_target_without_label_fixes,
     "W608": _missing_question_id_fixes,
+    "W609": _duplicate_block_id_fixes,
     "E921": _table_missing_keys_fixes,
     "E419": _missing_choices_fixes,
     "E420": _ajax_missing_action_fixes,
