@@ -152,6 +152,16 @@ class _IncludeResilientEnvironment(jinja2.Environment):
     internal sentinel so the remaining documents render; the orchestrator
     skips the documents that contain the sentinel. Sites that use
     ``ignore missing`` fall back to an empty template and produce no warning.
+
+    ``_parse`` is a private Jinja hook, used deliberately: wrapping the
+    include expression in the AST is the only way to attribute an include
+    failure to its own line. The resolver returns ``Template`` objects, which
+    relies on ``Environment.get_template`` accepting a template instance as
+    well as a name (typed ``str | Template`` since Jinja 3.1). That contract
+    is covered by
+    ``test_environment_get_template_passes_through_template_instances``, so a
+    Jinja upgrade that breaks it fails loudly here rather than silently
+    resolving the wrong template.
     """
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:

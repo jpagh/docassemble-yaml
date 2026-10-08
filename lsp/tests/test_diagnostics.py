@@ -4,8 +4,15 @@ from functools import cache
 from pathlib import Path
 
 from docassemble_lsp.core import WorkspaceIndex, analyze_text, build_workspace_index
+from docassemble_lsp.core.jinja import (
+    _UNRESOLVED_INCLUDE_SENTINEL,
+    _IncludeResilientEnvironment,
+)
 from docassemble_lsp.core.messages import MessageCode
 from docassemble_lsp.core.validation import all_dict_keys
+from docassemble_lsp.core.validation.orchestrator import (
+    _blank_unresolved_include_documents,
+)
 from docassemble_lsp.core.validation_config import RuntimeOptions
 from tests.corpus import (
     expected_codes_from_fixture_id,
@@ -1056,7 +1063,8 @@ def test_missing_jinja_include_warns_and_other_documents_still_validate(
         "---\n"
         "id: checked\n"
         "question: Checked\n"
-        "bogus key: value\n"
+        "fields:\n"
+        "  - label: Name\n"
     )
 
     diagnostics = analyze_text(content, path=str(source))
@@ -1067,9 +1075,39 @@ def test_missing_jinja_include_warns_and_other_documents_still_validate(
     assert warnings[0].severity == "warning"
     assert "missing.yml" in warnings[0].message
 
-    assert {d.code for d in diagnostics} == {"W607", "E301"}
-    e301 = next(d for d in diagnostics if d.code == "E301")
-    assert e301.line == 6
+    # E414 anchors to the offending field on line 10, not the document
+    # start, so this also proves rendered lines map back to the template.
+    assert {d.code for d in diagnostics} == {"W607", "E414"}
+    e414 = next(d for d in diagnostics if d.code == "E414")
+    assert e414.line == 10
+
+
+def test_blanking_unresolved_include_documents_preserves_separators() -> None:
+    rendered = (
+        "---  \r\n"
+        "id: skipped\r\n"
+        f"  {_UNRESOLVED_INCLUDE_SENTINEL}\r\n"
+        "--- \r\n"
+        "id: checked\r\n"
+    )
+
+    blanked = _blank_unresolved_include_documents(rendered)
+
+    assert "---  \r\n" in blanked
+    assert "--- \r\n" in blanked
+    assert blanked.count("\n") == rendered.count("\n")
+
+
+def test_environment_get_template_passes_through_template_instances() -> None:
+    """The include resolver returns Template objects, so Jinja must pass them
+    through; the compiler sends the resolver call to
+    ``Environment.get_or_select_template``. Fail loudly if a Jinja upgrade
+    changes that contract."""
+    environment = _IncludeResilientEnvironment()
+    template = environment.from_string("hello")
+
+    assert environment.get_template(template) is template
+    assert environment.get_or_select_template(template) is template
 
 
 def test_ignore_missing_jinja_include_warns_nothing_and_keeps_document(

@@ -346,19 +346,26 @@ def _jinja_issue_errors(
     ]
 
 
+_UNRESOLVED_DOCUMENT_SEPARATOR_RE = re.compile(
+    f"({DOCUMENT_MATCH.pattern})", flags=DOCUMENT_MATCH.flags
+)
+
+
 def _blank_unresolved_include_documents(rendered_body: str) -> str:
     """Blank YAML documents that contain an unresolved Jinja include.
 
     Rendering an unresolved include leaves a sentinel in its place. The
     original document can no longer be trusted, so blank it while preserving
-    line numbers and let the remaining documents validate normally.
+    line numbers and let the remaining documents validate normally. Document
+    separators are re-emitted exactly as rendered instead of being normalised.
     """
-    sections = DOCUMENT_MATCH.split(rendered_body)
-    blanked = [
-        "\n" * section.count("\n") if contains_unresolved_include(section) else section
-        for section in sections
-    ]
-    return "---".join(blanked)
+    # Splitting on a capturing group keeps each separator so it can be
+    # re-emitted verbatim; even indices are document bodies.
+    parts = _UNRESOLVED_DOCUMENT_SEPARATOR_RE.split(rendered_body)
+    for index in range(0, len(parts), 2):
+        if contains_unresolved_include(parts[index]):
+            parts[index] = "\n" * parts[index].count("\n")
+    return "".join(parts)
 
 
 def find_errors_from_string(

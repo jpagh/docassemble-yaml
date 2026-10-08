@@ -15,6 +15,7 @@
 
 ### Fixed
 
+- [LSP] Unresolved `{% include %}` templates in `# use jinja` files no longer abort validation with `E202`. Each include site reports warning `W607` at its original template line, the YAML documents containing it are skipped, and the remaining documents are still validated with findings mapped back to their source lines. `ignore missing` and candidate lists keep their normal rendering behaviour, and one include site warns once however often it renders.
 - [LSP] `W603` now detects field references with parsed Python reads instead of a line regex. A conditional field mentioned only in a Python comment or string literal no longer warns, and a bare assignment (`b = 1`) no longer warns, while genuine reads (bare names, attributes, subscripts) and augmented assignments (`b += 1`) still do. Unparsable code blocks are skipped; `E122` still reports the syntax error.
 - [LSP] Accepting a key completion after replacing an existing key word in place no longer duplicates the separator. Selecting `hint` and typing `under ` used to produce `under text: : ...`; the completion's text edit now replaces the leftover `: ` as well.
 - [LSP] `W601` no longer reports URL-style action buttons as undefined events. `action` values beginning with `/` or `?` (documented docassemble hyperlink actions, e.g. `/start/case_information`) are treated as links, not event references.
