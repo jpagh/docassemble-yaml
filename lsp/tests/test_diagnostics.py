@@ -2344,8 +2344,8 @@ def test_question_string_value_is_valid() -> None:
         "id: do_you_agree\nquestion: Do you agree?\nyesno: user.agrees\n",
         path="sample.yml",
     )
-    codes = {d.code for d in diagnostics}
-    assert not codes
+    error_codes = {d.code for d in diagnostics if d.severity == "error"}
+    assert not error_codes
 
 
 def test_yesno_string_variable_is_valid() -> None:
@@ -4896,3 +4896,44 @@ def test_multifield_label_treats_each_document_as_its_own_screen() -> None:
 
     assert [finding.line for finding in findings] == [4, 5]
     assert all("screen has 2 fields" in finding.message for finding in findings)
+
+
+def _w510(diagnostics) -> list:
+    return [diagnostic for diagnostic in diagnostics if diagnostic.code == "W510"]
+
+
+def test_yesno_shortcut_warns_for_every_shortcut_key() -> None:
+    source = (
+        "question: A?\nyesno: a\n"
+        "---\nquestion: B?\nnoyes: b\n"
+        "---\nquestion: C?\nyesnomaybe: c\n"
+        "---\nquestion: D?\nnoyesmaybe: d\n"
+    )
+
+    findings = _w510(analyze_text(source, path="sample.yml"))
+
+    assert [finding.line for finding in findings] == [2, 5, 8, 11]
+    assert [finding.message for finding in findings] == [
+        "Accessibility: screen uses `yesno` question shorthand; prefer `fields` with an explicit datatype",
+        "Accessibility: screen uses `noyes` question shorthand; prefer `fields` with an explicit datatype",
+        "Accessibility: screen uses `yesnomaybe` question shorthand; prefer `fields` with an explicit datatype",
+        "Accessibility: screen uses `noyesmaybe` question shorthand; prefer `fields` with an explicit datatype",
+    ]
+
+
+def test_yesno_shortcut_is_quiet_for_explicit_fields() -> None:
+    source = "question: A?\nfields:\n  - no label: a\n    datatype: yesnoradio\n"
+
+    assert _w510(analyze_text(source, path="sample.yml")) == []
+
+
+def test_yesno_shortcut_hidden_without_warnings() -> None:
+    source = "question: A?\nyesno: a\n"
+
+    diagnostics = analyze_text(
+        source,
+        path="sample.yml",
+        runtime_options=RuntimeOptions(show_warnings=False),
+    )
+
+    assert _w510(diagnostics) == []

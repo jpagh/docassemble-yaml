@@ -193,18 +193,19 @@ diagnostic do not pass through the gate.
 
 An edit that depends on parsed document structure — a screen's fields,
 its question text, or a block's unique id — is planned in a small core
-module (`question_ids.py`, `field_labels.py`) and only turned into a
-`SourceEdit` by `fixes.py`. The planner parses the source once, returns
-a frozen plan describing the one safe edit (or `None` to decline), and
-never manipulates line text. That keeps the fixer's line surgery
-mechanical, lets the rule and the fixer share one predicate (for
-example `field_lacks_usable_label`), and gives the decline cases a
-single tested home.
+module (`question_ids.py`, `field_labels.py`, `yesno_shortcuts.py`) and
+only turned into a `SourceEdit` by `fixes.py`. The planner parses the
+source once, returns a frozen plan describing the one safe edit (or
+`None` to decline), and never manipulates line text. That keeps the
+fixer's line surgery mechanical, lets the rule and the fixer share one
+predicate (for example `field_lacks_usable_label`), and gives the
+decline cases a single tested home.
 
 ### Main Files
 
 - `lsp/src/docassemble_lsp/core/fixes.py`
 - `lsp/src/docassemble_lsp/core/field_labels.py`
+- `lsp/src/docassemble_lsp/core/yesno_shortcuts.py`
 - `lsp/src/docassemble_lsp/lsp/server.py`
 - `lsp/tests/test_lsp.py`
 - `lsp/tests/test_cli.py`

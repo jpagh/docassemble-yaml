@@ -303,6 +303,31 @@ def test_check_command_fix_labels_first_multifield_offender(tmp_path: Path) -> N
     assert source.read_text(encoding="utf-8") == fixed
 
 
+def test_check_command_fix_expands_yesno_shortcut(tmp_path: Path) -> None:
+    source = tmp_path / "yesno_shortcut.yml"
+    source.write_text(
+        "id: agree\nquestion: Do you agree?\nyesno: user.agrees  # keep me\n",
+        encoding="utf-8",
+    )
+    fixed = (
+        "id: agree\n"
+        "question: Do you agree?\n"
+        "fields: # keep me\n"
+        "  - no label: user.agrees\n"
+        "    datatype: yesnoradio\n"
+    )
+
+    exit_code = main(["check", "--quiet", "--fix", str(source)])
+
+    assert exit_code == 0
+    assert source.read_text(encoding="utf-8") == fixed
+
+    second_exit = main(["check", "--quiet", "--fix", str(source)])
+
+    assert second_exit == 0
+    assert source.read_text(encoding="utf-8") == fixed
+
+
 def test_check_command_fix_reports_rejections_and_leaves_jinja_file_unchanged(
     tmp_path: Path, capsys
 ) -> None:

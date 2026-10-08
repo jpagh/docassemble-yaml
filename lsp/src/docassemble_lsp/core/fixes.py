@@ -24,6 +24,7 @@ from docassemble_lsp.core.schema import load_schema
 from docassemble_lsp.core.validation_config import RuntimeOptions
 from docassemble_lsp.core.workspace import WorkspaceIndex
 from docassemble_lsp.core.yaml_shared import _BLOCK_SCALAR_MARKERS, _document_lines
+from docassemble_lsp.core.yesno_shortcuts import plan_yesno_shortcut
 
 logger = logging.getLogger(__name__)
 
@@ -916,6 +917,56 @@ def _multifield_label_fixes(
     return []
 
 
+def _yesno_shortcut_fixes(
+    source: str, diagnostic: Diagnostic, preferred_line: int | None
+) -> list[ResolvedFix]:
+    """W510: expand a yes/no shortcut into an explicit single-field screen."""
+    del preferred_line
+    if diagnostic.code != "W510":
+        return []
+
+    plan = plan_yesno_shortcut(source, diagnostic.line)
+    if plan is None:
+        return []
+
+    lines = _document_lines(source)
+    line_index = plan.key_line - 1
+    if line_index < 0 or line_index >= len(lines):
+        return []
+    text = lines[line_index]
+    match = _YAML_KEY_RE.match(text)
+    if match is None:
+        return []
+
+    indent = match.group(1)
+    remainder = text[match.end() :]
+    comment_index = _yaml_comment_start(remainder)
+    comment = ""
+    if comment_index is not None:
+        comment = remainder[comment_index:].rstrip()
+    fields_line = f"{indent}fields:{f' {comment}' if comment else ''}"
+    new_text = "\n".join(
+        (
+            fields_line,
+            f"{indent}  - no label: {plan.target}",
+            f"{indent}    datatype: {plan.datatype}",
+        )
+    )
+    return [
+        ResolvedFix(
+            code="W510",
+            title=f"Expand '{plan.shortcut}' into an explicit field",
+            edit=SourceEdit(
+                start_line=line_index,
+                start_character=0,
+                end_line=line_index,
+                end_character=len(text),
+                new_text=new_text,
+            ),
+        )
+    ]
+
+
 _FIX_PROVIDERS: dict[str, FixProvider] = {
     "C102": _field_label_shorthand_fixes,
     "C103": _input_type_datatype_fixes,
@@ -923,6 +974,7 @@ _FIX_PROVIDERS: dict[str, FixProvider] = {
     "E414": _field_label_without_target_fixes,
     "E415": _field_target_without_label_fixes,
     "W502": _multifield_label_fixes,
+    "W510": _yesno_shortcut_fixes,
     "W608": _missing_question_id_fixes,
     "W609": _duplicate_block_id_fixes,
     "E921": _table_missing_keys_fixes,

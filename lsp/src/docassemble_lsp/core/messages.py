@@ -152,6 +152,7 @@ class MessageCode(str, Enum):
     ACCESSIBILITY_HTML_HEADING_LEVEL_SKIP = "W507"
     ACCESSIBILITY_EMPTY_LINK_TEXT = "W508"
     ACCESSIBILITY_NON_DESCRIPTIVE_LINK_TEXT = "W509"
+    ACCESSIBILITY_YESNO_SHORTCUT = "W510"
 
     # Packet 6: Field Datatypes And Inputs
     RANGE_MISSING_MIN_MAX = "E510"
@@ -964,6 +965,11 @@ MESSAGE_DEFINITIONS: dict[str, MessageDefinition] = {
         code=MessageCode.ACCESSIBILITY_NON_DESCRIPTIVE_LINK_TEXT,
         summary="Link text is too generic",
         template="Accessibility: link text is too generic",
+    ),
+    MessageCode.ACCESSIBILITY_YESNO_SHORTCUT: MessageDefinition(
+        code=MessageCode.ACCESSIBILITY_YESNO_SHORTCUT,
+        summary="Question uses a yes/no shortcut instead of explicit fields",
+        template="Accessibility: screen uses `{shortcut}` question shorthand; prefer `fields` with an explicit datatype",
     ),
     MessageCode.VALIDATION_CODE_MISSING_VALIDATION_ERROR: MessageDefinition(
         code=MessageCode.VALIDATION_CODE_MISSING_VALIDATION_ERROR,

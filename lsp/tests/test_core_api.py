@@ -443,6 +443,136 @@ def test_validate_fix_candidates_accepts_w502_label_candidate() -> None:
     assert validation.rejected == ()
 
 
+_YESNO_SHORTCUT_SOURCE = "id: agree\nquestion: Do you agree?\nyesno: user.agrees\n"
+
+
+def test_core_fix_text_expands_yesno_shortcut() -> None:
+    result = core.fix_text(_YESNO_SHORTCUT_SOURCE)
+
+    assert result.changed is True
+    assert result.applied_codes == ("W510",)
+    assert result.rejected == ()
+    assert result.text == (
+        "id: agree\n"
+        "question: Do you agree?\n"
+        "fields:\n"
+        "  - no label: user.agrees\n"
+        "    datatype: yesnoradio\n"
+    )
+
+
+def test_core_fix_text_uses_matching_datatype_for_shortcut_variants() -> None:
+    cases = {
+        "noyes": "noyesradio",
+        "yesnomaybe": "yesnomaybe",
+        "noyesmaybe": "noyesmaybe",
+    }
+
+    for shortcut, datatype in cases.items():
+        result = core.fix_text(
+            f"id: agree\nquestion: Agree?\n{shortcut}: user.agrees\n"
+        )
+
+        assert result.applied_codes == ("W510",), shortcut
+        assert f"    datatype: {datatype}\n" in result.text, shortcut
+
+
+def test_core_fix_text_preserves_shortcut_inline_comment() -> None:
+    result = core.fix_text(
+        "id: agree\nquestion: Do you agree?\nyesno: user.agrees  # keep me\n"
+    )
+
+    assert result.text == (
+        "id: agree\n"
+        "question: Do you agree?\n"
+        "fields: # keep me\n"
+        "  - no label: user.agrees\n"
+        "    datatype: yesnoradio\n"
+    )
+
+
+def test_core_fix_text_quotes_non_identifier_shortcut_targets() -> None:
+    result = core.fix_text(
+        "id: agree\nquestion: Do you agree?\nyesno: user['agrees']\n"
+    )
+
+    assert "  - no label: \"user['agrees']\"\n" in result.text
+    assert "    datatype: yesnoradio\n" in result.text
+
+
+def test_core_fix_text_declines_shortcut_when_fields_exists() -> None:
+    source = (
+        "id: agree\nquestion: Do you agree?\n"
+        "fields:\n  - no label: other\n    datatype: yesnoradio\n"
+        "yesno: user.agrees\n"
+    )
+
+    result = core.fix_text(source)
+
+    assert result.changed is False
+    assert result.text == source
+
+
+def test_core_fix_text_declines_shortcut_with_multiple_shortcuts() -> None:
+    source = "id: agree\nquestion: Agree?\nyesno: a\nnoyes: b\n"
+
+    result = core.fix_text(source)
+
+    assert result.changed is False
+    assert result.text == source
+
+
+def test_core_fix_text_declines_shortcut_with_non_string_value() -> None:
+    source = "id: agree\nquestion: Do you agree?\nyesno:\n  - bad\n"
+
+    result = core.fix_text(source)
+
+    assert result.changed is False
+    assert result.text == source
+
+
+def test_core_fix_text_expands_one_shortcut_per_document() -> None:
+    source = (
+        "---\nid: a\nquestion: A?\nyesno: a\n---\nid: b\nquestion: B?\nyesnomaybe: b\n"
+    )
+
+    result = core.fix_text(source)
+
+    assert result.applied_codes == ("W510", "W510")
+    assert result.text == (
+        "---\nid: a\nquestion: A?\nfields:\n  - no label: a\n    datatype: yesnoradio\n"
+        "---\nid: b\nquestion: B?\nfields:\n  - no label: b\n    datatype: yesnomaybe\n"
+    )
+
+
+def test_core_fix_text_yesno_shortcut_is_idempotent() -> None:
+    first = core.fix_text(_YESNO_SHORTCUT_SOURCE)
+    second = core.fix_text(first.text)
+
+    assert second.changed is False
+    assert second.text == first.text
+    assert second.applied_codes == ()
+
+
+def test_validate_fix_candidates_accepts_w510_shortcut_candidate() -> None:
+    diagnostics = core.analyze_text(_YESNO_SHORTCUT_SOURCE, path="sample.yml")
+    fixes = [
+        fix
+        for fix in resolve_diagnostic_fixes(_YESNO_SHORTCUT_SOURCE, diagnostics)
+        if fix.code == "W510"
+    ]
+
+    validation = validate_fix_candidates(
+        _YESNO_SHORTCUT_SOURCE,
+        fixes,
+        diagnostics=diagnostics,
+        path="sample.yml",
+    )
+
+    assert [fix.code for fix in validation.accepted] == ["W510"]
+    assert validation.rejected == ()
+
+
 def test_resolve_diagnostic_fixes_uses_unknown_key_diagnostic_line() -> None:
     """E301 now anchors to the key, so the fix resolves without a cursor line."""
     source = "---\nid: checked\nquestion: Checked\nqueston: Hi\n"

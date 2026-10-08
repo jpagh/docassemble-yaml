@@ -1729,6 +1729,78 @@ def test_build_code_actions_fix_all_includes_w502_label() -> None:
     ]
 
 
+def test_build_code_actions_expands_yesno_shortcut() -> None:
+    source = "id: agree\nquestion: Do you agree?\nyesno: user.agrees\n"
+    diagnostics = build_lsp_diagnostics("file:///sample.yml", source)
+
+    actions = build_code_actions("file:///sample.yml", source, 2, diagnostics)
+
+    fixes = [
+        action
+        for action in actions
+        if action.title == "Expand 'yesno' into an explicit field"
+    ]
+    assert len(fixes) == 1
+    fix = fixes[0]
+    assert fix.edit is not None and fix.edit.changes is not None
+    text_edits = fix.edit.changes["file:///sample.yml"]
+    assert len(text_edits) == 1
+    assert text_edits[0].new_text == (
+        "fields:\n  - no label: user.agrees\n    datatype: yesnoradio"
+    )
+    assert text_edits[0].range.start.line == 2
+    assert text_edits[0].range.end.line == 2
+
+
+def test_build_code_actions_offers_no_yesno_fix_when_fields_exists() -> None:
+    source = (
+        "id: agree\nquestion: Do you agree?\n"
+        "fields:\n  - no label: other\n    datatype: yesnoradio\n"
+        "yesno: user.agrees\n"
+    )
+    diagnostics = build_lsp_diagnostics("file:///sample.yml", source)
+
+    actions = build_code_actions("file:///sample.yml", source, 4, diagnostics)
+
+    assert not [
+        action
+        for action in actions
+        if action.title == "Expand 'yesno' into an explicit field"
+    ]
+
+
+def test_build_code_actions_offers_no_yesno_fix_with_multiple_shortcuts() -> None:
+    source = "id: agree\nquestion: Agree?\nyesno: a\nnoyes: b\n"
+    diagnostics = build_lsp_diagnostics("file:///sample.yml", source)
+
+    actions = build_code_actions("file:///sample.yml", source, 2, diagnostics)
+
+    assert not [action for action in actions if action.title.startswith("Expand '")]
+
+
+def test_build_code_actions_fix_all_includes_yesno_shortcut() -> None:
+    source = "id: agree\nquestion: Do you agree?\nyesno: user.agrees\n"
+    diagnostics = build_lsp_diagnostics("file:///sample.yml", source)
+
+    actions = build_code_actions(
+        "file:///sample.yml",
+        source,
+        2,
+        diagnostics,
+        only_kinds=["source.fixAll"],
+    )
+
+    assert [action.title for action in actions] == [
+        "Fix all auto-fixable docassemble-lsp issues"
+    ]
+    fix = actions[0]
+    assert fix.edit is not None and fix.edit.changes is not None
+    text_edits = fix.edit.changes["file:///sample.yml"]
+    assert [text_edit.new_text for text_edit in text_edits] == [
+        "fields:\n  - no label: user.agrees\n    datatype: yesnoradio"
+    ]
+
+
 def test_build_code_actions_adds_missing_question_id() -> None:
     source = "---\nquestion: What is your name?\n"
     diagnostics = build_lsp_diagnostics("file:///sample.yml", source)

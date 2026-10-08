@@ -4,8 +4,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from docassemble_lsp.core.line_helpers import _is_internal_metadata_key
+from docassemble_lsp.core.line_helpers import _is_internal_metadata_key, _lc_key_line
 from docassemble_lsp.core.messages import MessageCode
+from docassemble_lsp.core.yesno_shortcuts import YESNO_SHORTCUTS
 
 TEXT_SECTION_KEYS = ("question", "subquestion", "under", "help", "note", "html")
 # Keys that turn a fields-list item into a presentation item rather than an
@@ -128,6 +129,7 @@ def find_accessibility_findings(
 ) -> list[AccessibilityFinding]:
     options = options or AccessibilityLintOptions()
     findings: list[AccessibilityFinding] = []
+    findings.extend(_check_yesno_shortcuts(doc, document_start_line))
     findings.extend(_check_multifield_no_label_usage(doc, document_start_line))
     findings.extend(
         _check_combobox_usage(doc, source_code, document_start_line, options=options)
@@ -243,6 +245,28 @@ def field_lacks_usable_label(field_doc: Mapping[str, Any]) -> bool:
     label_is_blank = "label" in field_doc and not explicit_label.strip()
     missing_label = not inferred_label.strip()
     return has_no_label or label_is_blank or missing_label
+
+
+def _check_yesno_shortcuts(
+    doc: dict[str, Any], document_start_line: int
+) -> list[AccessibilityFinding]:
+    findings: list[AccessibilityFinding] = []
+    for shortcut in YESNO_SHORTCUTS:
+        if doc.get(shortcut) is None:
+            continue
+        findings.append(
+            AccessibilityFinding(
+                rule_id="yesno-shortcut",
+                code=MessageCode.ACCESSIBILITY_YESNO_SHORTCUT,
+                message=(
+                    "Accessibility: screen uses "
+                    f"`{shortcut}` question shorthand; prefer `fields` with an "
+                    "explicit datatype"
+                ),
+                line_number=(document_start_line + _lc_key_line(doc, shortcut) - 1),
+            )
+        )
+    return findings
 
 
 def _check_multifield_no_label_usage(
