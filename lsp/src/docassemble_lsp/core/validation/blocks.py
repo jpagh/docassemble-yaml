@@ -748,6 +748,27 @@ def _absolute_document_line(document_start_line: int, relative_line: int) -> int
     return document_start_line + max(relative_line, 1) - 1
 
 
+def _relative_unknown_key_line(
+    doc: Mapping[Any, Any],
+    key: Any,
+    *,
+    source_code: str,
+) -> int:
+    """Return the document-relative line for an unknown top-level key.
+
+    Prefers the source-text lookup (which also works when ruamel position
+    metadata is unavailable), then the ruamel key line, and finally falls
+    back to line 1 (the document start). Non-string keys have no usable
+    position data and always take the fallback.
+    """
+    if not isinstance(key, str):
+        return 1
+    key_line = _find_top_level_key_line(source_code, key)
+    if key_line is None:
+        key_line = _lc_key_line(doc, key)
+    return max(key_line, 1)
+
+
 def _relative_top_level_error_line(
     doc: Mapping[Any, Any],
     key: Any,

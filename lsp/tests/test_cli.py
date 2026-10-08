@@ -31,6 +31,21 @@ def test_check_command_reports_errors_as_json(tmp_path: Path, capsys) -> None:
     assert '"code": "E301"' in capsys.readouterr().out
 
 
+def test_check_command_reports_unknown_key_line(tmp_path: Path, capsys) -> None:
+    source = tmp_path / "unknown.yml"
+    source.write_text(
+        "---\nid: checked\nquestion: Checked\nbogus key: value\n",
+        encoding="utf-8",
+    )
+
+    exit_code = main(["check", "--json", str(source)])
+
+    output = capsys.readouterr().out
+    assert exit_code == 1
+    assert '"code": "E301"' in output
+    assert '"line": 4' in output
+
+
 def test_check_command_warning_only_is_zero_without_strict(tmp_path: Path) -> None:
     source = tmp_path / "warning.yml"
     source.write_text(

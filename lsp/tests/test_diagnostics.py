@@ -22,6 +22,7 @@ from docassemble_lsp.core.jinja import (
 )
 from docassemble_lsp.core.messages import MessageCode
 from docassemble_lsp.core.validation import all_dict_keys
+from docassemble_lsp.core.validation.blocks import _relative_unknown_key_line
 from docassemble_lsp.core.validation.orchestrator import (
     _blank_unresolved_include_documents,
 )
@@ -43,6 +44,68 @@ def test_analyze_text_surfaces_unknown_keys() -> None:
     codes = {diagnostic.code for diagnostic in diagnostics}
     assert "E301" in codes
     assert "E306" in codes
+
+
+def test_unknown_key_diagnostic_anchors_to_the_key_line() -> None:
+    diagnostics = analyze_text(
+        "---\nid: checked\nquestion: Checked\nbogus key: value\n",
+        path="sample.yml",
+    )
+
+    e301 = next(diagnostic for diagnostic in diagnostics if diagnostic.code == "E301")
+    assert e301.line == 4
+
+
+def test_unknown_key_diagnostic_anchors_to_key_in_second_document() -> None:
+    diagnostics = analyze_text(
+        "---\nid: whole\nquestion: Q\n"
+        "---\nid: checked\nquestion: Checked\nbogus key: value\n",
+        path="sample.yml",
+    )
+
+    assert [(diagnostic.code, diagnostic.line) for diagnostic in diagnostics] == [
+        ("E301", 7)
+    ]
+
+
+def test_unknown_key_diagnostic_lists_every_key_and_anchors_to_first() -> None:
+    diagnostics = analyze_text(
+        "---\nid: checked\nquestion: Checked\n"
+        "first bad key: value\nsecond bad key: value\n",
+        path="sample.yml",
+    )
+
+    e301s = [diagnostic for diagnostic in diagnostics if diagnostic.code == "E301"]
+    assert len(e301s) == 1
+    assert e301s[0].line == 4
+    assert "first bad key" in e301s[0].message
+    assert "second bad key" in e301s[0].message
+
+
+def test_unknown_key_diagnostic_falls_back_for_non_string_key() -> None:
+    diagnostics = analyze_text(
+        "---\nid: checked\nquestion: Checked\n1: value\n",
+        path="sample.yml",
+    )
+
+    e301 = next(diagnostic for diagnostic in diagnostics if diagnostic.code == "E301")
+    assert e301.line == 1
+    assert "1" in e301.message
+
+
+def test_relative_unknown_key_line_prefers_source_and_falls_back() -> None:
+    # Source-text lookup works without ruamel position metadata.
+    assert (
+        _relative_unknown_key_line(
+            {"bogus": 1}, "bogus", source_code="id: x\nbogus: 1\n"
+        )
+        == 2
+    )
+    # No source match and no position metadata fall back to the document start.
+    assert _relative_unknown_key_line({"bogus": 1}, "bogus", source_code="") == 1
+    # Non-string keys have no usable position data.
+    assert _relative_unknown_key_line({7: 1}, 7, source_code="7: 1\n") == 1
+    assert _relative_unknown_key_line({None: 1}, None, source_code="") == 1
 
 
 def test_analyze_text_reports_signature_only_top_level_keys_without_signature() -> None:
@@ -1702,7 +1765,25 @@ def test_ignore_missing_jinja_include_warns_nothing_and_keeps_document(
     diagnostics = analyze_text(content, path=str(source))
 
     assert [d.code for d in diagnostics] == ["E301"]
-    assert diagnostics[0].line == 2
+    assert diagnostics[0].line == 6
+
+
+def test_jinja_unknown_key_anchors_to_mapped_source_line(tmp_path: Path) -> None:
+    source = tmp_path / "interview.yml"
+    content = (
+        "# use jinja\n"
+        "---\n"
+        '{% include "missing.yml" ignore missing %}\n'
+        "id: skipped\n"
+        "---\n"
+        "id: checked\n"
+        "question: Checked\n"
+        "bogus key: value\n"
+    )
+
+    diagnostics = analyze_text(content, path=str(source))
+
+    assert [(d.code, d.line) for d in diagnostics if d.code == "E301"] == [("E301", 8)]
 
 
 def test_jinja_include_candidate_list_uses_existing_candidate(

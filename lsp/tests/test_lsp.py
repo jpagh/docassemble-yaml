@@ -1530,6 +1530,15 @@ def test_completion_list_in_mako_expression_includes_python_methods(tmp_path) ->
     assert "status_label" in labels
 
 
+def test_build_lsp_diagnostics_anchor_unknown_key_to_its_line() -> None:
+    source = "---\nid: checked\nquestion: Checked\nqueston: Hi\n"
+
+    diagnostics = build_lsp_diagnostics("file:///sample.yml", source)
+
+    e301 = next(diagnostic for diagnostic in diagnostics if diagnostic.code == "E301")
+    assert e301.range.start.line == 3
+
+
 def test_build_code_actions_suggest_known_key_replacement_for_unknown_key() -> None:
     source = "---\nqueston: Hi\n"
     diagnostics = build_lsp_diagnostics("file:///sample.yml", source)

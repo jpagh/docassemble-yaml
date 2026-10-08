@@ -264,6 +264,18 @@ def test_core_fix_text_renames_duplicate_ids_on_non_question_blocks() -> None:
     assert 'id: "shared 2"\n' in result.text
 
 
+def test_resolve_diagnostic_fixes_uses_unknown_key_diagnostic_line() -> None:
+    """E301 now anchors to the key, so the fix resolves without a cursor line."""
+    source = "---\nid: checked\nquestion: Checked\nqueston: Hi\n"
+    diagnostics = core.analyze_text(source, path="sample.yml")
+
+    fixes = resolve_diagnostic_fixes(source, diagnostics)
+
+    assert [(fix.code, fix.edit.start_line, fix.edit.new_text) for fix in fixes] == [
+        ("E301", 3, "question")
+    ]
+
+
 _C102_SOURCE = "question: Hi\nfields:\n  - Name: user.name\n"
 _C102_OPTIONS = RuntimeOptions(
     enabled_conventions=frozenset({"C102"}), show_warnings=False

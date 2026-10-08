@@ -46,6 +46,7 @@ from docassemble_lsp.core.validation.blocks import (
     _make_yaml_parser,
     _map_rendered_lines_to_source_lines,
     _relative_top_level_error_line,
+    _relative_unknown_key_line,
     _rewrite_yaml_parse_error_lines,
     _with_line_metadata,
     _yaml_error,
@@ -587,21 +588,29 @@ def find_errors_from_string(
                 )
 
         allowed_top_level_keys = _allowed_top_level_keys(doc_keys_lower)
-        weird_keys = []
+        # Keep the raw key next to its display name so the finding can be
+        # anchored to the first unknown key's line instead of the document
+        # start. Non-string keys carry no source position (None).
+        weird_key_entries: list[tuple[str, str | None]] = []
         for attr in doc:
             if _is_internal_metadata_key(attr):
                 continue
             if not isinstance(attr, str):
-                weird_keys.append(str(attr))
+                weird_key_entries.append((str(attr), None))
             elif attr.lower() not in allowed_top_level_keys:
-                weird_keys.append(attr)
-        if len(weird_keys) > 0:
+                weird_key_entries.append((attr, attr))
+        if len(weird_key_entries) > 0:
             all_errors.append(
                 _yaml_error(
                     code=MessageCode.UNKNOWN_KEYS,
-                    line_number=line_number,
+                    line_number=_absolute_document_line(
+                        line_number,
+                        _relative_unknown_key_line(
+                            doc, weird_key_entries[0][1], source_code=source_code
+                        ),
+                    ),
                     file_name=input_file,
-                    keys=weird_keys,
+                    keys=[display_key for display_key, _ in weird_key_entries],
                 )
             )
         if "on change" in doc_keys_lower and len(non_meta_keys_lower) > 1:
