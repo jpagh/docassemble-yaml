@@ -4,7 +4,7 @@
     description     = "Docassemble language server with shared core APIs for CLI and editors"
     readme          = "README.md"
     requires-python = ">=3.10"
-    license         = "Apache-2.0"
+    license         = "MIT"
     license-files   = [
         "LICENSE",
     ]

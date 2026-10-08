@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "description": "vscode-textmate reference tokenizer for the Fresh scope-parity test",
+  "license": "MIT",
   "dependencies": {
     "tm-grammars": "^1.32.22",
     "vscode-oniguruma": "^2.0.1",

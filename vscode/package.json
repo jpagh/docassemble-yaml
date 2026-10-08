@@ -10,7 +10,7 @@
     "docassemble",
     "yaml"
   ],
-  "license": "Apache-2.0",
+  "license": "MIT",
   "author": "Jack Adamson",
   "repository": {
     "type": "git",

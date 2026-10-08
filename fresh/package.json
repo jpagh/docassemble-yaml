@@ -5,7 +5,7 @@
   "description": "Docassemble YAML syntax highlighting (Mako/Jinja/Python aware), zero-config interview detection, and docassemble-lsp wiring for the Fresh editor",
   "type": "bundle",
   "author": "Jack Adamson",
-  "license": "Apache-2.0",
+  "license": "MIT",
   "repository": "https://github.com/jpagh/docassemble-yaml#fresh",
   "keywords": ["docassemble", "yaml", "interview", "mako", "jinja", "lsp"],
   "fresh": {

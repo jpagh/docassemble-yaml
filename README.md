@@ -61,3 +61,9 @@ For VS Code integration, set `docassemble-lsp.command` to point at the task from
 The `//lsp:lsp` monorepo-task reference resolves to the `lsp` task in `lsp/.mise.toml`.
 
 See `AGENTS.md` for agent guidance, `lsp/README.md` and `vscode/README.md` for per-project documentation.
+
+## License
+
+MIT — see [`LICENSE`](LICENSE). Third-party notices, including the MIT
+attribution for [DAYamlChecker](https://github.com/SuffolkLITLab/DAYamlChecker),
+are in [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
