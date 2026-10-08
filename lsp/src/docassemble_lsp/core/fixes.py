@@ -13,6 +13,7 @@ from docassemble_lsp.core.completion_registry import format_property_insert_text
 from docassemble_lsp.core.completion_rules import get_property_rule
 from docassemble_lsp.core.diagnostics import Diagnostic, analyze_text
 from docassemble_lsp.core.field_keys import INPUT_TYPE_DATATYPES
+from docassemble_lsp.core.field_labels import FieldLabelPlan, plan_multifield_label
 from docassemble_lsp.core.jinja import has_jinja_header
 from docassemble_lsp.core.messages import MessageCode
 from docassemble_lsp.core.question_ids import (
@@ -739,12 +740,189 @@ def _cross_doc_missing_file_fixes(
     ]
 
 
+_W502_LABEL_TITLE = "Use the question text as this field's label"
+_MULTIFIELD_LABEL_SAFE_TARGET_RE = re.compile(
+    r"^[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*|\[[^\]\n]+\])*$"
+)
+
+
+def _needs_block_label(question_text: str) -> bool:
+    """Return True when the text must be written as a block label.
+
+    Mako line directives only work at the start of a line, so a label that
+    carries them is written as a block scalar that keeps those lines intact.
+    Multi-line question text uses a block label too so it stays readable.
+    """
+    if "\n" in question_text:
+        return True
+    return any(line.lstrip().startswith("%") for line in question_text.splitlines())
+
+
+def _label_definition(
+    question_text: str, *, content_indent: str, comment: str = ""
+) -> str:
+    """Return the ``label: ...`` text for *question_text*.
+
+    Block content lines are indented by *content_indent*; callers add the
+    leading indentation to the first line themselves. *comment* is appended
+    to the header so an existing trailing YAML comment survives the edit.
+    """
+    if _needs_block_label(question_text):
+        keeps_final_newline = question_text.endswith("\n")
+        header = f"label: {'|' if keeps_final_newline else '|-'}{comment}"
+        body = question_text[:-1] if keeps_final_newline else question_text
+        rendered = "\n".join(
+            f"{content_indent}{line}" if line else "" for line in body.split("\n")
+        )
+        return f"{header}\n{rendered}"
+    quoted = json.dumps(question_text, ensure_ascii=False)
+    return f"label: {quoted}{comment}"
+
+
+def _field_target_text(target: str) -> str:
+    if _MULTIFIELD_LABEL_SAFE_TARGET_RE.match(target):
+        return target
+    return json.dumps(target, ensure_ascii=False)
+
+
+def _insert_label_fix(
+    plan: FieldLabelPlan, line_index: int, text: str
+) -> list[ResolvedFix]:
+    """Add a label key in front of an existing ``field`` key."""
+    match = re.match(r"^(\s*)(-\s+)?field\s*:", text, re.IGNORECASE)
+    if match is None:
+        return []
+    indent = match.group(1)
+    marker = match.group(2) or ""
+    content_indent = " " * (len(indent) + len(marker) + 2)
+    definition = _label_definition(plan.question_text, content_indent=content_indent)
+    if marker:
+        rest = text[len(indent) + len(marker) :]
+        new_text = f"{indent}{marker}{definition}\n{indent}  {rest}"
+    else:
+        new_text = f"{indent}{definition}\n{text}"
+    return [
+        ResolvedFix(
+            code="W502",
+            title=_W502_LABEL_TITLE,
+            edit=SourceEdit(
+                start_line=line_index,
+                start_character=0,
+                end_line=line_index,
+                end_character=len(text),
+                new_text=new_text,
+            ),
+        )
+    ]
+
+
+def _fill_label_fix(
+    plan: FieldLabelPlan, line_index: int, text: str
+) -> list[ResolvedFix]:
+    """Fill a blank explicit ``label`` value in place."""
+    match = re.match(r"^(\s*)(-\s+)?label\s*:\s*", text, re.IGNORECASE)
+    if match is None:
+        return []
+    indent = match.group(1)
+    marker = match.group(2) or ""
+    content_indent = " " * (len(indent) + len(marker) + 2)
+    remainder = text[match.end() :]
+    comment_index = _yaml_comment_start(remainder)
+    if comment_index is not None:
+        value_part = remainder[:comment_index]
+        comment = f" {remainder[comment_index:].strip()}"
+    else:
+        value_part = remainder
+        comment = ""
+    if value_part.strip() not in ("", "''", '""'):
+        return []
+    definition = _label_definition(
+        plan.question_text, content_indent=content_indent, comment=comment
+    )
+    new_text = f"{indent}{marker}{definition}"
+    return [
+        ResolvedFix(
+            code="W502",
+            title=_W502_LABEL_TITLE,
+            edit=SourceEdit(
+                start_line=line_index,
+                start_character=0,
+                end_line=line_index,
+                end_character=len(text),
+                new_text=new_text,
+            ),
+        )
+    ]
+
+
+def _convert_no_label_fix(
+    plan: FieldLabelPlan, line_index: int, text: str
+) -> list[ResolvedFix]:
+    """Rewrite the ``no label: variable`` shorthand as ``label`` + ``field``."""
+    match = re.match(r"^(\s*)(-\s+)?no\s+label\s*:\s*(.*)$", text, re.IGNORECASE)
+    if match is None:
+        return []
+    indent = match.group(1)
+    marker = match.group(2) or ""
+    content_indent = " " * (len(indent) + len(marker) + 2)
+    remainder = match.group(3)
+    comment_index = _yaml_comment_start(remainder)
+    comment = ""
+    if comment_index is not None:
+        comment = f" {remainder[comment_index:].strip()}"
+    definition = _label_definition(plan.question_text, content_indent=content_indent)
+    target = _field_target_text(plan.field_target or "")
+    field_line = f"{indent}{'  ' if marker else ''}field: {target}{comment}"
+    new_text = f"{indent}{marker}{definition}\n{field_line}"
+    return [
+        ResolvedFix(
+            code="W502",
+            title=_W502_LABEL_TITLE,
+            edit=SourceEdit(
+                start_line=line_index,
+                start_character=0,
+                end_line=line_index,
+                end_character=len(text),
+                new_text=new_text,
+            ),
+        )
+    ]
+
+
+def _multifield_label_fixes(
+    source: str, diagnostic: Diagnostic, preferred_line: int | None
+) -> list[ResolvedFix]:
+    """W502: promote the screen's question text to the first unlabeled field."""
+    del preferred_line
+    if diagnostic.code != "W502":
+        return []
+
+    plan = plan_multifield_label(source, diagnostic.line)
+    if plan is None:
+        return []
+
+    lines = _document_lines(source)
+    line_index = plan.key_line - 1
+    if line_index < 0 or line_index >= len(lines):
+        return []
+    text = lines[line_index]
+
+    if plan.kind == "insert-label":
+        return _insert_label_fix(plan, line_index, text)
+    if plan.kind == "fill-label":
+        return _fill_label_fix(plan, line_index, text)
+    if plan.kind == "convert-no-label":
+        return _convert_no_label_fix(plan, line_index, text)
+    return []
+
+
 _FIX_PROVIDERS: dict[str, FixProvider] = {
     "C102": _field_label_shorthand_fixes,
     "C103": _input_type_datatype_fixes,
     "E301": _unknown_key_fixes,
     "E414": _field_label_without_target_fixes,
     "E415": _field_target_without_label_fixes,
+    "W502": _multifield_label_fixes,
     "W608": _missing_question_id_fixes,
     "W609": _duplicate_block_id_fixes,
     "E921": _table_missing_keys_fixes,

@@ -4816,3 +4816,83 @@ def test_cross_doc_imports_entry_undefined(tmp_path: Path) -> None:
     w604 = [e for e in errors if e.code == "W604"]
     assert len(w604) == 1
     assert "fake" in w604[0].err_str
+
+
+def _w502(diagnostics) -> list:
+    return [diagnostic for diagnostic in diagnostics if diagnostic.code == "W502"]
+
+
+def test_multifield_label_reports_missing_blank_and_no_label_fields() -> None:
+    source = (
+        "question: What is your favorite color?\n"
+        "fields:\n"
+        "  - field: favorite_color\n"
+        "  - label: ''\n"
+        "    field: backup_color\n"
+        "  - no label: other_color\n"
+        "  - Other color: other_color_2\n"
+    )
+
+    findings = _w502(analyze_text(source, path="sample.yml"))
+
+    assert [finding.line for finding in findings] == [3, 4, 6]
+    assert all("screen has 4 fields" in finding.message for finding in findings)
+    assert "favorite_color" in findings[0].message
+    assert "backup_color" in findings[1].message
+    assert "other_color" in findings[2].message
+
+
+def test_multifield_label_is_quiet_on_single_field_screens() -> None:
+    source = "question: What is your name?\nfields:\n  - field: user_name\n"
+
+    assert _w502(analyze_text(source, path="sample.yml")) == []
+
+
+def test_multifield_label_is_quiet_when_every_field_has_a_label() -> None:
+    source = (
+        "question: Names?\n"
+        "fields:\n"
+        "  - First name: first_name\n"
+        "  - label: Last name\n"
+        "    field: last_name\n"
+    )
+
+    assert _w502(analyze_text(source, path="sample.yml")) == []
+
+
+def test_multifield_label_skips_code_and_presentation_items() -> None:
+    source = (
+        "question: Contact details?\n"
+        "fields:\n"
+        "  - code: |\n"
+        "      contact_options = ['a']\n"
+        "  - note: We only use this to reach you.\n"
+        "  - html: <p>Thanks!</p>\n"
+        "  - field: phone_number\n"
+        "  - field: email_address\n"
+    )
+
+    findings = _w502(analyze_text(source, path="sample.yml"))
+
+    assert [finding.line for finding in findings] == [7, 8]
+    assert "phone_number" in findings[0].message
+    assert "email_address" in findings[1].message
+
+
+def test_multifield_label_treats_each_document_as_its_own_screen() -> None:
+    source = (
+        "---\n"
+        "question: One\n"
+        "fields:\n"
+        "  - field: a\n"
+        "  - field: b\n"
+        "---\n"
+        "question: Two?\n"
+        "fields:\n"
+        "  - Single: only\n"
+    )
+
+    findings = _w502(analyze_text(source, path="sample.yml"))
+
+    assert [finding.line for finding in findings] == [4, 5]
+    assert all("screen has 2 fields" in finding.message for finding in findings)

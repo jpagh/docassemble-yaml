@@ -1,11 +1,16 @@
 import re
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from docassemble_lsp.core.line_helpers import _is_internal_metadata_key
 from docassemble_lsp.core.messages import MessageCode
 
 TEXT_SECTION_KEYS = ("question", "subquestion", "under", "help", "note", "html")
+# Keys that turn a fields-list item into a presentation item rather than an
+# input. They render content but do not collect an answer.
+FIELD_PRESENTATION_KEYS = ("note", "html", "raw html")
 FIELD_NON_LABEL_KEYS = {
     "code",
     "default",
@@ -221,6 +226,25 @@ def _check_combobox_usage(
     return findings
 
 
+def field_lacks_usable_label(field_doc: Mapping[str, Any]) -> bool:
+    """Return True when W502 would be reported for *field_doc*.
+
+    An item needs a usable label on a multi-field screen unless it is a
+    code-only or presentation item, which collect no answer. A label is
+    unusable when the author wrote ``no label``, when an explicit ``label``
+    is blank, or when there is no explicit label and no shorthand key to
+    infer one from.
+    """
+    if _is_code_only_field(field_doc) or _is_presentation_field(field_doc):
+        return False
+    has_no_label = _is_truthy(field_doc.get("no label"))
+    explicit_label = str(field_doc.get("label") or "")
+    inferred_label = _extract_field_label(field_doc)
+    label_is_blank = "label" in field_doc and not explicit_label.strip()
+    missing_label = not inferred_label.strip()
+    return has_no_label or label_is_blank or missing_label
+
+
 def _check_multifield_no_label_usage(
     doc: dict[str, Any], document_start_line: int
 ) -> list[AccessibilityFinding]:
@@ -230,7 +254,7 @@ def _check_multifield_no_label_usage(
 
     findings: list[AccessibilityFinding] = []
     for field_index, field_doc in enumerate(fields, start=1):
-        if _is_code_only_field(field_doc):
+        if not field_lacks_usable_label(field_doc):
             continue
 
         field_line = (
@@ -238,16 +262,6 @@ def _check_multifield_no_label_usage(
             + int(field_doc.get("__line__") or doc.get("__line__") or 1)
             - 1
         )
-        no_label_value = field_doc.get("no label")
-        has_no_label = _is_truthy(no_label_value)
-        explicit_label = str(field_doc.get("label") or "")
-        inferred_label = _extract_field_label(field_doc)
-        label_is_blank = "label" in field_doc and not explicit_label.strip()
-        missing_label = not inferred_label.strip()
-
-        if not (has_no_label or label_is_blank or missing_label):
-            continue
-
         field_name = _extract_field_variable(field_doc) or f"field #{field_index}"
         findings.append(
             AccessibilityFinding(
@@ -624,12 +638,23 @@ def _iter_fields(doc: dict[str, Any]) -> list[dict[str, Any]]:
     return [field for field in fields if isinstance(field, dict)]
 
 
-def _is_code_only_field(field: dict[str, Any]) -> bool:
-    keys = {key.strip() for key in field if key != "__line__"}
-    return keys == {"code"}
+def _field_key_names(field: Mapping[str, Any]) -> set[str]:
+    """Return the author-written keys of a fields item, without metadata."""
+    return {str(key).strip() for key in field if not _is_internal_metadata_key(key)}
 
 
-def _extract_field_variable(field: dict[str, Any]) -> str:
+def _is_code_only_field(field: Mapping[str, Any]) -> bool:
+    return _field_key_names(field) == {"code"}
+
+
+def _is_presentation_field(field: Mapping[str, Any]) -> bool:
+    keys = _field_key_names(field)
+    if not keys.intersection(FIELD_PRESENTATION_KEYS):
+        return False
+    return not keys.intersection({"field", "no label"})
+
+
+def _extract_field_variable(field: Mapping[str, Any]) -> str:
     explicit = str(field.get("field") or "").strip()
     if explicit:
         return explicit
@@ -648,20 +673,23 @@ def _extract_field_variable(field: dict[str, Any]) -> str:
         }:
             return candidate
     for key, value in field.items():
-        if key in FIELD_NON_LABEL_KEYS:
+        key_text = str(key).strip()
+        if _is_internal_metadata_key(key) or key_text in FIELD_NON_LABEL_KEYS:
             continue
         if isinstance(value, str):
             return value.strip()
     return ""
 
 
-def _extract_field_label(field: dict[str, Any]) -> str:
+def _extract_field_label(field: Mapping[str, Any]) -> str:
     explicit = str(field.get("label") or "").strip()
     if explicit:
         return explicit
     for key in field:
-        key_text = key.strip()
-        if key_text and key_text not in FIELD_NON_LABEL_KEYS:
+        key_text = str(key).strip()
+        if not key_text or _is_internal_metadata_key(key):
+            continue
+        if key_text not in FIELD_NON_LABEL_KEYS:
             return key_text
     return ""
 

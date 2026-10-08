@@ -1630,6 +1630,105 @@ def test_build_code_actions_adds_missing_label_key_for_e415() -> None:
     )
 
 
+def test_build_code_actions_promotes_question_text_for_w502() -> None:
+    source = (
+        "id: colors\n"
+        "question: What is your favorite color?\n"
+        "fields:\n"
+        "  - field: favorite_color\n"
+        "  - field: backup_color\n"
+    )
+    diagnostics = build_lsp_diagnostics("file:///sample.yml", source)
+
+    actions = build_code_actions("file:///sample.yml", source, 3, diagnostics)
+
+    w502 = [
+        action
+        for action in actions
+        if action.title == "Use the question text as this field's label"
+    ]
+    assert len(w502) == 1
+    w502_fix = w502[0]
+    assert w502_fix.edit is not None and w502_fix.edit.changes is not None
+    text_edits = w502_fix.edit.changes["file:///sample.yml"]
+    assert len(text_edits) == 1
+    assert text_edits[0].new_text == (
+        '  - label: "What is your favorite color?"\n    field: favorite_color'
+    )
+    assert text_edits[0].range.start.line == 3
+    assert text_edits[0].range.end.line == 3
+
+
+def test_build_code_actions_offers_no_w502_fix_for_later_offenders() -> None:
+    source = (
+        "id: colors\n"
+        "question: What is your favorite color?\n"
+        "fields:\n"
+        "  - field: favorite_color\n"
+        "  - field: backup_color\n"
+    )
+    diagnostics = build_lsp_diagnostics("file:///sample.yml", source)
+    offender_diagnostics = [
+        diagnostic for diagnostic in diagnostics if diagnostic.range.start.line == 4
+    ]
+
+    actions = build_code_actions("file:///sample.yml", source, 4, offender_diagnostics)
+
+    assert not [
+        action
+        for action in actions
+        if action.title == "Use the question text as this field's label"
+    ]
+
+
+def test_build_code_actions_offers_no_w502_fix_when_question_text_is_used() -> None:
+    source = (
+        "id: colors\n"
+        "question: What is your favorite color?\n"
+        "fields:\n"
+        "  - What is your favorite color?: favorite_color\n"
+        "  - field: backup_color\n"
+    )
+    diagnostics = build_lsp_diagnostics("file:///sample.yml", source)
+
+    actions = build_code_actions("file:///sample.yml", source, 4, diagnostics)
+
+    assert not [
+        action
+        for action in actions
+        if action.title == "Use the question text as this field's label"
+    ]
+
+
+def test_build_code_actions_fix_all_includes_w502_label() -> None:
+    source = (
+        "id: colors\n"
+        "question: What is your favorite color?\n"
+        "fields:\n"
+        "  - field: favorite_color\n"
+        "  - field: backup_color\n"
+    )
+    diagnostics = build_lsp_diagnostics("file:///sample.yml", source)
+
+    actions = build_code_actions(
+        "file:///sample.yml",
+        source,
+        3,
+        diagnostics,
+        only_kinds=["source.fixAll"],
+    )
+
+    assert [action.title for action in actions] == [
+        "Fix all auto-fixable docassemble-lsp issues"
+    ]
+    fix = actions[0]
+    assert fix.edit is not None and fix.edit.changes is not None
+    text_edits = fix.edit.changes["file:///sample.yml"]
+    assert [text_edit.new_text for text_edit in text_edits] == [
+        '  - label: "What is your favorite color?"\n    field: favorite_color'
+    ]
+
+
 def test_build_code_actions_adds_missing_question_id() -> None:
     source = "---\nquestion: What is your name?\n"
     diagnostics = build_lsp_diagnostics("file:///sample.yml", source)

@@ -264,6 +264,185 @@ def test_core_fix_text_renames_duplicate_ids_on_non_question_blocks() -> None:
     assert 'id: "shared 2"\n' in result.text
 
 
+_W502_SOURCE = (
+    "id: colors\n"
+    "question: What is your favorite color?\n"
+    "fields:\n"
+    "  - field: favorite_color\n"
+    "  - field: backup_color\n"
+)
+_W502_LABEL = '  - label: "What is your favorite color?"\n'
+
+
+def test_core_fix_text_labels_first_multifield_offender() -> None:
+    result = core.fix_text(_W502_SOURCE)
+
+    assert result.changed is True
+    assert result.applied_codes == ("W502",)
+    assert result.rejected == ()
+    assert result.text == (
+        "id: colors\n"
+        "question: What is your favorite color?\n"
+        "fields:\n"
+        f"{_W502_LABEL}"
+        "    field: favorite_color\n"
+        "  - field: backup_color\n"
+    )
+
+
+def test_core_fix_text_labels_blank_and_no_label_shorthand_fields() -> None:
+    blank = core.fix_text(
+        "id: colors\nquestion: What is your favorite color?\n"
+        "fields:\n  - label: ''\n    field: favorite_color\n  - field: other\n"
+    )
+    shorthand = core.fix_text(
+        "id: colors\nquestion: What is your favorite color?\n"
+        "fields:\n  - no label: favorite_color\n    default: blue\n"
+        "  - field: other\n"
+    )
+
+    assert blank.changed is True
+    assert blank.text == (
+        "id: colors\nquestion: What is your favorite color?\nfields:\n"
+        f"{_W502_LABEL}"
+        "    field: favorite_color\n  - field: other\n"
+    )
+    assert shorthand.changed is True
+    assert shorthand.text == (
+        "id: colors\nquestion: What is your favorite color?\nfields:\n"
+        f"{_W502_LABEL}"
+        "    field: favorite_color\n    default: blue\n  - field: other\n"
+    )
+
+
+def test_core_fix_text_keeps_mako_directives_in_a_block_label() -> None:
+    source = (
+        "id: guardian\n"
+        "question: |\n"
+        "  % if filled_by_attorney:\n"
+        "  Does ${ users[0] } want to be the guardian?\n"
+        "  % else:\n"
+        "  Do you want to be the guardian?\n"
+        "  % endif\n"
+        "fields:\n"
+        "  - field: guardian_name\n"
+        "  - field: guardian_email\n"
+    )
+
+    result = core.fix_text(source)
+
+    assert result.changed is True
+    assert result.text == (
+        "id: guardian\n"
+        "question: |\n"
+        "  % if filled_by_attorney:\n"
+        "  Does ${ users[0] } want to be the guardian?\n"
+        "  % else:\n"
+        "  Do you want to be the guardian?\n"
+        "  % endif\n"
+        "fields:\n"
+        "  - label: |\n"
+        "      % if filled_by_attorney:\n"
+        "      Does ${ users[0] } want to be the guardian?\n"
+        "      % else:\n"
+        "      Do you want to be the guardian?\n"
+        "      % endif\n"
+        "    field: guardian_name\n"
+        "  - field: guardian_email\n"
+    )
+
+
+def test_core_fix_text_labels_one_field_per_screen_and_is_idempotent() -> None:
+    first = core.fix_text(_W502_SOURCE)
+    second = core.fix_text(first.text)
+
+    remaining = [
+        diagnostic
+        for diagnostic in core.analyze_text(first.text, path="sample.yml")
+        if diagnostic.code == "W502"
+    ]
+    assert [diagnostic.line for diagnostic in remaining] == [6]
+    assert second.changed is False
+    assert second.text == first.text
+    assert second.applied_codes == ()
+
+
+def test_core_fix_text_declines_when_question_text_is_unavailable() -> None:
+    source = "id: colors\nfields:\n  - field: favorite_color\n  - field: other\n"
+
+    result = core.fix_text(source)
+
+    assert result.changed is False
+    assert result.text == source
+    assert result.applied_codes == ()
+    assert result.rejected == ()
+
+
+def test_core_fix_text_declines_when_question_text_already_labels_a_field() -> None:
+    source = (
+        "id: colors\n"
+        "question: What is your favorite color?\n"
+        "fields:\n"
+        "  - What is your favorite color?: favorite_color\n"
+        "  - field: backup_color\n"
+    )
+
+    result = core.fix_text(source)
+
+    assert result.changed is False
+    assert result.text == source
+
+
+def test_core_fix_text_declines_when_no_label_shorthand_already_has_a_field() -> None:
+    source = (
+        "id: colors\n"
+        "question: What is your favorite color?\n"
+        "fields:\n"
+        "  - no label: favorite_color\n"
+        "    field: favorite_color\n"
+        "  - field: backup_color\n"
+    )
+
+    result = core.fix_text(source)
+
+    assert result.changed is False
+    assert result.text == source
+
+
+def test_resolve_diagnostic_fixes_offers_w502_only_for_first_offender() -> None:
+    diagnostics = core.analyze_text(_W502_SOURCE, path="sample.yml")
+
+    fixes = resolve_diagnostic_fixes(
+        _W502_SOURCE,
+        [
+            diagnostic
+            for diagnostic in diagnostics
+            if diagnostic.code == "W502" and diagnostic.line == 6
+        ],
+    )
+
+    assert fixes == []
+
+
+def test_validate_fix_candidates_accepts_w502_label_candidate() -> None:
+    diagnostics = core.analyze_text(_W502_SOURCE, path="sample.yml")
+    fixes = [
+        fix
+        for fix in resolve_diagnostic_fixes(_W502_SOURCE, diagnostics)
+        if fix.code == "W502"
+    ]
+
+    validation = validate_fix_candidates(
+        _W502_SOURCE,
+        fixes,
+        diagnostics=diagnostics,
+        path="sample.yml",
+    )
+
+    assert [fix.code for fix in validation.accepted] == ["W502"]
+    assert validation.rejected == ()
+
+
 def test_resolve_diagnostic_fixes_uses_unknown_key_diagnostic_line() -> None:
     """E301 now anchors to the key, so the fix resolves without a cursor line."""
     source = "---\nid: checked\nquestion: Checked\nqueston: Hi\n"

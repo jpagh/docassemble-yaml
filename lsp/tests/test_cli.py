@@ -272,6 +272,37 @@ def test_check_command_fix_renames_duplicate_block_ids(tmp_path: Path) -> None:
     )
 
 
+def test_check_command_fix_labels_first_multifield_offender(tmp_path: Path) -> None:
+    source = tmp_path / "multifield.yml"
+    source.write_text(
+        "id: colors\n"
+        "question: What is your favorite color?\n"
+        "fields:\n"
+        "  - no label: favorite_color\n"
+        "  - field: backup_color\n",
+        encoding="utf-8",
+    )
+    fixed = (
+        "id: colors\n"
+        "question: What is your favorite color?\n"
+        "fields:\n"
+        '  - label: "What is your favorite color?"\n'
+        "    field: favorite_color\n"
+        "  - field: backup_color\n"
+    )
+
+    exit_code = main(["check", "--strict", "--quiet", "--fix", str(source)])
+
+    # The first offender is labelled; the remaining one keeps failing strict.
+    assert exit_code == 1
+    assert source.read_text(encoding="utf-8") == fixed
+
+    second_exit = main(["check", "--strict", "--quiet", "--fix", str(source)])
+
+    assert second_exit == 1
+    assert source.read_text(encoding="utf-8") == fixed
+
+
 def test_check_command_fix_reports_rejections_and_leaves_jinja_file_unchanged(
     tmp_path: Path, capsys
 ) -> None:
