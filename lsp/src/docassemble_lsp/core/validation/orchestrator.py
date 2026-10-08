@@ -8,7 +8,7 @@ from __future__ import annotations
 import dataclasses
 import logging
 import re
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from pathlib import Path
 from typing import Any
 
@@ -18,7 +18,9 @@ from ruamel.yaml.error import MarkedYAMLError
 from docassemble_lsp.core.accessibility import find_accessibility_findings
 from docassemble_lsp.core.files import templates_dir_for_path
 from docassemble_lsp.core.jinja import (
+    JinjaIssue,
     contains_jinja_syntax,
+    contains_unresolved_include,
     has_jinja_header,
     preprocess_jinja,
 )
@@ -330,6 +332,35 @@ def _validate_cross_document(
     return errors
 
 
+def _jinja_issue_errors(
+    issues: Iterable[JinjaIssue], input_file: str
+) -> list[YAMLError]:
+    return [
+        _yaml_error(
+            code=issue.code,
+            line_number=issue.line_number,
+            file_name=input_file,
+            err_str=issue.message,
+        )
+        for issue in issues
+    ]
+
+
+def _blank_unresolved_include_documents(rendered_body: str) -> str:
+    """Blank YAML documents that contain an unresolved Jinja include.
+
+    Rendering an unresolved include leaves a sentinel in its place. The
+    original document can no longer be trusted, so blank it while preserving
+    line numbers and let the remaining documents validate normally.
+    """
+    sections = DOCUMENT_MATCH.split(rendered_body)
+    blanked = [
+        "\n" * section.count("\n") if contains_unresolved_include(section) else section
+        for section in sections
+    ]
+    return "---".join(blanked)
+
+
 def find_errors_from_string(
     full_content: str,
     input_file: str | None = None,
@@ -357,26 +388,18 @@ def find_errors_from_string(
         input_file = "<string input>"
 
     if has_jinja_header(full_content):
-        rendered, render_errors = preprocess_jinja(full_content, input_file=input_file)
-        if render_errors:
-            return [
-                _yaml_error(
-                    code=e.code,
-                    line_number=e.line_number,
-                    file_name=input_file,
-                    err_str=e.message,
-                )
-                for e in render_errors
-            ]
+        render_result = preprocess_jinja(full_content, input_file=input_file)
+        if render_result.errors:
+            return _jinja_issue_errors(render_result.errors, input_file)
         _, _sep, original_body = full_content.partition("\n")
-        _, _sep, rendered_body = rendered.partition("\n")
+        _, _sep, rendered_body = render_result.text.partition("\n")
         original_sections = DOCUMENT_MATCH.split(original_body)
         jinja_affected: set[int] = set()
         for idx, section in enumerate(original_sections):
             if contains_jinja_syntax(section):
                 jinja_affected.add(idx + 1)
         errors = find_errors_from_string(
-            rendered_body,
+            _blank_unresolved_include_documents(rendered_body),
             input_file=input_file,
             runtime_options=runtime_options,
             workspace_index=workspace_index,
@@ -404,6 +427,7 @@ def find_errors_from_string(
             err.line_number = rendered_line_map.get(
                 err.line_number, err.line_number + 1
             )
+        errors.extend(_jinja_issue_errors(render_result.warnings, input_file))
         return [error for error in errors if runtime_options.allows_code(error.code)]
 
     exclusive_keys = [

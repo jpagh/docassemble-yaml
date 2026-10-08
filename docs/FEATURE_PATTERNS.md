@@ -127,6 +127,24 @@ This document explains how to add each major feature family in
 - emitting convention-style behavior without checking runtime options
 - adding a quick fix for a rule that is not deterministic
 
+### Jinja Include Rendering
+
+`# use jinja` templates render before validation. A missing include
+must not abort the render: `preprocess_jinja` wraps every `{% include %}`
+site so it resolves its candidates at render time, and an unresolvable
+site renders an internal sentinel plus a `W607` warning
+anchored to the include line. `ignore missing` sites render nothing and
+warn nothing, candidate lists are tried in order, and one source site
+warns once no matter how many times it renders. Nested includes are
+attributed to the outer include site that pulled in the containing
+template.
+
+`orchestrator.py` blanks the YAML documents that contain the sentinel
+(preserving line numbers) and validates the rest, so findings in
+remaining documents still map back to the original template lines.
+Syntax errors and runtime errors keep their fatal `E201`/`E202`
+behaviour; only unresolved includes become warnings.
+
 ## Code Actions And Fixes
 
 ### Preferred Path

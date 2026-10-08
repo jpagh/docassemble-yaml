@@ -1043,6 +1043,168 @@ def test_jinja_template_error_anchors_to_template_line() -> None:
     assert e202.line == 4
 
 
+def test_missing_jinja_include_warns_and_other_documents_still_validate(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "interview.yml"
+    content = (
+        "# use jinja\n"
+        "---\n"
+        "id: skipped\n"
+        "question: |\n"
+        '  {% include "missing.yml" %}\n'
+        "---\n"
+        "id: checked\n"
+        "question: Checked\n"
+        "bogus key: value\n"
+    )
+
+    diagnostics = analyze_text(content, path=str(source))
+
+    warnings = [d for d in diagnostics if d.code == "W607"]
+    assert len(warnings) == 1
+    assert warnings[0].line == 5
+    assert warnings[0].severity == "warning"
+    assert "missing.yml" in warnings[0].message
+
+    assert {d.code for d in diagnostics} == {"W607", "E301"}
+    e301 = next(d for d in diagnostics if d.code == "E301")
+    assert e301.line == 6
+
+
+def test_ignore_missing_jinja_include_warns_nothing_and_keeps_document(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "interview.yml"
+    content = (
+        "# use jinja\n"
+        "---\n"
+        '{% include "missing.yml" ignore missing %}\n'
+        "question: Hi\n"
+        "bogus key: value\n"
+    )
+
+    diagnostics = analyze_text(content, path=str(source))
+
+    assert [d.code for d in diagnostics] == ["E301"]
+    assert diagnostics[0].line == 2
+
+
+def test_jinja_include_candidate_list_uses_existing_candidate(
+    tmp_path: Path,
+) -> None:
+    included = tmp_path / "present.yml"
+    included.write_text("question: From include\n", encoding="utf-8")
+    source = tmp_path / "interview.yml"
+    content = '# use jinja\n{% include ["missing.yml", "present.yml"] %}\n'
+
+    diagnostics = analyze_text(content, path=str(source))
+
+    assert diagnostics == []
+
+
+def test_jinja_include_candidate_list_warns_when_no_candidate_exists(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "interview.yml"
+    content = '# use jinja\n{% include ["first.yml", "second.yml"] %}\n'
+
+    diagnostics = analyze_text(content, path=str(source))
+
+    warnings = [d for d in diagnostics if d.code == "W607"]
+    assert len(warnings) == 1
+    assert warnings[0].line == 2
+    assert "first.yml" in warnings[0].message
+    assert "second.yml" in warnings[0].message
+
+
+def test_repeated_jinja_include_site_warns_once(tmp_path: Path) -> None:
+    source = tmp_path / "interview.yml"
+    content = (
+        "# use jinja\n"
+        '{% for item in ["a", "b"] %}{% include "missing.yml" %}{% endfor %}\n'
+    )
+
+    diagnostics = analyze_text(content, path=str(source))
+
+    assert [d.code for d in diagnostics if d.code == "W607"] == ["W607"]
+
+
+def test_dynamic_jinja_include_resolved_at_render_time_does_not_warn(
+    tmp_path: Path,
+) -> None:
+    included = tmp_path / "present.yml"
+    included.write_text("question: From include\n", encoding="utf-8")
+    source = tmp_path / "interview.yml"
+    content = '# use jinja\n{% set chosen = "present.yml" %}{% include chosen %}\n'
+
+    diagnostics = analyze_text(content, path=str(source))
+
+    assert diagnostics == []
+
+
+def test_dynamic_jinja_include_warns_when_unresolved(tmp_path: Path) -> None:
+    source = tmp_path / "interview.yml"
+    content = "# use jinja\n{% include chosen_template %}\n"
+
+    diagnostics = analyze_text(content, path=str(source))
+
+    warnings = [d for d in diagnostics if d.code == "W607"]
+    assert len(warnings) == 1
+    assert warnings[0].line == 2
+    assert "chosen_template" in warnings[0].message
+
+
+def test_missing_jinja_include_without_loader_warns() -> None:
+    diagnostics = analyze_text('# use jinja\n{% include "missing.yml" %}\n')
+
+    warnings = [d for d in diagnostics if d.code == "W607"]
+    assert len(warnings) == 1
+    assert warnings[0].line == 2
+    assert "missing.yml" in warnings[0].message
+
+
+def test_missing_jinja_import_keeps_fatal_error(tmp_path: Path) -> None:
+    source = tmp_path / "interview.yml"
+    content = '# use jinja\n{% import "missing_macros.yml" as macros %}\nquestion: Hi\n'
+
+    diagnostics = analyze_text(content, path=str(source))
+
+    assert [d.code for d in diagnostics] == ["E202"]
+    assert diagnostics[0].line == 2
+
+
+def test_nested_jinja_include_warns_at_outer_site(tmp_path: Path) -> None:
+    child = tmp_path / "child.yml"
+    child.write_text('{% include "grandchild.yml" %}\n', encoding="utf-8")
+    source = tmp_path / "interview.yml"
+    content = '# use jinja\n{% include "child.yml" %}\n'
+
+    diagnostics = analyze_text(content, path=str(source))
+
+    warnings = [d for d in diagnostics if d.code == "W607"]
+    assert len(warnings) == 1
+    assert warnings[0].line == 2
+    assert "grandchild.yml" in warnings[0].message
+    assert "child.yml" in warnings[0].message
+
+
+def test_package_qualified_jinja_include_warns_instead_of_failing(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "interview.yml"
+    content = (
+        '# use jinja\n{% include "docassemble.demo:data/questions/shared.yml" %}\n'
+    )
+
+    diagnostics = analyze_text(content, path=str(source))
+
+    warnings = [d for d in diagnostics if d.code == "W607"]
+    assert len(warnings) == 1
+    assert warnings[0].line == 2
+    assert "docassemble.demo:data/questions/shared.yml" in warnings[0].message
+
+
 def test_top_level_jinja_without_header_reports_missing_header_hint() -> None:
     diagnostics = analyze_text(
         "{% set jinja_documents_available = ({'x': 1}) %}\n---\nquestion: Hi\n",

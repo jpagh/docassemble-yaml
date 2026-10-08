@@ -42,6 +42,7 @@ class MessageCode(str, Enum):
     TOO_MANY_TYPES = "E307"
     INTERVIEW_ORDER_UNMATCHED_GUARD = "W603"
     VALIDATION_CODE_OFFSCREEN_READ = "W606"
+    JINJA_INCLUDE_UNRESOLVED = "W607"
     BOOLEAN_DATATYPE_CHOICES_IGNORED = "E534"
     VISIBILITY_MODIFIER_CONFLICT = "E535"
     VISIBILITY_JS_NON_JS_MIX = "E536"
@@ -975,6 +976,14 @@ MESSAGE_DEFINITIONS: dict[str, MessageDefinition] = {
         code=MessageCode.CROSS_DOC_MISSING_TEMPLATE,
         summary="Template file not found in workspace",
         template="template file '{path}' does not exist in the workspace",
+    ),
+    MessageCode.JINJA_INCLUDE_UNRESOLVED: MessageDefinition(
+        code=MessageCode.JINJA_INCLUDE_UNRESOLVED,
+        summary="Jinja include could not be resolved",
+        template=(
+            "Could not resolve Jinja include {names}; "
+            "any document containing it was not validated."
+        ),
     ),
     # Packet 9: Documents And Attachments
     MessageCode.ATTACHMENT_ITEM_MUST_BE_DICT: MessageDefinition(
