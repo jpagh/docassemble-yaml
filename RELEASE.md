@@ -5,17 +5,55 @@ Release contract for `docassemble-yaml` (LSP + VS Code extension). Internal-faci
 ## How to Release
 
 ```bash
-mise run bump    # bump version (patch)
 mise run //vscode:test       # extension tests (mock server)
 DOCASSEMBLE_LSP_ENABLE_REAL_TEST=1 mise run //vscode:test:real-lsp  # full real-server extension tests
+
+mise run deploy              # gate, bump, publish VSIX, create the GitHub Release
 ```
 
-`mise run bump` updates `lsp/pyproject.toml`, `vscode/package.json`, `CHANGELOG.md`, then commits and tags (`v{new_version}`).
+`mise run deploy` runs, in order:
 
-Build the VSIX from `vscode/`:
+1. `gate` — the full pre-release check.
+2. `bump` — bumps `lsp/pyproject.toml`, `vscode/package.json`, `CHANGELOG.md`, and `VERSION`, commits, and pushes the `v{new_version}` tag.
+3. `//vscode:publish` — packages and publishes the VSIX.
+4. `release:github` — creates the GitHub Release whose body is the new `CHANGELOG.md` section followed by GitHub's auto-generated notes. Publishing that release triggers the PyPI workflow (below).
+
+The steps are separate tasks, so a failure after the bump does not force another version: retry with `mise run release:github` (or `mise run //vscode:publish`) directly. `mise run publish` is the same as `deploy` without the release step.
+
+To inspect the release notes without touching GitHub:
+
+```bash
+scripts/github-release.sh --dry-run
+```
+
+Build the VSIX alone from `vscode/`:
 ```bash
 mise run //vscode:package
 ```
+
+## PyPI Publishing
+
+`docassemble-lsp` is published to PyPI from `lsp/` by
+`.github/workflows/python-publish.yml`, using PyPI **Trusted Publishing** (OIDC, no
+API token secret). The workflow runs when a GitHub Release is published, or on
+manual `workflow_dispatch`.
+
+It builds the sdist and wheel with `uv build` and refuses to publish when the
+release tag does not match the version in `lsp/pyproject.toml` (the version
+`mise run bump` updates), so a release created from a stale tag fails instead
+of publishing the wrong package.
+
+One-time setup:
+
+- PyPI → Account → Publishing → **Add a new pending publisher**:
+  - PyPI project name: `docassemble-lsp`
+  - Owner: `jpagh`
+  - Repository name: `docassemble-yaml`
+  - Workflow name: `python-publish.yml`
+  - Environment name: `pypi`
+- GitHub → repository Settings → Environments → create `pypi` (optionally add
+  required reviewers). The name must match the workflow's `environment` and the
+  PyPI publisher.
 
 ## Pre-release Gate
 

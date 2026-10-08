@@ -11,6 +11,15 @@
     authors         = [
         { name = "Jack Adamson" },
     ]
+    keywords        = [
+        "docassemble",
+        "lsp",
+        "yaml",
+    ]
+    classifiers     = [
+        "Programming Language :: Python",
+        "Topic :: Text Editors",
+    ]
     dependencies    = [
         "black>=26.1.0",
         "esprima2>=6.0.0",
@@ -23,7 +32,9 @@
     ]
 
     [project.urls]
-        Repository = "https://github.com/jpagh/docassemble-yaml"
+        "Bug Tracker" = "https://github.com/jpagh/docassemble-yaml/issues"
+        Homepage      = "https://github.com/jpagh/docassemble-yaml"
+        Repository    = "https://github.com/jpagh/docassemble-yaml"
 
     [project.scripts]
         docassemble-lsp = "docassemble_lsp.cli:main"

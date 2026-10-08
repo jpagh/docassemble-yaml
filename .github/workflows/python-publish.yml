@@ -1,0 +1,36 @@
+name: Publish Python Package
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+    permissions:
+      id-token: write
+      contents: read
+    defaults:
+      run:
+        working-directory: lsp
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install uv
+        uses: astral-sh/setup-uv@v9.0.0
+      - name: Check the release tag matches the LSP version
+        if: github.event_name == 'release'
+        run: |
+          tag="${{ github.event.release.tag_name }}"
+          version="$(uv version --short)"
+          if [ "v${version}" != "${tag}" ]; then
+            echo "Release tag '${tag}' does not match lsp/pyproject.toml version '${version}'." >&2
+            echo "Run 'mise run bump' first, then create the Release for the new tag." >&2
+            exit 1
+          fi
+      - name: Build package
+        run: uv build
+      - name: Publish to PyPI
+        run: uv publish

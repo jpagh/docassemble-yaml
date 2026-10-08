@@ -59,6 +59,17 @@ monorepo_root = true
         { task = "//vscode:publish" },
     ]
 
+[tasks."release:github"]
+    description = "Create the GitHub Release for the current VERSION (CHANGELOG section + generated notes); publishing it triggers the PyPI workflow"
+    run         = "scripts/github-release.sh"
+
+[tasks.deploy]
+    description = "Full deploy: gate, bump patch, publish VSIX, then create the GitHub Release (which triggers PyPI publishing)"
+    run         = [
+        { task = "publish" },
+        { task = "release:github" },
+    ]
+
 [tasks.pre-commit]
     description = "Format and check the whole monorepo"
     run         = [

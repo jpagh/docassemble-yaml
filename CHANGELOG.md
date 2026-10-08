@@ -4,6 +4,7 @@
 
 ### Added
 
+- [LSP] `docassemble-lsp` is published to PyPI; install the language server and CLI with `uv tool install docassemble-lsp` (or `pipx install docassemble-lsp`).
 - [Fresh] The Docassemble pack is now a bundle with a detection plugin: `.yml` files under a package's `data/questions/` directory open as Docassemble (grammar + `docassemble-lsp`) with no configuration, while other YAML files stay YAML. Interviews kept elsewhere still use `languages.docassemble.filenames` in `~/.config/fresh/config.json`.
 
 ### Changed

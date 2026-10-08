@@ -3,10 +3,23 @@
 Monorepo for the docassemble-lsp language server, its VS Code extension, and
 optional support for the Fresh terminal editor.
 
-- **`lsp/`** — Python language server (CalVer versioned)
+- **`lsp/`** — Python language server (CalVer versioned; published to PyPI as
+  `docassemble-lsp`)
 - **`vscode/`** — VS Code extension (same version as lsp/)
 - **`fresh/`** — Fresh language pack (syntax highlighting + LSP wiring); see
   [`docs/FRESH.md`](docs/FRESH.md) for the investigation and setup
+
+## Install
+
+The language server and CLI are published to PyPI as `docassemble-lsp`:
+
+```bash
+uv tool install docassemble-lsp
+# or: pipx install docassemble-lsp
+```
+
+Editor setup is covered in [`lsp/README.md`](lsp/README.md),
+[`vscode/README.md`](vscode/README.md), and [`fresh/README.md`](fresh/README.md).
 
 ## Required tools
 
@@ -19,6 +32,7 @@ optional support for the Fresh terminal editor.
 | `pyrefly` | lsp | Python type checker (`mise run //lsp:type`) |
 | `pytest` | lsp | Python test runner (`mise run //lsp:test`) |
 | `bump-my-version` | root | Unified version bump (`mise run bump`) |
+| `gh` | root | Creates the GitHub Release (`mise run deploy` / `mise run release:github`) |
 | `aube` | vscode | Node package manager (replaces npm); mise-managed |
 | `node` | vscode | Node runtime (aube auto-switches) |
 | `typescript` / `esbuild` | vscode | TS compile + bundler (mise-managed) |
@@ -29,6 +43,7 @@ optional support for the Fresh terminal editor.
 ```bash
 mise run check   # lint, type, and test the whole monorepo
 mise run bump    # bump version (patch)
+mise run deploy  # full release (see RELEASE.md)
 ```
 
 ## Development
