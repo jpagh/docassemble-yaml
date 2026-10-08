@@ -1,17 +1,30 @@
 from __future__ import annotations
 
 import functools
+import multiprocessing
+import os
 import re
+import signal
+import sys
+import threading
+import warnings
 from collections.abc import Iterable, MutableMapping
 from dataclasses import dataclass
+from multiprocessing.connection import Connection
 from pathlib import Path
 from typing import Any
 
 import jinja2
 import jinja2.nodes
+import jinja2.sandbox
 import jinja2.visitor
 
 from docassemble_lsp.core.messages import MessageCode, format_message
+
+try:  # pragma: no cover - depends on the platform
+    import resource as _resource
+except ImportError:  # pragma: no cover - Windows has no resource module
+    _resource = None
 
 _JINJA_SYNTAX_RE = re.compile(r"({{.*?}}|{%-?.*?-?%}|{#.*?#})", re.DOTALL)
 
@@ -23,6 +36,34 @@ _UNRESOLVED_INCLUDE_SENTINEL = "__docassemble_lsp_unresolved_include__"
 #: ``{% include %}`` tags so each include site can resolve itself at render
 #: time and report failures against its own line.
 _INCLUDE_RESOLVER_NAME = "__docassemble_lsp_resolve_include__"
+
+
+@dataclass(frozen=True, slots=True)
+class JinjaRenderLimits:
+    """Resource bounds applied to a single Jinja render.
+
+    ``source_characters`` is checked before parsing, so an oversized source
+    is never processed. ``output_characters`` stops rendering as soon as the
+    accumulated template output passes the cap. ``wall_seconds`` is enforced
+    by the parent process, which kills a render that outlives it.
+    ``cpu_seconds`` and ``address_space_headroom_bytes`` become the render
+    process's ``RLIMIT_CPU`` and ``RLIMIT_AS``. macOS does not enforce
+    address-space limits, so that limit is skipped there and the wall
+    timeout remains the bound.
+    """
+
+    source_characters: int = 4 * 1024 * 1024
+    output_characters: int = 16 * 1024 * 1024
+    wall_seconds: float = 5.0
+    cpu_seconds: int = 12
+    address_space_headroom_bytes: int = 512 * 1024 * 1024
+
+
+#: Default bounds for one Jinja render.
+JINJA_RENDER_LIMITS = JinjaRenderLimits()
+
+#: Grace period for reaping a render process after it replies or is killed.
+_REAP_SECONDS = 5.0
 
 
 @dataclass(frozen=True, slots=True)
@@ -92,6 +133,15 @@ class _SilentUndefined(jinja2.Undefined):
         return _SilentUndefined()
 
 
+class _SandboxViolationUndefined(jinja2.StrictUndefined):
+    """Undefined returned for an unsafe sandbox attribute.
+
+    ``_SilentUndefined`` renders unknown values as empty text, but a sandbox
+    violation must never render silently: every use of this undefined raises
+    the ``SecurityError`` the sandbox attached to it.
+    """
+
+
 def _include_candidates(node: jinja2.nodes.Include) -> tuple[str, ...] | None:
     """Return the statically named include candidates, or None when dynamic."""
     template = node.template
@@ -143,8 +193,13 @@ def _iter_include_names(value: object) -> Iterable[str]:
                 yield item
 
 
-class _IncludeResilientEnvironment(jinja2.Environment):
-    """Environment that turns missing Jinja templates into warnings.
+class _IncludeResilientEnvironment(jinja2.sandbox.SandboxedEnvironment):
+    """Sandboxed environment that turns missing Jinja templates into warnings.
+
+    Template code runs in Jinja's sandbox, so access to unsafe attributes is
+    refused. ``unsafe_undefined`` returns a strict undefined, which means an
+    expression that reaches an unsafe attribute raises ``SecurityError``
+    instead of rendering as empty text.
 
     Jinja raises ``TemplateNotFound`` when an included template does not
     exist, which aborts validation of the whole file. Every ``{% include %}``
@@ -179,6 +234,21 @@ class _IncludeResilientEnvironment(jinja2.Environment):
     ) -> jinja2.nodes.Template:
         tree = super()._parse(source, name, filename)
         return _IncludeSiteTransformer(self, name).visit(tree)
+
+    def unsafe_undefined(self, obj: Any, attribute: str) -> jinja2.Undefined:
+        """Return a strict undefined for an unsafe attribute access.
+
+        Jinja's default undefined is silent, so a sandbox violation would
+        render as empty text. Returning a strict undefined makes any use of
+        the value raise the ``SecurityError`` attached to it.
+        """
+        return _SandboxViolationUndefined(
+            f"access to attribute {attribute!r} of"
+            f" {type(obj).__name__!r} object is unsafe.",
+            name=attribute,
+            obj=obj,
+            exc=jinja2.exceptions.SecurityError,
+        )
 
     def register_include_site(
         self, node: jinja2.nodes.Include, containing_template: str | None
@@ -281,9 +351,39 @@ def _error_result(
     )
 
 
-def preprocess_jinja(
-    content: str, *, input_file: str | None = None
+def _resource_limit_result(content: str, reason: str) -> JinjaRenderResult:
+    return _error_result(
+        content,
+        code=MessageCode.JINJA_RENDER_RESOURCE_LIMIT,
+        message=format_message(MessageCode.JINJA_RENDER_RESOURCE_LIMIT, reason=reason),
+        line_number=_first_jinja_line(content),
+    )
+
+
+class _OutputLimitExceeded(Exception):
+    """Raised internally when rendered output passes the configured cap."""
+
+
+def _render_template_text(template: jinja2.Template, limits: JinjaRenderLimits) -> str:
+    """Render ``template``, stopping as soon as the output cap is passed."""
+    chunks: list[str] = []
+    size = 0
+    for chunk in template.generate():
+        size += len(chunk)
+        if size > limits.output_characters:
+            raise _OutputLimitExceeded
+        chunks.append(chunk)
+    return "".join(chunks)
+
+
+def _render_jinja(
+    content: str, *, input_file: str | None, limits: JinjaRenderLimits
 ) -> JinjaRenderResult:
+    """Render ``content`` in the current process.
+
+    This runs inside the bounded render process; it is also the fallback
+    when no child process can be created.
+    """
     loader = None
     if input_file and input_file != "<string input>":
         parent = Path(input_file).expanduser().resolve().parent
@@ -306,7 +406,23 @@ def preprocess_jinja(
         )
 
     try:
-        rendered = template.render()
+        rendered = _render_template_text(template, limits)
+    except _OutputLimitExceeded:
+        return _error_result(
+            content,
+            code=MessageCode.JINJA_OUTPUT_TOO_LARGE,
+            message=format_message(
+                MessageCode.JINJA_OUTPUT_TOO_LARGE, limit=limits.output_characters
+            ),
+            line_number=_first_jinja_line(content),
+        )
+    except jinja2.exceptions.SecurityError as ex:
+        return _error_result(
+            content,
+            code=MessageCode.JINJA_SANDBOX_VIOLATION,
+            message=format_message(MessageCode.JINJA_SANDBOX_VIOLATION, error=str(ex)),
+            line_number=getattr(ex, "lineno", None) or _first_jinja_line(content),
+        )
     except jinja2.exceptions.TemplateError as ex:
         return _error_result(
             content,
@@ -314,8 +430,231 @@ def preprocess_jinja(
             message=f"Jinja2 template error: {ex}",
             line_number=getattr(ex, "lineno", None) or _first_jinja_line(content),
         )
+    except RecursionError:
+        return _resource_limit_result(content, "the recursion limit was reached")
+    except MemoryError:
+        return _resource_limit_result(content, "memory was exhausted")
+    except OverflowError:
+        # Jinja's sandbox caps ``range`` and refuses values that cannot be
+        # iterated; report the bound instead of crashing the render.
+        return _resource_limit_result(
+            content, "the sandbox refused an oversized value or range"
+        )
 
     return JinjaRenderResult(
         text=rendered,
         warnings=tuple(environment.failed_include_warnings()),
     )
+
+
+def _process_context():
+    """Return the multiprocessing context used for bounded renders.
+
+    The concrete context types (``ForkContext``/``SpawnContext``) are
+    intentionally left to inference: typeshed does not declare ``Process``
+    on the ``BaseContext`` they widen to.
+    """
+    if hasattr(os, "fork"):
+        return multiprocessing.get_context("fork")
+    return multiprocessing.get_context("spawn")
+
+
+def _silence_standard_output() -> None:
+    """Detach the render process from the stdio the LSP protocol uses.
+
+    A forked render process inherits the server's stdout, where protocol
+    messages are written. Redirecting it to the null device keeps a stray
+    write from corrupting the protocol; stderr is left alone so a crash
+    traceback reaches the host's log.
+    """
+    try:
+        stdout_fd = sys.stdout.fileno()
+        devnull_fd = os.open(os.devnull, os.O_WRONLY)
+    except (AttributeError, OSError, ValueError):  # pragma: no cover - defensive
+        return
+    try:
+        os.dup2(devnull_fd, stdout_fd)
+    except OSError:  # pragma: no cover - defensive
+        pass
+    finally:
+        os.close(devnull_fd)
+
+
+def _current_address_space_bytes() -> int | None:
+    """Return this process's virtual address space when it is exposed."""
+    try:
+        with open("/proc/self/statm", encoding="ascii") as statm:
+            pages = int(statm.read().split()[0])
+        return pages * os.sysconf("SC_PAGE_SIZE")
+    except (IndexError, OSError, ValueError):
+        return None
+
+
+def _apply_resource_limits(
+    *, platform: str, cpu_seconds: int, address_space_headroom_bytes: int
+) -> None:
+    """Set the render process's CPU and address-space limits.
+
+    macOS accepts but does not enforce address-space limits, so that limit is
+    skipped there and the parent's wall timeout remains the only bound.
+    """
+    if _resource is None:
+        return
+    cpu = max(1, int(cpu_seconds))
+    _resource.setrlimit(_resource.RLIMIT_CPU, (cpu, cpu))
+    if platform == "darwin":
+        return
+    current = _current_address_space_bytes()
+    if current is None:
+        return
+    limit = current + address_space_headroom_bytes
+    _resource.setrlimit(_resource.RLIMIT_AS, (limit, limit))
+
+
+def _render_worker(
+    connection: Connection,
+    content: str,
+    input_file: str | None,
+    limits: JinjaRenderLimits,
+) -> None:
+    """Render one template in a dedicated, resource-limited process."""
+    _silence_standard_output()
+    try:
+        _apply_resource_limits(
+            platform=sys.platform,
+            cpu_seconds=limits.cpu_seconds,
+            address_space_headroom_bytes=limits.address_space_headroom_bytes,
+        )
+    except (OSError, ValueError):  # pragma: no cover - defensive
+        pass
+    result = _render_jinja(content, input_file=input_file, limits=limits)
+    try:
+        connection.send(result)
+    except (BrokenPipeError, OSError):  # pragma: no cover - parent gave up
+        pass
+    finally:
+        connection.close()
+
+
+def _stopped_reason(exitcode: int | None) -> str:
+    sigxcpu = getattr(signal, "SIGXCPU", None)
+    if sigxcpu is not None and exitcode == -sigxcpu:
+        return "the CPU time limit was reached"
+    return (
+        "the render process stopped unexpectedly; "
+        "it may have exceeded its CPU or memory limit"
+    )
+
+
+def _format_seconds(seconds: float) -> str:
+    return f"{seconds:g}"
+
+
+def _render_bounded(
+    content: str, *, input_file: str | None, limits: JinjaRenderLimits
+) -> JinjaRenderResult:
+    """Render ``content`` in a bounded child process."""
+    context = _process_context()
+    receive_connection, send_connection = context.Pipe(duplex=False)
+    process = context.Process(
+        target=_render_worker,
+        args=(send_connection, content, input_file, limits),
+        daemon=True,
+    )
+    try:
+        with warnings.catch_warnings():
+            # A host process may be multi-threaded (test runners, editor
+            # hosts), which makes Python 3.12+ warn about fork. The render
+            # process only runs Jinja and never touches a parent lock, so
+            # fork is deliberate and safe here.
+            warnings.simplefilter("ignore", DeprecationWarning)
+            process.start()
+    except (AssertionError, OSError, RuntimeError, ValueError):
+        # Process creation can be unavailable (a daemonic or restricted
+        # parent). Fall back to a sandboxed in-process render; the sandbox
+        # and size caps still apply, but only normal operation bounds the
+        # wall clock.
+        receive_connection.close()
+        send_connection.close()
+        return _render_jinja(content, input_file=input_file, limits=limits)
+
+    # The child owns the write end now. Closing the parent's copy lets the
+    # read end see EOF when the render finishes or is killed.
+    send_connection.close()
+
+    timed_out = threading.Event()
+
+    def _abort() -> None:
+        timed_out.set()
+        process.kill()
+
+    reply: JinjaRenderResult | None = None
+    timer = threading.Timer(limits.wall_seconds, _abort)
+    timer.start()
+    try:
+        try:
+            reply = receive_connection.recv()
+        except (EOFError, OSError):
+            reply = None
+    finally:
+        timer.cancel()
+        receive_connection.close()
+        process.join(timeout=_REAP_SECONDS)
+        if process.is_alive():  # pragma: no cover - defensive
+            process.kill()
+            process.join(timeout=_REAP_SECONDS)
+
+    if reply is not None:
+        return reply
+
+    line_number = _first_jinja_line(content)
+    if timed_out.is_set():
+        return _error_result(
+            content,
+            code=MessageCode.JINJA_RENDER_TIMEOUT,
+            message=format_message(
+                MessageCode.JINJA_RENDER_TIMEOUT,
+                seconds=_format_seconds(limits.wall_seconds),
+            ),
+            line_number=line_number,
+        )
+    return _error_result(
+        content,
+        code=MessageCode.JINJA_RENDER_RESOURCE_LIMIT,
+        message=format_message(
+            MessageCode.JINJA_RENDER_RESOURCE_LIMIT,
+            reason=_stopped_reason(process.exitcode),
+        ),
+        line_number=line_number,
+    )
+
+
+def preprocess_jinja(
+    content: str,
+    *,
+    input_file: str | None = None,
+    limits: JinjaRenderLimits | None = None,
+) -> JinjaRenderResult:
+    """Render ``# use jinja`` source under sandbox and resource bounds.
+
+    The source is rejected when it is longer than
+    ``limits.source_characters``, and rendering runs in a child process with
+    CPU and address-space rlimits. A render that outlives
+    ``limits.wall_seconds`` is killed and reported as ``E209``. A sandbox
+    violation or a render that passes a size limit is reported instead of
+    being rendered.
+    """
+    render_limits = limits if limits is not None else JINJA_RENDER_LIMITS
+    source_size = len(content)
+    if source_size > render_limits.source_characters:
+        return _error_result(
+            content,
+            code=MessageCode.JINJA_SOURCE_TOO_LARGE,
+            message=format_message(
+                MessageCode.JINJA_SOURCE_TOO_LARGE,
+                size=source_size,
+                limit=render_limits.source_characters,
+            ),
+            line_number=1,
+        )
+    return _render_bounded(content, input_file=input_file, limits=render_limits)

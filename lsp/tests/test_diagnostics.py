@@ -1,12 +1,23 @@
 from __future__ import annotations
 
+import sys
+import time
+from dataclasses import replace
 from functools import cache
 from pathlib import Path
 
-from docassemble_lsp.core import WorkspaceIndex, analyze_text, build_workspace_index
+import pytest
+
+import docassemble_lsp.core.jinja as jinja_module
+from docassemble_lsp.core import (
+    WorkspaceIndex,
+    analyze_text,
+    build_workspace_index,
+)
 from docassemble_lsp.core.jinja import (
     _UNRESOLVED_INCLUDE_SENTINEL,
     _IncludeResilientEnvironment,
+    preprocess_jinja,
 )
 from docassemble_lsp.core.messages import MessageCode
 from docassemble_lsp.core.validation import all_dict_keys
@@ -18,6 +29,7 @@ from tests.corpus import (
     expected_codes_from_fixture_id,
     installed_example_top_level_keys,
     regression_fixture_documents,
+    regression_fixture_path,
     regression_fixture_text,
     repo_example_corpus_root,
     standalone_installed_example_blocks,
@@ -1150,6 +1162,135 @@ def test_jinja_template_error_anchors_to_template_line() -> None:
 
     e202 = next(diagnostic for diagnostic in diagnostics if diagnostic.code == "E202")
     assert e202.line == 4
+
+
+def test_jinja_render_keeps_unknown_values_and_mako_untouched() -> None:
+    result = preprocess_jinja(
+        "# use jinja\n---\nid: jinja_render\nquestion: Hello {{ unknown }} ${ mako }\n"
+    )
+
+    assert result.errors == ()
+    assert result.warnings == ()
+    assert result.text.endswith("question: Hello  ${ mako }\n")
+
+
+def test_jinja_sandbox_violation_reports_error() -> None:
+    diagnostics = analyze_text(
+        "# use jinja\n---\nid: jinja_sandbox\nquestion: {{ ''.__class__ }}\n",
+        path="sample.yml",
+    )
+
+    e208 = next(diagnostic for diagnostic in diagnostics if diagnostic.code == "E208")
+    assert e208.line == 4
+    assert e208.severity == "error"
+    assert "__class__" in e208.message
+
+
+def test_jinja_sandbox_violation_through_string_format_is_an_error() -> None:
+    diagnostics = analyze_text(
+        '# use jinja\n---\nid: jinja_sandbox\nquestion: {{ "{0.__class__}".format("x") }}\n',
+        path="sample.yml",
+    )
+
+    assert [diagnostic.code for diagnostic in diagnostics] == ["E208"]
+
+
+def test_infinite_jinja_loop_terminates_with_timeout_diagnostic(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # The macOS guard skips the address-space rlimit; the wall timeout must
+    # still stop a render that would otherwise never finish.
+    monkeypatch.setattr(sys, "platform", "darwin")
+    monkeypatch.setattr(
+        jinja_module,
+        "JINJA_RENDER_LIMITS",
+        replace(jinja_module.JINJA_RENDER_LIMITS, wall_seconds=0.5),
+    )
+    source = regression_fixture_path("infinite_jinja_loop.yml")
+
+    started = time.monotonic()
+    diagnostics = analyze_text(source.read_text(encoding="utf-8"), path=str(source))
+    elapsed = time.monotonic() - started
+
+    assert [diagnostic.code for diagnostic in diagnostics] == ["E209"]
+    assert diagnostics[0].line == 5
+    assert elapsed < 5
+
+
+def test_oversized_jinja_source_is_rejected_without_rendering(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        jinja_module,
+        "JINJA_RENDER_LIMITS",
+        replace(jinja_module.JINJA_RENDER_LIMITS, source_characters=64),
+    )
+
+    diagnostics = analyze_text("# use jinja\n" + "x" * 100, path="sample.yml")
+
+    assert [diagnostic.code for diagnostic in diagnostics] == ["E211"]
+    assert diagnostics[0].severity == "error"
+    assert "112 characters" in diagnostics[0].message
+
+
+def test_oversized_jinja_output_is_rejected_without_rendering(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        jinja_module,
+        "JINJA_RENDER_LIMITS",
+        replace(jinja_module.JINJA_RENDER_LIMITS, output_characters=10),
+    )
+
+    diagnostics = analyze_text(
+        "# use jinja\n{% for i in range(20) %}{{ i }}{% endfor %}\n",
+        path="sample.yml",
+    )
+
+    assert [diagnostic.code for diagnostic in diagnostics] == ["E212"]
+    assert "10-character" in diagnostics[0].message
+
+
+class _RecordingResource:
+    RLIMIT_AS = 9
+    RLIMIT_CPU = 10
+
+    def __init__(self) -> None:
+        self.calls: list[tuple[int, tuple[int, int]]] = []
+
+    def setrlimit(self, which: int, limits: tuple[int, int]) -> None:
+        self.calls.append((which, limits))
+
+
+def test_jinja_resource_limits_skip_address_space_on_macos(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    recording = _RecordingResource()
+    monkeypatch.setattr(jinja_module, "_resource", recording)
+    monkeypatch.setattr(jinja_module, "_current_address_space_bytes", lambda: 4096)
+
+    jinja_module._apply_resource_limits(
+        platform="darwin", cpu_seconds=7, address_space_headroom_bytes=1024
+    )
+
+    assert recording.calls == [(_RecordingResource.RLIMIT_CPU, (7, 7))]
+
+
+def test_jinja_resource_limits_apply_address_space_elsewhere(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    recording = _RecordingResource()
+    monkeypatch.setattr(jinja_module, "_resource", recording)
+    monkeypatch.setattr(jinja_module, "_current_address_space_bytes", lambda: 4096)
+
+    jinja_module._apply_resource_limits(
+        platform="linux", cpu_seconds=7, address_space_headroom_bytes=1024
+    )
+
+    assert recording.calls == [
+        (_RecordingResource.RLIMIT_CPU, (7, 7)),
+        (_RecordingResource.RLIMIT_AS, (5120, 5120)),
+    ]
 
 
 def test_missing_jinja_include_warns_and_other_documents_still_validate(

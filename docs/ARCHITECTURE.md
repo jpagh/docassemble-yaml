@@ -124,6 +124,14 @@ provider layer rather than growing `schema.py` again.
 - `lsp/src/docassemble_lsp/core/fixes.py`
 - `lsp/src/docassemble_lsp/core/formatting.py`
 
+`# use jinja` documents are rendered before validation. Rendering runs in
+a sandboxed environment and in a child process: the source and rendered
+output have size caps, the parent kills a render that outlives the wall
+timeout, and the child sets CPU and address-space rlimits (the
+address-space limit is skipped on macOS, which does not enforce it). A
+sandbox violation or a limit is reported as a diagnostic instead of
+rendering unbounded.
+
 Diagnostics and fixes are shared by CLI and LSP. Validation remains a
 relatively large subsystem, but the intended direction is still the
 same: feature entry points should stay thin and deterministic fixes

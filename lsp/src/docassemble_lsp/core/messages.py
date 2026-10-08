@@ -20,6 +20,11 @@ class MessageCode(str, Enum):
     YAML_PARSE_ERROR = "E102"
     JINJA2_SYNTAX_ERROR = "E201"
     JINJA2_TEMPLATE_ERROR = "E202"
+    JINJA_SANDBOX_VIOLATION = "E208"
+    JINJA_RENDER_TIMEOUT = "E209"
+    JINJA_RENDER_RESOURCE_LIMIT = "E210"
+    JINJA_SOURCE_TOO_LARGE = "E211"
+    JINJA_OUTPUT_TOO_LARGE = "E212"
     UNKNOWN_KEYS = "E301"
 
     YAML_STRING_TYPE = "E103"
@@ -254,6 +259,33 @@ MESSAGE_DEFINITIONS: dict[str, MessageDefinition] = {
         code=MessageCode.JINJA2_TEMPLATE_ERROR,
         summary="Jinja2 template error",
         template="Jinja2 template error: {error}",
+    ),
+    MessageCode.JINJA_SANDBOX_VIOLATION: MessageDefinition(
+        code=MessageCode.JINJA_SANDBOX_VIOLATION,
+        summary="Jinja2 sandbox violation",
+        template="Jinja2 sandbox violation: {error}",
+    ),
+    MessageCode.JINJA_RENDER_TIMEOUT: MessageDefinition(
+        code=MessageCode.JINJA_RENDER_TIMEOUT,
+        summary="Jinja2 render exceeded the time limit",
+        template="Jinja2 rendering exceeded the {seconds}-second time limit.",
+    ),
+    MessageCode.JINJA_RENDER_RESOURCE_LIMIT: MessageDefinition(
+        code=MessageCode.JINJA_RENDER_RESOURCE_LIMIT,
+        summary="Jinja2 render stopped at a resource limit",
+        template="Jinja2 rendering stopped before it finished ({reason}).",
+    ),
+    MessageCode.JINJA_SOURCE_TOO_LARGE: MessageDefinition(
+        code=MessageCode.JINJA_SOURCE_TOO_LARGE,
+        summary="Jinja2 source is too large to render",
+        template=(
+            "Jinja2 source is too large to render ({size} characters; limit {limit})."
+        ),
+    ),
+    MessageCode.JINJA_OUTPUT_TOO_LARGE: MessageDefinition(
+        code=MessageCode.JINJA_OUTPUT_TOO_LARGE,
+        summary="Jinja2 render produced too much output",
+        template="Jinja2 rendering produced more than the {limit}-character output limit.",
     ),
     MessageCode.UNKNOWN_KEYS: MessageDefinition(
         code=MessageCode.UNKNOWN_KEYS,
