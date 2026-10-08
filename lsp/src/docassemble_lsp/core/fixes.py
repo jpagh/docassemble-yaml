@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import logging
 import re
-from collections.abc import Callable
-from dataclasses import dataclass
+from collections.abc import Callable, Sequence
+from dataclasses import dataclass, replace
 from difflib import get_close_matches
 from itertools import pairwise
 from pathlib import Path
@@ -11,9 +12,14 @@ from docassemble_lsp.core.completion_registry import format_property_insert_text
 from docassemble_lsp.core.completion_rules import get_property_rule
 from docassemble_lsp.core.diagnostics import Diagnostic, analyze_text
 from docassemble_lsp.core.field_keys import INPUT_TYPE_DATATYPES
+from docassemble_lsp.core.jinja import has_jinja_header
+from docassemble_lsp.core.messages import MessageCode
 from docassemble_lsp.core.schema import load_schema
 from docassemble_lsp.core.validation_config import RuntimeOptions
+from docassemble_lsp.core.workspace import WorkspaceIndex
 from docassemble_lsp.core.yaml_shared import _BLOCK_SCALAR_MARKERS, _document_lines
+
+logger = logging.getLogger(__name__)
 
 _YAML_KEY_RE = re.compile(r"^(\s*)(?:-\s*)?([^:#][^:]*?)\s*:")
 _FIELD_LABEL_SHORTHAND_RE = re.compile(r"^(\s*)-\s*([^:]+?)\s*:\s*(.*?)\s*(#.*)?$")
@@ -44,10 +50,24 @@ class ResolvedFix:
 
 
 @dataclass(frozen=True, slots=True)
+class FixRejection:
+    code: str
+    title: str
+    reason: str
+
+
+@dataclass(frozen=True, slots=True)
+class FixValidation:
+    accepted: tuple[ResolvedFix, ...] = ()
+    rejected: tuple[FixRejection, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
 class FixResult:
     text: str
     changed: bool
     applied_codes: tuple[str, ...] = ()
+    rejected: tuple[FixRejection, ...] = ()
 
 
 FixProvider = Callable[[str, Diagnostic, int | None], list[ResolvedFix]]
@@ -677,25 +697,239 @@ def apply_resolved_fixes(source: str, fixes: list[ResolvedFix]) -> FixResult:
     )
 
 
+def _finding_counts(diagnostics: Sequence[Diagnostic]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for diagnostic in diagnostics:
+        key = diagnostic.code or "<uncoded>"
+        counts[key] = counts.get(key, 0) + 1
+    return counts
+
+
+_PARSE_FAILURE_CODES = frozenset(
+    {MessageCode.YAML_DUPLICATE_KEY, MessageCode.YAML_PARSE_ERROR}
+)
+
+
+def _parse_failure_counts(
+    text: str,
+    *,
+    path: str,
+    runtime_options: RuntimeOptions | None,
+    workspace_index: WorkspaceIndex | None,
+) -> dict[str, int]:
+    """Return parse-failure counts in *text*, even when the run ignores them.
+
+    Parsing is a precondition for safe rewriting, so ``ignore_codes`` must not
+    be able to hide a candidate that broke the document.
+    """
+    if runtime_options is None or not runtime_options.ignore_codes:
+        return {}
+    parse_options = replace(runtime_options, ignore_codes=frozenset())
+    counts: dict[str, int] = {}
+    for diagnostic in analyze_text(
+        text,
+        path=path,
+        runtime_options=parse_options,
+        workspace_index=workspace_index,
+    ):
+        if diagnostic.code in _PARSE_FAILURE_CODES:
+            counts[diagnostic.code] = counts.get(diagnostic.code, 0) + 1
+    return counts
+
+
+def _candidate_assessment(
+    candidate_text: str,
+    baseline_counts: dict[str, int],
+    baseline_parse_counts: dict[str, int],
+    *,
+    path: str,
+    runtime_options: RuntimeOptions | None,
+    workspace_index: WorkspaceIndex | None,
+) -> tuple[dict[str, int], str | None]:
+    """Return the candidate's finding counts and the reason to reject it."""
+    candidate_counts = _finding_counts(
+        analyze_text(
+            candidate_text,
+            path=path,
+            runtime_options=runtime_options,
+            workspace_index=workspace_index,
+        )
+    )
+    new_codes = sorted(
+        code
+        for code, count in candidate_counts.items()
+        if count > baseline_counts.get(code, 0)
+    )
+    if new_codes:
+        return candidate_counts, f"introduces new finding(s): {', '.join(new_codes)}"
+    candidate_parse_counts = _parse_failure_counts(
+        candidate_text,
+        path=path,
+        runtime_options=runtime_options,
+        workspace_index=workspace_index,
+    )
+    new_parse_failures = sorted(
+        code
+        for code, count in candidate_parse_counts.items()
+        if count > baseline_parse_counts.get(code, 0)
+    )
+    if new_parse_failures:
+        return (
+            candidate_counts,
+            f"introduces parse failure(s): {', '.join(new_parse_failures)}",
+        )
+    return candidate_counts, None
+
+
+def validate_fix_candidates(
+    source: str,
+    fixes: Sequence[ResolvedFix],
+    *,
+    diagnostics: Sequence[Diagnostic] | None = None,
+    path: str = "<memory>",
+    runtime_options: RuntimeOptions | None = None,
+    workspace_index: WorkspaceIndex | None = None,
+) -> FixValidation:
+    """Re-check fix candidates against the source they would rewrite.
+
+    A candidate is accepted only when it still parses, introduces no new
+    finding of any code, and strictly reduces the finding it was made for.
+    Before and after finding counts are compared per code with the same
+    runtime options and workspace context as the original run. The batch of
+    accepted fixes is re-checked as a whole before it is returned, and
+    Jinja-rendered files are never rewritten automatically.
+    """
+    if not fixes:
+        return FixValidation()
+
+    if has_jinja_header(source):
+        return FixValidation(
+            rejected=tuple(
+                FixRejection(
+                    code=fix.code,
+                    title=fix.title,
+                    reason="Jinja-rendered files are not rewritten automatically",
+                )
+                for fix in fixes
+            )
+        )
+
+    if diagnostics is None:
+        diagnostics = analyze_text(
+            source,
+            path=path,
+            runtime_options=runtime_options,
+            workspace_index=workspace_index,
+        )
+    baseline_counts = _finding_counts(diagnostics)
+    baseline_parse_counts = _parse_failure_counts(
+        source,
+        path=path,
+        runtime_options=runtime_options,
+        workspace_index=workspace_index,
+    )
+
+    accepted: list[ResolvedFix] = []
+    rejected: list[FixRejection] = []
+    for fix in fixes:
+        candidate = apply_resolved_fixes(source, [fix])
+        if not candidate.changed:
+            rejected.append(
+                FixRejection(fix.code, fix.title, "candidate produces no change")
+            )
+            continue
+
+        candidate_counts, reason = _candidate_assessment(
+            candidate.text,
+            baseline_counts,
+            baseline_parse_counts,
+            path=path,
+            runtime_options=runtime_options,
+            workspace_index=workspace_index,
+        )
+        if reason is None and candidate_counts.get(fix.code, 0) >= baseline_counts.get(
+            fix.code, 0
+        ):
+            reason = f"does not reduce '{fix.code}' findings"
+        if reason is not None:
+            rejected.append(FixRejection(fix.code, fix.title, reason))
+            continue
+        accepted.append(fix)
+
+    if len(accepted) > 1:
+        try:
+            combined = apply_resolved_fixes(source, list(accepted))
+        except ValueError:
+            combined_reason = "overlapping candidate edits"
+        else:
+            _, combined_reason = _candidate_assessment(
+                combined.text,
+                baseline_counts,
+                baseline_parse_counts,
+                path=path,
+                runtime_options=runtime_options,
+                workspace_index=workspace_index,
+            )
+        if combined_reason is not None:
+            rejected.extend(
+                FixRejection(fix.code, fix.title, combined_reason) for fix in accepted
+            )
+            accepted = []
+
+    return FixValidation(accepted=tuple(accepted), rejected=tuple(rejected))
+
+
 def fix_text(
     source: str,
     *,
     path: str = "<memory>",
     runtime_options: RuntimeOptions | None = None,
+    workspace_index: WorkspaceIndex | None = None,
 ) -> FixResult:
-    diagnostics = analyze_text(source, path=path, runtime_options=runtime_options)
+    diagnostics = analyze_text(
+        source,
+        path=path,
+        runtime_options=runtime_options,
+        workspace_index=workspace_index,
+    )
     cli_fixes = [
         fix
         for fix in resolve_diagnostic_fixes(source, diagnostics)
         if fix.supports_cli_fix
     ]
-    return apply_resolved_fixes(source, cli_fixes)
+    validation = validate_fix_candidates(
+        source,
+        cli_fixes,
+        diagnostics=diagnostics,
+        path=path,
+        runtime_options=runtime_options,
+        workspace_index=workspace_index,
+    )
+    for rejection in validation.rejected:
+        logger.info(
+            "Rejected fix %s (%s) for %s: %s",
+            rejection.code,
+            rejection.title,
+            path,
+            rejection.reason,
+        )
+    if not validation.accepted:
+        return FixResult(text=source, changed=False, rejected=validation.rejected)
+
+    applied = apply_resolved_fixes(source, list(validation.accepted))
+    return FixResult(
+        text=applied.text,
+        changed=applied.changed,
+        applied_codes=applied.applied_codes,
+        rejected=validation.rejected,
+    )
 
 
 def fix_path(
     path: str | Path,
     *,
     runtime_options: RuntimeOptions | None = None,
+    workspace_index: WorkspaceIndex | None = None,
 ) -> FixResult:
     file_path = Path(path)
     original = file_path.read_text(encoding="utf-8")
@@ -703,6 +937,7 @@ def fix_path(
         original,
         path=str(file_path),
         runtime_options=runtime_options,
+        workspace_index=workspace_index,
     )
     if result.changed:
         file_path.write_text(result.text, encoding="utf-8")

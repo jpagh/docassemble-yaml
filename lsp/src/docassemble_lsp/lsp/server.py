@@ -113,6 +113,7 @@ from docassemble_lsp.core.fixes import (
     SourceEdit,
     resolve_diagnostic_fixes,
     resolve_fix_all_fixes,
+    validate_fix_candidates,
 )
 from docassemble_lsp.core.indentation import (
     indent_unit_between,
@@ -838,8 +839,23 @@ def build_code_actions(
             runtime_options=runtime_options,
             workspace_index=workspace_index,
         )
-        fix_all_fixes = resolve_fix_all_fixes(source, all_core_diagnostics)
-        if fix_all_fixes:
+        fix_all_validation = validate_fix_candidates(
+            source,
+            resolve_fix_all_fixes(source, all_core_diagnostics),
+            diagnostics=all_core_diagnostics,
+            path=uri,
+            runtime_options=runtime_options,
+            workspace_index=workspace_index,
+        )
+        for rejection in fix_all_validation.rejected:
+            logger.warning(
+                "Rejected fix-all candidate %s (%s) for %s: %s",
+                rejection.code,
+                rejection.title,
+                uri,
+                rejection.reason,
+            )
+        if fix_all_validation.accepted:
             actions.append(
                 CodeAction(
                     title="Fix all auto-fixable docassemble-lsp issues",
@@ -849,7 +865,7 @@ def build_code_actions(
                         changes={
                             uri: [
                                 _text_edit_from_source_edit(fix.edit)
-                                for fix in fix_all_fixes
+                                for fix in fix_all_validation.accepted
                             ]
                         }
                     ),

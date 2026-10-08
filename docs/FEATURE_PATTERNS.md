@@ -135,6 +135,21 @@ This document explains how to add each major feature family in
 2. keep the edit generator reusable by CLI and LSP
 3. translate the resolved edits into LSP code actions in `server.py`
 4. test both the fix resolver and the adapter behavior
+5. route automatic rewriting through `validate_fix_candidates` and
+   surface rejections instead of writing
+
+### Candidate Gate
+
+`validate_fix_candidates` re-checks a fix candidate before `--fix` or a
+fix-all code action writes it. A candidate is accepted only when it
+still parses, introduces no new finding of any code, and strictly
+reduces the finding it was made for. Findings are compared per code
+with the same runtime options and workspace context as the run, the
+accepted batch is re-checked as a whole, and Jinja-rendered files are
+never rewritten automatically. Rejections are reported on stderr by
+the CLI and logged by the LSP server; a rejected candidate leaves the
+file unchanged. Quick fixes requested explicitly for a single
+diagnostic do not pass through the gate.
 
 ### Main Files
 

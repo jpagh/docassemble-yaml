@@ -129,6 +129,14 @@ relatively large subsystem, but the intended direction is still the
 same: feature entry points should stay thin and deterministic fixes
 should reuse shared fix resolution.
 
+Automatic rewriting (`--fix` and fix-all code actions) runs every
+candidate through `validate_fix_candidates` in `fixes.py`. The gate
+re-checks a candidate with the same runtime options and workspace
+context as the run: it must still parse, must not add a finding of any
+code, and must reduce the finding it was written for. Jinja-rendered
+files are excluded from automatic rewriting. Quick fixes requested
+explicitly for one diagnostic stay ungated because the user chose them.
+
 Formatting is also shared across entry points. Whole-document
 formatting and on-type formatting are protocol features at the
 boundary, but their semantic rules should still live in core helpers

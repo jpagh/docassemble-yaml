@@ -282,9 +282,19 @@ def _check_command(args: argparse.Namespace) -> int:
         working = original
         if args.fix:
             fix_result = fix_text(
-                working, path=str(path), runtime_options=runtime_options
+                working,
+                path=str(path),
+                runtime_options=runtime_options,
+                workspace_index=workspace_index,
             )
             working = fix_result.text
+            if fix_result.rejected and not args.quiet:
+                for rejection in fix_result.rejected:
+                    print(
+                        f"{path}: skipped fix {rejection.code} "
+                        f"({rejection.title}): {rejection.reason}",
+                        file=sys.stderr,
+                    )
 
         diagnostics = analyze_text(
             working,

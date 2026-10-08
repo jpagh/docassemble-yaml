@@ -210,6 +210,64 @@ def test_check_command_fix_rewrites_radio_datatype_with_choices_file(
     )
 
 
+def test_check_command_fix_reports_rejections_and_leaves_jinja_file_unchanged(
+    tmp_path: Path, capsys
+) -> None:
+    source = tmp_path / "jinja_fix.yml"
+    original = "# use jinja\nquestion: Hi\nfields:\n  - Name: user.name\n"
+    source.write_text(original, encoding="utf-8")
+
+    exit_code = main(
+        ["check", "--strict", "--fix", "--conventions", "C102", str(source)]
+    )
+
+    assert exit_code == 1
+    assert source.read_text(encoding="utf-8") == original
+    stderr = capsys.readouterr().err
+    assert "skipped fix" in stderr
+    assert "Jinja" in stderr
+
+
+def test_check_command_fix_uses_workspace_index_for_the_gate(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    source = tmp_path / "index.yml"
+    source.write_text("question: Hi\nfields:\n  - Name: user.name\n", encoding="utf-8")
+    captured: dict[str, object] = {}
+    original_fix_text = cli.fix_text
+
+    def spy(source_text: str, **kwargs: object):
+        captured.update(kwargs)
+        return original_fix_text(source_text, **kwargs)
+
+    monkeypatch.setattr(cli, "fix_text", spy)
+
+    exit_code = main(
+        ["check", "--quiet", "--fix", "--conventions", "C102", str(source)]
+    )
+
+    assert exit_code == 0
+    assert captured.get("workspace_index") is not None
+
+
+def test_check_command_fix_leaves_file_unchanged_when_gate_rejects_candidate(
+    tmp_path: Path, capsys
+) -> None:
+    source = tmp_path / "colon_label.yml"
+    original = "question: Hi\nfields:\n  - 'Name: first': user.name\n"
+    source.write_text(original, encoding="utf-8")
+
+    exit_code = main(
+        ["check", "--strict", "--fix", "--conventions", "C102", str(source)]
+    )
+
+    assert exit_code == 1
+    assert source.read_text(encoding="utf-8") == original
+    stderr = capsys.readouterr().err
+    assert "skipped fix" in stderr
+    assert "E102" in stderr
+
+
 def test_check_command_ignore_codes_can_suppress_errors(tmp_path: Path) -> None:
     source = tmp_path / "ignored.yml"
     source.write_text("---\nfoo: bar\n", encoding="utf-8")
@@ -932,7 +990,10 @@ def test_check_command_fix_and_format_on_success_reads_file_once(
         errors: str | None = "strict",
     ) -> str:
         nonlocal call_count
-        call_count += 1
+        # Only the file under test counts: workspace-index caches may read
+        # vendored stubs on a cold test worker, which is not this file.
+        if self == source:
+            call_count += 1
         return original_read_text(self, encoding=encoding, errors=errors)
 
     monkeypatch.setattr(Path, "read_text", counting_read_text)

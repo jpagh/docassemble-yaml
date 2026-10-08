@@ -1680,6 +1680,25 @@ def test_build_code_actions_returns_no_quick_fix_when_no_diagnostics_match() -> 
     assert all("missing" not in t.lower() for t in e414_titles + e415_titles)
 
 
+def test_build_code_actions_skips_fix_all_for_jinja_rendered_files() -> None:
+    source = "# use jinja\nquestion: Hi\nfields:\n  - Name: user.name\n"
+    options = RuntimeOptions(enabled_conventions=frozenset({"C102"}))
+    diagnostics = build_lsp_diagnostics(
+        "file:///sample.yml", source, runtime_options=options
+    )
+
+    actions = build_code_actions(
+        "file:///sample.yml",
+        source,
+        2,
+        diagnostics,
+        only_kinds=["source.fixAll"],
+        runtime_options=options,
+    )
+
+    assert actions == []
+
+
 def test_definition_locations_resolve_local_include_file(tmp_path) -> None:
     included = tmp_path / "included.yml"
     included.write_text("question: Included\n", encoding="utf-8")
