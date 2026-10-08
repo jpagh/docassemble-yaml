@@ -161,7 +161,8 @@ class _IncludeResilientEnvironment(jinja2.Environment):
     is covered by
     ``test_environment_get_template_passes_through_template_instances``, so a
     Jinja upgrade that breaks it fails loudly here rather than silently
-    resolving the wrong template.
+    resolving the wrong template. The dependency is capped below Jinja 4 for
+    the same reason.
     """
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
