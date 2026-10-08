@@ -43,6 +43,7 @@ class MessageCode(str, Enum):
     INTERVIEW_ORDER_UNMATCHED_GUARD = "W603"
     VALIDATION_CODE_OFFSCREEN_READ = "W606"
     JINJA_INCLUDE_UNRESOLVED = "W607"
+    MISSING_QUESTION_ID = "W608"
     BOOLEAN_DATATYPE_CHOICES_IGNORED = "E534"
     VISIBILITY_MODIFIER_CONFLICT = "E535"
     VISIBILITY_JS_NON_JS_MIX = "E536"
@@ -984,6 +985,11 @@ MESSAGE_DEFINITIONS: dict[str, MessageDefinition] = {
             "Could not resolve Jinja include {names}; "
             "any document containing it was not validated."
         ),
+    ),
+    MessageCode.MISSING_QUESTION_ID: MessageDefinition(
+        code=MessageCode.MISSING_QUESTION_ID,
+        summary="Question block is missing an id",
+        template="question block is missing an `id`: {snippet}",
     ),
     # Packet 9: Documents And Attachments
     MessageCode.ATTACHMENT_ITEM_MUST_BE_DICT: MessageDefinition(

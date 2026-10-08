@@ -179,6 +179,7 @@ def test_check_command_fix_rewrites_field_label_shorthand_file(tmp_path: Path) -
             "--quiet",
             "--strict",
             "--fix",
+            "--no-warnings",
             "--conventions",
             "C102",
             str(source),
@@ -201,12 +202,37 @@ def test_check_command_fix_rewrites_radio_datatype_with_choices_file(
     )
 
     exit_code = main(
-        ["check", "--quiet", "--strict", "--fix", "--conventions", "C103", str(source)]
+        [
+            "check",
+            "--quiet",
+            "--strict",
+            "--fix",
+            "--no-warnings",
+            "--conventions",
+            "C103",
+            str(source),
+        ]
     )
 
     assert exit_code == 0
     assert source.read_text(encoding="utf-8") == (
         'question: Hi\nfields:\n  - label: May we text you?\n    field: texting_allowed\n    input type: radio\n    choices:\n      - "A"\n      - "B"\n'
+    )
+
+
+def test_check_command_fix_adds_missing_question_id(tmp_path: Path) -> None:
+    source = tmp_path / "missing_id.yml"
+    source.write_text(
+        "---\nquestion: What is your name?\n---\nquestion: WHAT is your NAME!?\n",
+        encoding="utf-8",
+    )
+
+    exit_code = main(["check", "--quiet", "--fix", str(source)])
+
+    assert exit_code == 0
+    assert source.read_text(encoding="utf-8") == (
+        '---\nid: "what is your name"\nquestion: What is your name?\n'
+        '---\nid: "what is your name 2"\nquestion: WHAT is your NAME!?\n'
     )
 
 
@@ -258,7 +284,15 @@ def test_check_command_fix_leaves_file_unchanged_when_gate_rejects_candidate(
     source.write_text(original, encoding="utf-8")
 
     exit_code = main(
-        ["check", "--strict", "--fix", "--conventions", "C102", str(source)]
+        [
+            "check",
+            "--strict",
+            "--fix",
+            "--no-warnings",
+            "--conventions",
+            "C102",
+            str(source),
+        ]
     )
 
     assert exit_code == 1

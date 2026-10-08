@@ -31,6 +31,7 @@ from docassemble_lsp.core.line_helpers import (
 )
 from docassemble_lsp.core.messages import MessageCode
 from docassemble_lsp.core.python_paths import path_from_uri_or_path
+from docassemble_lsp.core.question_ids import shorten_question_text
 from docassemble_lsp.core.validation.blocks import (
     _absolute_document_line,
     _allowed_top_level_keys,
@@ -39,6 +40,7 @@ from docassemble_lsp.core.validation.blocks import (
     _find_unmatched_interview_order_references,
     _format_missing_jinja_header_error,
     _format_yaml_parse_error,
+    _get_case_insensitive,
     _lowercase_key_map,
     _make_yaml_parser,
     _map_rendered_lines_to_source_lines,
@@ -630,6 +632,24 @@ def find_errors_from_string(
                                 file_name=input_file,
                             )
                         )
+        question_key = doc_keys_lower.get("question")
+        if question_key is not None:
+            id_value = _get_case_insensitive(doc, "id")
+            has_id = id_value is not None and (
+                not isinstance(id_value, str) or bool(id_value.strip())
+            )
+            question_value = doc.get(question_key)
+            if not has_id and str(question_value or "").strip():
+                all_errors.append(
+                    _yaml_error(
+                        code=MessageCode.MISSING_QUESTION_ID,
+                        line_number=_absolute_document_line(
+                            line_number, _lc_key_line(doc, question_key)
+                        ),
+                        file_name=input_file,
+                        snippet=shorten_question_text(question_value),
+                    )
+                )
         all_errors.extend(
             validate_table_block_in_doc(doc, doc_keys_lower, line_number, input_file)
         )

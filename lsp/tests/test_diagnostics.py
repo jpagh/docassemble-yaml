@@ -55,7 +55,9 @@ def test_analyze_text_supports_jinja_include_from_source_directory(
     tmp_path: Path,
 ) -> None:
     included = tmp_path / "included.yml"
-    included.write_text("question: Included question\n", encoding="utf-8")
+    included.write_text(
+        "id: included_question\nquestion: Included question\n", encoding="utf-8"
+    )
 
     source = tmp_path / "interview.yml"
     content = '# use jinja\n{% include "included.yml" %}\nmandatory: True\n'
@@ -79,7 +81,7 @@ def test_analyze_text_can_disallow_field_label_shorthand_by_option() -> None:
 
 def test_analyze_text_hides_conventions_without_opt_in() -> None:
     diagnostics = analyze_text(
-        "question: Hi\nfields:\n  - Name: user.name\n",
+        "id: hi\nquestion: Hi\nfields:\n  - Name: user.name\n",
         path="sample.yml",
     )
 
@@ -114,6 +116,51 @@ def test_field_only_item_reports_missing_label() -> None:
 
     e415 = next(diagnostic for diagnostic in diagnostics if diagnostic.code == "E415")
     assert e415.line == 3
+
+
+def test_missing_question_id_warns_once_per_block_without_id() -> None:
+    source = (
+        "---\nid: has_id\nquestion: Has id\n"
+        "---\nquestion: Missing id\n"
+        "---\nquestion: Also missing\n"
+    )
+    diagnostics = analyze_text(source, path="sample.yml")
+
+    findings = [d for d in diagnostics if d.code == "W608"]
+    assert [finding.line for finding in findings] == [5, 7]
+    assert all(finding.severity == "warning" for finding in findings)
+    assert "Missing id" in findings[0].message
+    assert "Also missing" in findings[1].message
+
+
+def test_missing_question_id_accepts_case_insensitive_id() -> None:
+    diagnostics = analyze_text("ID: keep\nquestion: Hello\n", path="sample.yml")
+
+    assert not [d for d in diagnostics if d.code == "W608"]
+
+
+def test_missing_question_id_warns_for_empty_id_value() -> None:
+    diagnostics = analyze_text("question: Hello\nid:\n", path="sample.yml")
+
+    findings = [d for d in diagnostics if d.code == "W608"]
+    assert len(findings) == 1
+    assert findings[0].line == 1
+
+
+def test_missing_question_id_ignores_empty_question_text() -> None:
+    diagnostics = analyze_text("question:\n", path="sample.yml")
+
+    assert not [d for d in diagnostics if d.code == "W608"]
+
+
+def test_missing_question_id_hidden_without_warnings() -> None:
+    source = "question: Hello\n"
+
+    diagnostics = analyze_text(
+        source, path="sample.yml", runtime_options=RuntimeOptions(show_warnings=False)
+    )
+
+    assert not [d for d in diagnostics if d.code == "W608"]
 
 
 def test_field_target_must_be_plain_text() -> None:
@@ -758,7 +805,7 @@ def test_analyze_text_accepts_response_family_block_forms() -> None:
 
 def test_analyze_text_accepts_crlf_multi_document_streams() -> None:
     diagnostics = analyze_text(
-        "---\r\nmetadata:\r\n  title: Example\r\n---\r\nquestion: Hi\r\n",
+        "---\r\nmetadata:\r\n  title: Example\r\n---\r\nid: hi\r\nquestion: Hi\r\n",
         path="sample.yml",
     )
 
@@ -1118,6 +1165,7 @@ def test_ignore_missing_jinja_include_warns_nothing_and_keeps_document(
         "# use jinja\n"
         "---\n"
         '{% include "missing.yml" ignore missing %}\n'
+        "id: hi\n"
         "question: Hi\n"
         "bogus key: value\n"
     )
@@ -1132,7 +1180,7 @@ def test_jinja_include_candidate_list_uses_existing_candidate(
     tmp_path: Path,
 ) -> None:
     included = tmp_path / "present.yml"
-    included.write_text("question: From include\n", encoding="utf-8")
+    included.write_text("id: from_include\nquestion: From include\n", encoding="utf-8")
     source = tmp_path / "interview.yml"
     content = '# use jinja\n{% include ["missing.yml", "present.yml"] %}\n'
 
@@ -1172,7 +1220,7 @@ def test_dynamic_jinja_include_resolved_at_render_time_does_not_warn(
     tmp_path: Path,
 ) -> None:
     included = tmp_path / "present.yml"
-    included.write_text("question: From include\n", encoding="utf-8")
+    included.write_text("id: from_include\nquestion: From include\n", encoding="utf-8")
     source = tmp_path / "interview.yml"
     content = '# use jinja\n{% set chosen = "present.yml" %}{% include chosen %}\n'
 
@@ -1683,7 +1731,7 @@ def test_features_list_reports_shape_error() -> None:
 
 def test_question_string_value_is_valid() -> None:
     diagnostics = analyze_text(
-        "question: Do you agree?\nyesno: user.agrees\n",
+        "id: do_you_agree\nquestion: Do you agree?\nyesno: user.agrees\n",
         path="sample.yml",
     )
     codes = {d.code for d in diagnostics}
@@ -2943,7 +2991,7 @@ def test_attachment_valid_list() -> None:
 
 def test_attachment_valid_with_full_metadata() -> None:
     diagnostics = analyze_text(
-        "question: Here is your document\nattachment:\n  name: Report\n  filename: report\n  metadata:\n    title: Annual Report\n    author:\n      - John\n      - Jane\n    DoubleSpacing: True\n",
+        "id: doc\nquestion: Here is your document\nattachment:\n  name: Report\n  filename: report\n  metadata:\n    title: Annual Report\n    author:\n      - John\n      - Jane\n    DoubleSpacing: True\n",
         path="sample.yml",
     )
     codes = {d.code for d in diagnostics}
@@ -3114,7 +3162,7 @@ def test_attachment_content_file_dict_missing_code_key() -> None:
 
 def test_attachments_list_valid() -> None:
     diagnostics = analyze_text(
-        "question: Here are your documents\nattachments:\n  - name: Doc 1\n    filename: doc1\n  - name: Doc 2\n    filename: doc2\n",
+        "id: docs\nquestion: Here are your documents\nattachments:\n  - name: Doc 1\n    filename: doc1\n  - name: Doc 2\n    filename: doc2\n",
         path="sample.yml",
     )
     codes = {d.code for d in diagnostics}
@@ -3134,7 +3182,7 @@ def test_attachment_metadata_with_bool_entries_is_valid() -> None:
 def test_valid_attachment_snippet_has_no_diagnostics() -> None:
     """Regression: a typical attachment block from upstream examples."""
     diagnostics = analyze_text(
-        "question: Here is your document\nattachment:\n  name: Hello World\n  filename: hello_world\n  content: |\n    Hello, world!\n  valid formats:\n    - pdf\n    - rtf\n",
+        "id: doc\nquestion: Here is your document\nattachment:\n  name: Hello World\n  filename: hello_world\n  content: |\n    Hello, world!\n  valid formats:\n    - pdf\n    - rtf\n",
         path="sample.yml",
     )
     codes = {d.code for d in diagnostics}
@@ -3285,7 +3333,7 @@ def test_table_column_item_non_dict_reports_error() -> None:
 def test_review_valid_with_full_features() -> None:
     """Regression: a review block with label, field, action, and show if."""
     diagnostics = analyze_text(
-        "question: Review your answers\nreview:\n  - label: Name\n    field: user.name\n    show if: user.defined\n  - label: Email\n    fields:\n      - user.email\n      - user.alt_email\n",
+        "id: review\nquestion: Review your answers\nreview:\n  - label: Name\n    field: user.name\n    show if: user.defined\n  - label: Email\n    fields:\n      - user.email\n      - user.alt_email\n",
         path="sample.yml",
     )
     codes = {d.code for d in diagnostics}

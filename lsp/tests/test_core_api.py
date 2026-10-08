@@ -64,7 +64,9 @@ def test_core_does_not_export_internal_helpers(name: str) -> None:
 def test_core_fix_text_expands_all_field_label_shorthands() -> None:
     result = core.fix_text(
         "question: Hi\nfields:\n  - Name: user.name\n  - Age: user.age\n",
-        runtime_options=RuntimeOptions(enabled_conventions=frozenset({"C102"})),
+        runtime_options=RuntimeOptions(
+            enabled_conventions=frozenset({"C102"}), show_warnings=False
+        ),
     )
 
     assert result.changed is True
@@ -76,7 +78,9 @@ def test_core_fix_text_expands_all_field_label_shorthands() -> None:
 def test_core_fix_text_rewrites_radio_datatype_with_choices_to_input_type() -> None:
     result = core.fix_text(
         'question: Hi\nfields:\n  - label: May we text you?\n    field: texting_allowed\n    datatype: radio\n    choices:\n      - "A"\n      - "B"\n',
-        runtime_options=RuntimeOptions(enabled_conventions=frozenset({"C103"})),
+        runtime_options=RuntimeOptions(
+            enabled_conventions=frozenset({"C103"}), show_warnings=False
+        ),
     )
 
     assert result.changed is True
@@ -86,14 +90,95 @@ def test_core_fix_text_rewrites_radio_datatype_with_choices_to_input_type() -> N
 
 
 def test_core_fix_text_skips_conventions_without_opt_in() -> None:
-    result = core.fix_text("question: Hi\nfields:\n  - Name: user.name\n")
+    source = "id: hi\nquestion: Hi\nfields:\n  - Name: user.name\n"
+    result = core.fix_text(source)
 
     assert result.changed is False
-    assert result.text == "question: Hi\nfields:\n  - Name: user.name\n"
+    assert result.text == source
+
+
+_MISSING_ID_SOURCE = (
+    "---\nquestion: What is your name?\n---\nquestion: WHAT is your NAME!?\n"
+)
+
+
+def test_core_fix_text_generates_unique_lowercase_ids() -> None:
+    result = core.fix_text(_MISSING_ID_SOURCE)
+
+    assert result.changed is True
+    assert result.applied_codes == ("W608", "W608")
+    assert 'id: "what is your name"\n' in result.text
+    # The second screen differs only in case and punctuation, so the
+    # uniqueness pass suffixes it instead of reusing the first ID.
+    assert 'id: "what is your name 2"\n' in result.text
+
+
+def test_core_fix_text_normalizes_apostrophes_punctuation_and_accents() -> None:
+    source = (
+        "---\nquestion: We didn\u2019t find Caf\u00e9\n"
+        "---\nquestion: ${city_only_address}\n"
+    )
+    result = core.fix_text(source)
+
+    assert 'id: "we didnt find caf\u00e9"\n' in result.text
+    assert 'id: "city only address"\n' in result.text
+
+
+def test_core_fix_text_keeps_mako_directives_literal_in_generated_id() -> None:
+    source = (
+        "question: |\n"
+        "  % if filled_by_attorney:\n"
+        "  Does ${ users[0] } want to be the guardian?\n"
+        "  % else:\n"
+        "  Do you want to be the guardian?\n"
+        "  % endif\n"
+    )
+    result = core.fix_text(source)
+
+    assert (
+        'id: "if filled by attorney does users 0 want to be the guardian '
+        'else do you want to be the guardian endif"\n'
+    ) in result.text
+    assert "% if filled_by_attorney:" in result.text
+
+
+def test_core_fix_text_avoids_author_written_ids() -> None:
+    source = "---\nid: hello world\nquestion: Other\n---\nquestion: Hello, World!\n"
+    result = core.fix_text(source)
+
+    assert result.text.count("id:") == 2
+    assert 'id: "hello world 2"\n' in result.text
+
+
+def test_core_fix_text_fills_empty_id_in_place() -> None:
+    result = core.fix_text("question: Hello there\nid: # TODO\n")
+
+    assert result.changed is True
+    assert result.text == 'question: Hello there\nid: "hello there" # TODO\n'
+
+
+def test_core_fix_text_missing_id_is_idempotent() -> None:
+    first = core.fix_text(_MISSING_ID_SOURCE)
+    second = core.fix_text(first.text)
+
+    assert second.changed is False
+    assert second.text == first.text
+    assert second.applied_codes == ()
+
+
+def test_core_fix_text_declines_missing_id_in_jinja_template() -> None:
+    source = "# use jinja\nquestion: Hi {{ name }}\n"
+
+    result = core.fix_text(source)
+
+    assert result.changed is False
+    assert result.text == source
 
 
 _C102_SOURCE = "question: Hi\nfields:\n  - Name: user.name\n"
-_C102_OPTIONS = RuntimeOptions(enabled_conventions=frozenset({"C102"}))
+_C102_OPTIONS = RuntimeOptions(
+    enabled_conventions=frozenset({"C102"}), show_warnings=False
+)
 
 
 def _replace_source_fix(
@@ -177,6 +262,7 @@ def test_validate_fix_candidates_honours_ignored_codes() -> None:
     options = RuntimeOptions(
         enabled_conventions=frozenset({"C102"}),
         ignore_codes=frozenset({"E301", "E306"}),
+        show_warnings=False,
     )
     diagnostics = _c102_diagnostics(_C102_SOURCE, options)
     fix = _replace_source_fix(_C102_SOURCE, "---\nfoo: bar\n")
@@ -199,7 +285,9 @@ def test_validate_fix_candidates_honours_enabled_conventions() -> None:
     )
     fix = _replace_source_fix(_C102_SOURCE, radio_source)
 
-    both_enabled = RuntimeOptions(enabled_conventions=frozenset({"C102", "C103"}))
+    both_enabled = RuntimeOptions(
+        enabled_conventions=frozenset({"C102", "C103"}), show_warnings=False
+    )
     diagnostics = _c102_diagnostics(_C102_SOURCE, both_enabled)
     rejected = validate_fix_candidates(
         _C102_SOURCE,
@@ -211,7 +299,9 @@ def test_validate_fix_candidates_honours_enabled_conventions() -> None:
     assert rejected.accepted == ()
     assert "C103" in rejected.rejected[0].reason
 
-    only_c102 = RuntimeOptions(enabled_conventions=frozenset({"C102"}))
+    only_c102 = RuntimeOptions(
+        enabled_conventions=frozenset({"C102"}), show_warnings=False
+    )
     diagnostics = _c102_diagnostics(_C102_SOURCE, only_c102)
     accepted = validate_fix_candidates(
         _C102_SOURCE,
@@ -227,6 +317,7 @@ def test_validate_fix_candidates_rejects_parse_failure_even_when_ignored() -> No
     options = RuntimeOptions(
         enabled_conventions=frozenset({"C102"}),
         ignore_codes=frozenset({"E102"}),
+        show_warnings=False,
     )
     diagnostics = _c102_diagnostics(_C102_SOURCE, options)
     fix = _replace_source_fix(_C102_SOURCE, "fields: [\n")
@@ -246,7 +337,9 @@ def test_validate_fix_candidates_rejects_parse_failure_even_when_ignored() -> No
 
 def test_validate_fix_candidates_rejects_overlapping_accepted_batch() -> None:
     source = "question: Hi\nfields:\n  - Name: user.name\n  - Age: user.age\n"
-    options = RuntimeOptions(enabled_conventions=frozenset({"C102"}))
+    options = RuntimeOptions(
+        enabled_conventions=frozenset({"C102"}), show_warnings=False
+    )
     diagnostics = _c102_diagnostics(source, options)
     name_line = "  - Name: user.name"
     fixes = [

@@ -322,7 +322,7 @@ def test_lsp_process_publishes_and_clears_diagnostics_on_change(tmp_path: Path) 
     valid_source = "---\nquestion: Hello\n"
     source_path.write_text(invalid_source, encoding="utf-8")
 
-    with _LspSession() as session:
+    with _LspSession(["--ignore-codes", "W608"]) as session:
         session.initialize(tmp_path)
         session.notify(
             "textDocument/didOpen", _did_open_params(source_path, invalid_source)
@@ -393,7 +393,7 @@ def test_lsp_process_publishes_field_shorthand_convention_when_enabled(
     source = "question: Hi\nfields:\n  - Name: user.name\n"
     source_path.write_text(source, encoding="utf-8")
 
-    with _LspSession(["--conventions", "C102"]) as session:
+    with _LspSession(["--conventions", "C102", "--ignore-codes", "W608"]) as session:
         session.initialize(tmp_path)
         session.notify("textDocument/didOpen", _did_open_params(source_path, source))
 
@@ -415,7 +415,7 @@ def test_lsp_process_offers_code_action_for_field_shorthand_convention(
     source = "question: Hi\nfields:\n  - Name: user.name\n"
     source_path.write_text(source, encoding="utf-8")
 
-    with _LspSession(["--conventions", "C102"]) as session:
+    with _LspSession(["--conventions", "C102", "--ignore-codes", "W608"]) as session:
         session.initialize(tmp_path)
         session.notify("textDocument/didOpen", _did_open_params(source_path, source))
 
@@ -455,7 +455,7 @@ def test_lsp_process_offers_source_fix_all_for_field_shorthand_conventions(
     source = "question: Hi\nfields:\n  - Name: user.name\n  - Age: user.age\n"
     source_path.write_text(source, encoding="utf-8")
 
-    with _LspSession(["--conventions", "C102"]) as session:
+    with _LspSession(["--conventions", "C102", "--ignore-codes", "W608"]) as session:
         session.initialize(tmp_path)
         session.notify("textDocument/didOpen", _did_open_params(source_path, source))
 
@@ -501,7 +501,7 @@ def test_lsp_process_reads_conventions_from_pyproject(tmp_path: Path) -> None:
     source = "question: Hi\nfields:\n  - Name: user.name\n"
     source_path.write_text(source, encoding="utf-8")
 
-    with _LspSession(cwd=tmp_path) as session:
+    with _LspSession(["--ignore-codes", "W608"], cwd=tmp_path) as session:
         session.initialize(tmp_path)
         session.notify("textDocument/didOpen", _did_open_params(source_path, source))
 
@@ -530,7 +530,7 @@ def test_lsp_process_reads_conventions_from_dedicated_config_files(
     source = "question: Hi\nfields:\n  - Name: user.name\n"
     source_path.write_text(source, encoding="utf-8")
 
-    with _LspSession(cwd=tmp_path) as session:
+    with _LspSession(["--ignore-codes", "W608"], cwd=tmp_path) as session:
         session.initialize(tmp_path)
         session.notify("textDocument/didOpen", _did_open_params(source_path, source))
 

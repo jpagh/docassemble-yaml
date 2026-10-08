@@ -1548,9 +1548,14 @@ def test_build_code_actions_returns_no_quick_fix_without_unknown_key_diagnostic(
     None
 ):
     source = "---\nquestion: Hi\n"
-    diagnostics = build_lsp_diagnostics("file:///sample.yml", source)
+    options = RuntimeOptions(show_warnings=False)
+    diagnostics = build_lsp_diagnostics(
+        "file:///sample.yml", source, runtime_options=options
+    )
 
-    actions = build_code_actions("file:///sample.yml", source, 1, diagnostics)
+    actions = build_code_actions(
+        "file:///sample.yml", source, 1, diagnostics, runtime_options=options
+    )
 
     assert actions == []
 
@@ -1559,9 +1564,14 @@ def test_build_code_actions_adds_missing_field_key_for_e414() -> None:
     source = (
         "question: |\n  How's the weather?\nfields:\n  - label: This is the label\n"
     )
-    diagnostics = build_lsp_diagnostics("file:///sample.yml", source)
+    options = RuntimeOptions(show_warnings=False)
+    diagnostics = build_lsp_diagnostics(
+        "file:///sample.yml", source, runtime_options=options
+    )
 
-    actions = build_code_actions("file:///sample.yml", source, 3, diagnostics)
+    actions = build_code_actions(
+        "file:///sample.yml", source, 3, diagnostics, runtime_options=options
+    )
 
     assert [a.title for a in actions if "Add missing" in a.title] == [
         "Add missing 'field' key"
@@ -1584,9 +1594,14 @@ def test_build_code_actions_adds_missing_field_key_for_e414() -> None:
 
 def test_build_code_actions_adds_missing_label_key_for_e415() -> None:
     source = "question: Hi\nfields:\n  - field: user.name\n"
-    diagnostics = build_lsp_diagnostics("file:///sample.yml", source)
+    options = RuntimeOptions(show_warnings=False)
+    diagnostics = build_lsp_diagnostics(
+        "file:///sample.yml", source, runtime_options=options
+    )
 
-    actions = build_code_actions("file:///sample.yml", source, 2, diagnostics)
+    actions = build_code_actions(
+        "file:///sample.yml", source, 2, diagnostics, runtime_options=options
+    )
 
     assert [a.title for a in actions if "Add missing" in a.title] == [
         "Add missing 'label' key"
@@ -1604,6 +1619,57 @@ def test_build_code_actions_adds_missing_label_key_for_e415() -> None:
     assert last_line == "    label: ", (
         f"Expected label key indented inside the list item, got: {last_line!r}"
     )
+
+
+def test_build_code_actions_adds_missing_question_id() -> None:
+    source = "---\nquestion: What is your name?\n"
+    diagnostics = build_lsp_diagnostics("file:///sample.yml", source)
+
+    actions = build_code_actions("file:///sample.yml", source, 1, diagnostics)
+
+    fixes = [a for a in actions if a.title.startswith("Add missing id")]
+    assert [a.title for a in fixes] == ['Add missing id "what is your name"']
+    fix = fixes[0]
+    assert fix.edit is not None and fix.edit.changes is not None
+    text_edits = fix.edit.changes["file:///sample.yml"]
+    assert len(text_edits) == 1
+    assert text_edits[0].new_text == (
+        'id: "what is your name"\nquestion: What is your name?'
+    )
+    assert text_edits[0].range.start.line == 1
+    assert text_edits[0].range.end.line == 1
+
+
+def test_build_code_actions_offers_no_missing_id_fix_when_id_present() -> None:
+    source = "---\nid: has_id\nquestion: Has id\n"
+    diagnostics = build_lsp_diagnostics("file:///sample.yml", source)
+
+    actions = build_code_actions("file:///sample.yml", source, 2, diagnostics)
+
+    assert actions == []
+
+
+def test_build_code_actions_fix_all_includes_missing_question_id() -> None:
+    source = "---\nquestion: What is your name?\n"
+    diagnostics = build_lsp_diagnostics("file:///sample.yml", source)
+
+    actions = build_code_actions(
+        "file:///sample.yml",
+        source,
+        1,
+        diagnostics,
+        only_kinds=["source.fixAll"],
+    )
+
+    assert [action.title for action in actions] == [
+        "Fix all auto-fixable docassemble-lsp issues"
+    ]
+    fix = actions[0]
+    assert fix.edit is not None and fix.edit.changes is not None
+    text_edits = fix.edit.changes["file:///sample.yml"]
+    assert [text_edit.new_text for text_edit in text_edits] == [
+        'id: "what is your name"\nquestion: What is your name?'
+    ]
 
 
 def test_build_code_actions_adds_missing_table_keys_for_e921() -> None:

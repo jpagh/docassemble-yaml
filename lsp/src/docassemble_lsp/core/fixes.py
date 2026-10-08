@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import logging
 import re
 from collections.abc import Callable, Sequence
@@ -14,6 +15,7 @@ from docassemble_lsp.core.diagnostics import Diagnostic, analyze_text
 from docassemble_lsp.core.field_keys import INPUT_TYPE_DATATYPES
 from docassemble_lsp.core.jinja import has_jinja_header
 from docassemble_lsp.core.messages import MessageCode
+from docassemble_lsp.core.question_ids import plan_missing_question_ids
 from docassemble_lsp.core.schema import load_schema
 from docassemble_lsp.core.validation_config import RuntimeOptions
 from docassemble_lsp.core.workspace import WorkspaceIndex
@@ -305,6 +307,11 @@ def _field_target_without_label_fixes(
 
 _TABLE_REQUIRED_KEYS = frozenset({"table", "rows", "columns"})
 
+_EMPTY_ID_LINE_RE = re.compile(
+    r"""^(\s*)(?:-\s+)?id\s*:\s*(?:(?P<quote>["'])(?P=quote))?\s*(?P<comment>#.*)?$""",
+    re.IGNORECASE,
+)
+
 
 def _table_missing_keys_fixes(
     source: str, diagnostic: Diagnostic, preferred_line: int | None
@@ -353,6 +360,74 @@ def _table_missing_keys_fixes(
             ),
             supports_fix_all=False,
             supports_cli_fix=False,
+        )
+    ]
+
+
+def _missing_question_id_fixes(
+    source: str, diagnostic: Diagnostic, preferred_line: int | None
+) -> list[ResolvedFix]:
+    """W608: insert the planned unique id before the question key."""
+    if diagnostic.code != "W608":
+        return []
+
+    plan = {entry.line: entry for entry in plan_missing_question_ids(source)}
+    target = diagnostic.line
+    if target not in plan and preferred_line is not None:
+        target = preferred_line + 1
+    entry = plan.get(target)
+    if entry is None:
+        return []
+
+    quoted = json.dumps(entry.generated_id, ensure_ascii=False)
+    title = f"Add missing id {quoted}"
+    lines = _document_lines(source)
+
+    if entry.id_line is not None:
+        # The block already has an empty `id:` key: fill it in rather than
+        # inserting a second key, which would be a duplicate YAML key.
+        line_index = entry.id_line - 1
+        if line_index < 0 or line_index >= len(lines):
+            return []
+        text = lines[line_index]
+        match = _EMPTY_ID_LINE_RE.match(text)
+        if match is None:
+            return []
+        indent = match.group(1)
+        comment = match.group("comment")
+        replacement = f"{indent}id: {quoted}"
+        if comment:
+            replacement = f"{replacement} {comment}"
+        return [
+            ResolvedFix(
+                code="W608",
+                title=title,
+                edit=SourceEdit(
+                    start_line=line_index,
+                    start_character=0,
+                    end_line=line_index,
+                    end_character=len(text),
+                    new_text=replacement,
+                ),
+            )
+        ]
+
+    line_index = entry.line - 1
+    if line_index < 0 or line_index >= len(lines):
+        return []
+    text = lines[line_index]
+    indent = text[: len(text) - len(text.lstrip())]
+    return [
+        ResolvedFix(
+            code="W608",
+            title=title,
+            edit=SourceEdit(
+                start_line=line_index,
+                start_character=0,
+                end_line=line_index,
+                end_character=len(text),
+                new_text=f"{indent}id: {quoted}\n{text}",
+            ),
         )
     ]
 
@@ -593,6 +668,7 @@ _FIX_PROVIDERS: dict[str, FixProvider] = {
     "E301": _unknown_key_fixes,
     "E414": _field_label_without_target_fixes,
     "E415": _field_target_without_label_fixes,
+    "W608": _missing_question_id_fixes,
     "E921": _table_missing_keys_fixes,
     "E419": _missing_choices_fixes,
     "E420": _ajax_missing_action_fixes,

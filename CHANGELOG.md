@@ -4,6 +4,7 @@
 
 ### Added
 
+- [LSP] New warning `W608` reports question blocks that have no `id`. `--fix`, the quick fix, and fix-all add a unique ID generated from the question text: letters, digits, and spaces are lowercased, apostrophes are dropped in place, other punctuation separates words, accented letters survive, and Mako text is kept literal. Generated IDs avoid every author-written ID in the file and every earlier generated ID, an existing empty `id:` key is filled in place, and repeated runs make no further change.
 - [LSP] `docassemble-lsp` is published to PyPI; install the language server and CLI with `uv tool install docassemble-lsp` (or `pipx install docassemble-lsp`).
 - [Fresh] The Docassemble pack is now a bundle with a detection plugin: `.yml` files under a package's `data/questions/` directory open as Docassemble (grammar + `docassemble-lsp`) with no configuration, while other YAML files stay YAML. Interviews kept elsewhere still use `languages.docassemble.filenames` in `~/.config/fresh/config.json`.
 
