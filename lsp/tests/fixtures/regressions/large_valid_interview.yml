@@ -66,3 +66,25 @@ fields:
 validation code: |
   if number_apples + number_oranges != 10:
     validation_error("The numbers must add up to 10!")
+
+---
+id: VALID_interview_order_conditional_source
+question: |
+  Conditional field source for the W603 reference regressions below.
+fields:
+  - Has alias?: has_alias
+    datatype: yesnoradio
+  - Alias: alias
+    show if: has_alias
+
+---
+id: VALID_interview_order_reference_in_comment
+mandatory: True
+code: |
+  # alias is only mentioned in this comment
+
+---
+id: VALID_interview_order_reference_in_string
+mandatory: True
+code: |
+  message = "alias"

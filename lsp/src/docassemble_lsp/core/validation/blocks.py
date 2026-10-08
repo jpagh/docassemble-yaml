@@ -35,7 +35,6 @@ from docassemble_lsp.core.validation.fields import (
     _HIDE_STYLE_MODIFIERS,
     _IDENTIFIER_RE,
     _JS_VAL_RE,
-    _SIMPLE_IDENTIFIER_RE,
     DAFields,
     DAPythonVar,
     MakoMarkdownText,
@@ -953,13 +952,34 @@ def _extract_conditional_fields_from_doc(
     return conditional_fields
 
 
-def _find_variable_reference_lines(code: str, variable_expr: str) -> list[int]:
-    lines = code.splitlines()
-    if _SIMPLE_IDENTIFIER_RE.match(variable_expr):
-        pattern = re.compile(rf"\b{re.escape(variable_expr)}\b")
-    else:
-        pattern = re.compile(rf"{re.escape(variable_expr)}(?!\w)")
-    return [i + 1 for i, line in enumerate(lines) if pattern.search(line)]
+def _python_reference_lines(code: str) -> dict[str, list[int]]:
+    """Index real Python variable reads, excluding comments and literal text."""
+    references: dict[str, list[int]] = {}
+    try:
+        tree = _safe_ast_parse(code)
+    except (SyntaxError, ValueError):
+        # Invalid Python is reported separately (E122); do not interpret it.
+        return references
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.Name, ast.Attribute, ast.Subscript)) and isinstance(
+            node.ctx, ast.Load
+        ):
+            references.setdefault(ast.unparse(node), []).append(node.lineno)
+        elif isinstance(node, ast.AugAssign):
+            # Augmented assignment reads its target before writing it, although
+            # Python marks that target with Store context.
+            references.setdefault(ast.unparse(node.target), []).append(
+                node.target.lineno
+            )
+    return {path: sorted(set(lines)) for path, lines in references.items()}
+
+
+def _canonical_python_reference(variable_expr: str) -> str | None:
+    """Return the normalized path for *variable_expr*, or None when invalid."""
+    try:
+        return ast.unparse(_safe_ast_parse(variable_expr, mode="eval").body)
+    except (SyntaxError, ValueError):
+        return None
 
 
 def _statement_span(stmts: list[ast.stmt]) -> tuple[int, int] | None:
@@ -980,7 +1000,7 @@ def _extract_branch_guards_by_line(code: str) -> dict[int, list[str]]:
     guards_by_line: dict[int, list[str]] = {}
     try:
         tree = _safe_ast_parse(code)
-    except SyntaxError:
+    except (SyntaxError, ValueError):
         return guards_by_line
 
     for node in ast.walk(tree):
@@ -1039,6 +1059,7 @@ def _find_unmatched_interview_order_references(
         return []
 
     guards_by_line = _extract_branch_guards_by_line(code)
+    references = _python_reference_lines(code)
     unmatched: list[tuple[str, int]] = []
     guards_by_field_var: dict[str, list[list[str]]] = {}
     for conditional in conditional_fields:
@@ -1046,7 +1067,10 @@ def _find_unmatched_interview_order_references(
         guards_by_field_var.setdefault(field_var, []).append(conditional["guards"])
 
     for field_var, expected_guard_sets in guards_by_field_var.items():
-        for ref_line in _find_variable_reference_lines(code, field_var):
+        reference_key = _canonical_python_reference(field_var)
+        if reference_key is None:
+            continue
+        for ref_line in references.get(reference_key, []):
             active_guards = guards_by_line.get(ref_line, [])
             if _has_showifdef_guard(active_guards, field_var):
                 continue

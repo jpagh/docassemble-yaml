@@ -1116,6 +1116,65 @@ code: |
     assert w603s[0].severity == "warning"
 
 
+def _w603_source(code_body: str, *, field_var: str = "b") -> str:
+    """Build a two-document interview with a conditional field and *code_body*."""
+    code_lines = "\n".join(
+        f"  {line}" if line else "" for line in code_body.splitlines()
+    )
+    return (
+        "---\n"
+        "id: prior_conditional\n"
+        "question: First\n"
+        "fields:\n"
+        "  - A: a\n"
+        f"  - B: {field_var}\n"
+        "    show if: a\n"
+        "---\n"
+        "mandatory: True\n"
+        "code: |\n"
+        f"{code_lines}\n"
+    )
+
+
+def _w603_lines(code_body: str, *, field_var: str = "b") -> list[int]:
+    return [
+        diagnostic.line
+        for diagnostic in analyze_text(
+            _w603_source(code_body, field_var=field_var), path="sample.yml"
+        )
+        if diagnostic.code == "W603"
+    ]
+
+
+def test_interview_order_guard_check_ignores_comments_and_string_literals() -> None:
+    assert _w603_lines('# b is mentioned here but not read\nlabel = "b"') == []
+
+
+def test_interview_order_guard_check_detects_python_reads() -> None:
+    cases = {
+        "bare read": "b",
+        "attribute read": "b.attribute",
+        "subscript read": "b[0]",
+        "augmented assignment": "b += 1",
+    }
+
+    for label, code_body in cases.items():
+        assert _w603_lines(code_body) == [11], label
+
+
+def test_interview_order_guard_check_ignores_plain_writes() -> None:
+    assert _w603_lines("b = 1") == []
+
+
+def test_interview_order_guard_check_matches_dotted_field_reads() -> None:
+    assert _w603_lines("person.name", field_var="person.name") == [11]
+
+
+def test_interview_order_guard_check_respects_matching_guards() -> None:
+    assert _w603_lines("if a:\n    b") == []
+    assert _w603_lines('if showifdef("b"):\n    b') == []
+
+
 def test_large_invalid_fixture_documents_match_expected_codes() -> None:
     aggregate_only_ids = {"WHOLEFILE_W603_interview_order_unmatched_guard"}
     runtime_options = RuntimeOptions(enabled_conventions=frozenset({"C101", "C106"}))
