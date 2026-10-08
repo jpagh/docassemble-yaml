@@ -32,6 +32,12 @@ _JINJA_SYNTAX_RE = re.compile(r"({{.*?}}|{%-?.*?-?%}|{#.*?#})", re.DOTALL)
 #: documents that contain it because the included content is unknown.
 _UNRESOLVED_INCLUDE_SENTINEL = "__docassemble_lsp_unresolved_include__"
 
+#: Rendered in place of a value that only the server supplies (``jinja data``
+#: or docassemble's Jinja context). Each substitution gets its own token, so
+#: two unknown values can never be mistaken for each other or for a value
+#: the author wrote.
+_UNKNOWN_VALUE_PREFIX = "__docassemble_lsp_unknown_"
+
 #: Name of the internal function wrapped around template expressions of
 #: ``{% include %}`` tags so each include site can resolve itself at render
 #: time and report failures against its own line.
@@ -111,6 +117,125 @@ def contains_unresolved_include(content: str) -> bool:
     return _UNRESOLVED_INCLUDE_SENTINEL in content
 
 
+def contains_placeholder(content: object) -> bool:
+    """Return True when rendered ``content`` still contains a server placeholder.
+
+    Workspace-aware checks resolve names against the rest of the interview,
+    so a value that was substituted for an unknown server value must not be
+    resolved as if the author had written it. Non-string values cannot
+    contain a placeholder.
+    """
+    return isinstance(content, str) and _UNKNOWN_VALUE_PREFIX in content
+
+
+@dataclass(frozen=True, slots=True)
+class _UnknownValueSite:
+    """The template site one unknown value was substituted at.
+
+    ``template_name`` is the immediate template (``None`` for the file being
+    rendered), while ``line_number`` is the line reported to the user: the
+    outermost include line or the render root's call site.
+    """
+
+    template_name: str | None
+    line_number: int
+    variable_name: str | None
+
+
+class _UnknownValueTracker:
+    """Placeholders and warnings for one render's unknown values.
+
+    ``placeholder_for`` assigns a fresh token to every substitution, so a
+    site that renders repeatedly (a loop, or a template included twice)
+    still produces distinct values and cannot look like a duplicate block
+    ID. ``warn`` records at most one warning per site, so one source site
+    warns once however often it renders.
+    """
+
+    def __init__(self) -> None:
+        self._count = 0
+        self._warnings: dict[_UnknownValueSite, JinjaIssue] = {}
+
+    def placeholder_for(self, site: _UnknownValueSite) -> str:
+        self.warn(site)
+        self._count += 1
+        return f"{_UNKNOWN_VALUE_PREFIX}{self._count}__"
+
+    def warn(self, site: _UnknownValueSite) -> None:
+        if site in self._warnings:
+            return
+        self._warnings[site] = JinjaIssue(
+            code=MessageCode.JINJA_UNKNOWN_VALUE,
+            message=format_message(
+                MessageCode.JINJA_UNKNOWN_VALUE,
+                name=site.variable_name or "value",
+            ),
+            line_number=site.line_number,
+        )
+
+    def issues(self) -> list[JinjaIssue]:
+        return [
+            self._warnings[site]
+            for site in sorted(
+                self._warnings,
+                key=lambda site: (site.line_number, site.variable_name or ""),
+            )
+        ]
+
+
+def _locate_unknown_value_site(
+    variable_name: str | None,
+) -> tuple[_UnknownValueTracker, _UnknownValueSite] | None:
+    """Find the render frame that substituted an unknown value.
+
+    Jinja's generated template code carries ``__jinja_template__`` in its
+    globals, the same marker ``jinja2.debug`` uses to rewrite tracebacks.
+    Walking to that frame gives the template and generated line, which
+    ``Template.get_corresponding_lineno`` maps to a source line.
+
+    The reported line always belongs to the file being rendered. A use
+    inside an ``{% include %}`` is attributed to the outermost include
+    site, mirroring unresolved includes; a use inside an imported macro or
+    an inherited block is attributed to the call site in the render root.
+    """
+    innermost: tuple[jinja2.Template, int] | None = None
+    root_line_number: int | None = None
+    frame = sys._getframe(2)
+    while frame is not None:
+        template = frame.f_globals.get("__jinja_template__")
+        if template is not None:
+            if innermost is None:
+                innermost = (template, frame.f_lineno)
+            if template.name is None:
+                root_line_number = template.get_corresponding_lineno(frame.f_lineno)
+        frame = frame.f_back
+    if innermost is None:
+        return None
+
+    template, generated_line = innermost
+    environment = template.environment
+    tracker = getattr(environment, "_unknown_values", None)
+    if not isinstance(tracker, _UnknownValueTracker):
+        return None
+
+    line_number = template.get_corresponding_lineno(generated_line)
+    if template.name is not None:
+        include_sites = getattr(environment, "_include_sites", {})
+        outermost_site_by_template = getattr(
+            environment, "_outermost_site_by_template", {}
+        )
+        outermost_site_id = outermost_site_by_template.get(template.name)
+        if outermost_site_id in include_sites:
+            line_number = include_sites[outermost_site_id].line_number
+        elif root_line_number is not None:
+            line_number = root_line_number
+    return tracker, _UnknownValueSite(
+        template_name=template.name,
+        line_number=line_number,
+        variable_name=variable_name,
+    )
+
+
 class _SilentUndefined(jinja2.Undefined):
     def __str__(self) -> str:
         return ""
@@ -140,6 +265,46 @@ class _SandboxViolationUndefined(jinja2.StrictUndefined):
     violation must never render silently: every use of this undefined raises
     the ``SecurityError`` the sandbox attached to it.
     """
+
+
+class _PlaceholderUndefined(_SilentUndefined):
+    """Undefined that renders a distinct placeholder for a server value.
+
+    Every undefined name is assumed to be a value only the server supplies
+    (``jinja data`` or docassemble's Jinja context), so rendering it as empty
+    text both hides real errors and makes unrelated values look equal. A
+    substitution instead renders a unique, parseable placeholder and records
+    one warning per source site. Truth tests, iteration, length, indexing,
+    attribute access, and calls keep their silent behaviour so the rest of
+    the document still renders and validates.
+    """
+
+    def __str__(self) -> str:
+        located = _locate_unknown_value_site(self._undefined_name)
+        if located is None:
+            return ""
+        tracker, site = located
+        return tracker.placeholder_for(site)
+
+    def __getattr__(self, name: str) -> _PlaceholderUndefined:
+        if name.startswith("_"):
+            raise AttributeError(name)
+        return self._derive()
+
+    def __getitem__(self, key: object) -> _PlaceholderUndefined:  # type: ignore[override]
+        return self._derive()
+
+    def __call__(self, *args: object, **kwargs: object) -> _PlaceholderUndefined:
+        return self._derive()
+
+    def _derive(self) -> _PlaceholderUndefined:
+        """Return the undefined this one stands for, keeping its name."""
+        return _PlaceholderUndefined(
+            self._undefined_hint,
+            self._undefined_obj,
+            self._undefined_name,
+            self._undefined_exception,
+        )
 
 
 def _include_candidates(node: jinja2.nodes.Include) -> tuple[str, ...] | None:
@@ -226,6 +391,7 @@ class _IncludeResilientEnvironment(jinja2.sandbox.SandboxedEnvironment):
         self._next_include_site_id = 1
         self._failed_include_sites: set[int] = set()
         self._outermost_site_by_template: dict[str, int] = {}
+        self._unknown_values = _UnknownValueTracker()
         environment_globals: MutableMapping[str, Any] = self.globals
         environment_globals[_INCLUDE_RESOLVER_NAME] = self._resolve_include
 
@@ -282,6 +448,10 @@ class _IncludeResilientEnvironment(jinja2.sandbox.SandboxedEnvironment):
                 )
             )
         return warnings
+
+    def unknown_value_warnings(self) -> list[JinjaIssue]:
+        """Return one warning for every site that substituted an unknown value."""
+        return self._unknown_values.issues()
 
     def _resolve_include(self, value: object, site_id: int) -> jinja2.Template:
         if self.loader is not None:
@@ -391,7 +561,7 @@ def _render_jinja(
 
     environment = _IncludeResilientEnvironment(
         loader=loader,
-        undefined=_SilentUndefined,
+        undefined=_PlaceholderUndefined,
         keep_trailing_newline=True,
     )
 
@@ -443,7 +613,8 @@ def _render_jinja(
 
     return JinjaRenderResult(
         text=rendered,
-        warnings=tuple(environment.failed_include_warnings()),
+        warnings=tuple(environment.failed_include_warnings())
+        + tuple(environment.unknown_value_warnings()),
     )
 
 

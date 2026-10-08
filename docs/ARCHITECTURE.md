@@ -130,7 +130,10 @@ output have size caps, the parent kills a render that outlives the wall
 timeout, and the child sets CPU and address-space rlimits (the
 address-space limit is skipped on macOS, which does not enforce it). A
 sandbox violation or a limit is reported as a diagnostic instead of
-rendering unbounded.
+rendering unbounded. Unknown values are assumed to come from the server:
+each substitution renders a distinct placeholder and reports warning
+`W610` at its template line, so the surrounding YAML still parses and
+workspace-aware checks can skip values that are not really author-written.
 
 Diagnostics and fixes are shared by CLI and LSP. Validation remains a
 relatively large subsystem, but the intended direction is still the

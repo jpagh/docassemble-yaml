@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
+from docassemble_lsp.core.jinja import contains_placeholder
 from docassemble_lsp.core.messages import MessageCode
 from docassemble_lsp.core.validation_config import YAMLError
 
@@ -27,7 +28,11 @@ def validate_data_block(
     if has_data and "variable name" in doc_keys_lower:
         data_key = doc_keys_lower["data"]
         data_value = doc.get(data_key)
-        if data_value is not None and not isinstance(data_value, (Mapping, list)):
+        if (
+            data_value is not None
+            and not isinstance(data_value, (Mapping, list))
+            and not contains_placeholder(data_value)
+        ):
             errors.append(
                 _yaml_error(
                     code=MessageCode.DATA_TYPE,

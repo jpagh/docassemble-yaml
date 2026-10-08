@@ -18,6 +18,7 @@ from ruamel.yaml import YAML
 from ruamel.yaml.comments import CommentedMap, CommentedSeq
 from ruamel.yaml.error import MarkedYAMLError
 
+from docassemble_lsp.core.jinja import contains_placeholder
 from docassemble_lsp.core.line_helpers import (
     _is_internal_metadata_key,
     _lc_key_line,
@@ -1057,6 +1058,10 @@ def _find_unmatched_interview_order_references(
         return []
     if not _is_interview_order_style_block(doc):
         return []
+    if contains_placeholder(code):
+        # The code came from a server-supplied Jinja value, so its guard
+        # structure cannot be compared with the rest of the interview.
+        return []
 
     guards_by_line = _extract_branch_guards_by_line(code)
     references = _python_reference_lines(code)
@@ -1064,6 +1069,10 @@ def _find_unmatched_interview_order_references(
     guards_by_field_var: dict[str, list[list[str]]] = {}
     for conditional in conditional_fields:
         field_var = conditional["field_var"]
+        if contains_placeholder(field_var) or any(
+            contains_placeholder(guard) for guard in conditional["guards"]
+        ):
+            continue
         guards_by_field_var.setdefault(field_var, []).append(conditional["guards"])
 
     for field_var, expected_guard_sets in guards_by_field_var.items():

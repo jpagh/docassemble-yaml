@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import sys
 import time
 from dataclasses import replace
@@ -1164,14 +1165,345 @@ def test_jinja_template_error_anchors_to_template_line() -> None:
     assert e202.line == 4
 
 
-def test_jinja_render_keeps_unknown_values_and_mako_untouched() -> None:
+_PLACEHOLDER_RE = re.compile(r"__docassemble_lsp_unknown_\d+__")
+
+
+def _placeholder_tokens(text: str) -> list[str]:
+    return _PLACEHOLDER_RE.findall(text)
+
+
+def test_jinja_render_replaces_unknown_value_with_placeholder() -> None:
     result = preprocess_jinja(
         "# use jinja\n---\nid: jinja_render\nquestion: Hello {{ unknown }} ${ mako }\n"
     )
 
     assert result.errors == ()
-    assert result.warnings == ()
-    assert result.text.endswith("question: Hello  ${ mako }\n")
+    assert [issue.code for issue in result.warnings] == ["W610"]
+    assert result.warnings[0].line_number == 4
+    assert "unknown" in result.warnings[0].message
+    assert result.text.endswith(
+        "question: Hello __docassemble_lsp_unknown_1__ ${ mako }\n"
+    )
+
+
+def test_jinja_unknown_values_get_distinct_placeholders() -> None:
+    result = preprocess_jinja(
+        "# use jinja\n"
+        "---\n"
+        "id: {{ block_a }}\n"
+        "question: A {{ block_a }}\n"
+        "---\n"
+        "id: {{ block_b }}\n"
+        "question: B\n"
+    )
+
+    placeholders = _placeholder_tokens(result.text)
+    assert len(placeholders) == 3
+    assert len(set(placeholders)) == 3
+
+
+def test_jinja_unknown_value_warns_once_per_source_site() -> None:
+    result = preprocess_jinja(
+        "# use jinja\n"
+        "{% for index in [1, 2] %}\n"
+        "---\n"
+        "id: {{ block }}\n"
+        "question: Q {{ index }}\n"
+        "{% endfor %}\n"
+    )
+
+    assert [(issue.code, issue.line_number) for issue in result.warnings] == [
+        ("W610", 4)
+    ]
+    assert len(set(_placeholder_tokens(result.text))) == 2
+
+
+def test_repeated_jinja_unknown_renders_are_identical() -> None:
+    source = "# use jinja\n---\nid: {{ a }}\nquestion: {{ b }}\n"
+
+    first = preprocess_jinja(source)
+    second = preprocess_jinja(source)
+
+    assert first.text == second.text
+    assert first.warnings == second.warnings
+
+
+def test_jinja_unknown_value_in_id_position_reports_no_id_findings() -> None:
+    diagnostics = analyze_text(
+        "# use jinja\n"
+        "---\n"
+        "id: {{ block_a }}\n"
+        "question: A\n"
+        "---\n"
+        "id: {{ block_b }}\n"
+        "question: B\n",
+        path="sample.yml",
+    )
+
+    assert not [d for d in diagnostics if d.code in {"W608", "W609"}]
+    warnings = [d for d in diagnostics if d.code == "W610"]
+    assert [d.line for d in warnings] == [3, 6]
+    assert "block_a" in warnings[0].message
+    assert "block_b" in warnings[1].message
+
+
+def test_repeated_jinja_unknown_substitution_in_id_is_not_a_duplicate() -> None:
+    diagnostics = analyze_text(
+        "# use jinja\n"
+        "{% for index in [1, 2] %}\n"
+        "---\n"
+        "id: {{ block }}\n"
+        "question: Q {{ index }}\n"
+        "{% endfor %}\n",
+        path="sample.yml",
+    )
+
+    assert [d.code for d in diagnostics] == ["W610"]
+    assert diagnostics[0].line == 4
+
+
+def test_jinja_unknown_value_in_code_block_keeps_surrounding_findings() -> None:
+    diagnostics = analyze_text(
+        "# use jinja\n"
+        "---\n"
+        "id: with_code\n"
+        "question: Hi\n"
+        "code: |\n"
+        "  if {{ gate }}:\n"
+        "    value = 1\n"
+        "---\n"
+        "id: plain\n"
+        "question: There\n"
+        "fields:\n"
+        "  - label: Missing\n",
+        path="sample.yml",
+    )
+
+    codes = [d.code for d in diagnostics]
+    assert "E122" not in codes
+    assert "E414" in codes
+    assert [(d.code, d.line) for d in diagnostics if d.code == "W610"] == [("W610", 6)]
+
+
+def test_jinja_unknown_value_in_boolean_modifier_keeps_surrounding_findings() -> None:
+    diagnostics = analyze_text(
+        "# use jinja\n"
+        "---\n"
+        "id: flag\n"
+        "question: Hi\n"
+        "mandatory: {{ require_ack }}\n"
+        "---\n"
+        "id: next\n"
+        "question: Next\n"
+        "bogus: 1\n",
+        path="sample.yml",
+    )
+
+    assert [(d.code, d.line) for d in diagnostics if d.code == "W610"] == [("W610", 5)]
+    assert "E301" in {d.code for d in diagnostics}
+
+
+def test_jinja_unknown_value_in_data_block_is_not_a_type_error() -> None:
+    diagnostics = analyze_text(
+        "# use jinja\n"
+        "---\n"
+        "id: data_block\n"
+        "data: {{ data_map }}\n"
+        "variable name: {{ data_var }}\n"
+        "---\n"
+        "id: plain\n"
+        "question: Next\n"
+        "bogus: 1\n",
+        path="sample.yml",
+    )
+
+    codes = {d.code for d in diagnostics}
+    assert "E928" not in codes
+    assert "E301" in codes
+    assert [(d.code, d.line) for d in diagnostics if d.code == "W610"] == [
+        ("W610", 4),
+        ("W610", 5),
+    ]
+
+
+def test_jinja_unknown_value_in_table_columns_is_not_a_type_error() -> None:
+    diagnostics = analyze_text(
+        "# use jinja\n"
+        "---\n"
+        "id: table_block\n"
+        "table: {{ table_name }}\n"
+        "rows: {{ table_rows }}\n"
+        "columns: {{ table_columns }}\n"
+        "---\n"
+        "id: plain\n"
+        "question: Next\n"
+        "bogus: 1\n",
+        path="sample.yml",
+    )
+
+    codes = {d.code for d in diagnostics}
+    assert "E924" not in codes
+    assert "E301" in codes
+    assert len([d for d in diagnostics if d.code == "W610"]) == 3
+
+
+def test_jinja_unknown_value_in_nested_include_reports_outer_line(
+    tmp_path: Path,
+) -> None:
+    grandchild = tmp_path / "grandchild.yml"
+    grandchild.write_text(
+        "id: grandchild\nquestion: {{ deep_value }}\n", encoding="utf-8"
+    )
+    child = tmp_path / "child.yml"
+    child.write_text('{% include "grandchild.yml" %}\n', encoding="utf-8")
+    source = tmp_path / "interview.yml"
+
+    diagnostics = analyze_text(
+        '# use jinja\n{% include "child.yml" %}\n', path=str(source)
+    )
+
+    warnings = [d for d in diagnostics if d.code == "W610"]
+    assert len(warnings) == 1
+    assert warnings[0].line == 2
+    assert "deep_value" in warnings[0].message
+
+
+def test_jinja_unknown_value_in_macro_reports_call_site(tmp_path: Path) -> None:
+    macros = tmp_path / "macros.yml"
+    macros.write_text(
+        "{% macro greet() %}{{ macro_unknown }}{% endmacro %}\n", encoding="utf-8"
+    )
+    source = tmp_path / "interview.yml"
+
+    diagnostics = analyze_text(
+        '# use jinja\n{% import "macros.yml" as m %}\n'
+        "---\nid: q\nquestion: {{ m.greet() }}\n",
+        path=str(source),
+    )
+
+    warnings = [d for d in diagnostics if d.code == "W610"]
+    assert len(warnings) == 1
+    assert warnings[0].line == 5
+    assert "macro_unknown" in warnings[0].message
+
+
+def test_jinja_unknown_value_in_interview_order_keeps_guard_check_quiet() -> None:
+    diagnostics = analyze_text(
+        "# use jinja\n"
+        "---\n"
+        "id: prior_conditional\n"
+        "question: First\n"
+        "fields:\n"
+        "  - A: a\n"
+        "  - B: b\n"
+        "    show if: {{ guard_var }}\n"
+        "---\n"
+        "mandatory: True\n"
+        "code: |\n"
+        "  b\n",
+        path="sample.yml",
+    )
+
+    assert [d for d in diagnostics if d.code == "W603"] == []
+    assert [d for d in diagnostics if d.code == "W610"] != []
+
+
+def test_jinja_unknown_value_in_code_keeps_guard_check_quiet() -> None:
+    diagnostics = analyze_text(
+        "# use jinja\n"
+        "---\n"
+        "id: prior_conditional\n"
+        "question: First\n"
+        "fields:\n"
+        "  - A: a\n"
+        "  - B: b\n"
+        "    show if: a\n"
+        "---\n"
+        "mandatory: True\n"
+        "code: |\n"
+        "  {{ server_flag }}\n"
+        "  b\n",
+        path="sample.yml",
+    )
+
+    assert [d for d in diagnostics if d.code == "W603"] == []
+    assert [d for d in diagnostics if d.code == "W610"] != []
+
+
+def test_jinja_unknown_value_in_include_is_not_a_missing_file(
+    tmp_path: Path,
+) -> None:
+    from docassemble_lsp.core.validation import find_errors_from_string
+    from docassemble_lsp.core.workspace import WorkspaceIndex
+
+    errors = find_errors_from_string(
+        "# use jinja\ninclude:\n  - {{ shared_template }}\n",
+        input_file=str(tmp_path / "test.yml"),
+        workspace_index=WorkspaceIndex.empty(),
+    )
+
+    assert [e.code for e in errors if e.code == "W604"] == []
+    assert [e.code for e in errors if e.code == "W610"] == ["W610"]
+
+
+def test_jinja_unknown_value_in_action_is_not_an_undefined_event(
+    tmp_path: Path,
+) -> None:
+    from docassemble_lsp.core.validation import find_errors_from_string
+    from docassemble_lsp.core.workspace import WorkspaceIndex
+
+    errors = find_errors_from_string(
+        "# use jinja\n"
+        "---\n"
+        "id: act\n"
+        "question: Hi\n"
+        "fields:\n"
+        "  - label: x\n"
+        "buttons:\n"
+        "  - action: {{ next_event }}\n",
+        input_file=str(tmp_path / "test.yml"),
+        workspace_index=WorkspaceIndex.empty(),
+    )
+
+    assert [e.code for e in errors if e.code == "W601"] == []
+    assert [e.code for e in errors if e.code == "W610"] == ["W610"]
+
+
+def test_jinja_unknown_value_in_usedefs_is_not_an_undefined_def(
+    tmp_path: Path,
+) -> None:
+    from docassemble_lsp.core.validation import find_errors_from_string
+    from docassemble_lsp.core.workspace import WorkspaceIndex
+
+    errors = find_errors_from_string(
+        "# use jinja\nusedefs: {{ my_def }}\n",
+        input_file=str(tmp_path / "test.yml"),
+        workspace_index=WorkspaceIndex.empty(),
+    )
+
+    assert [e.code for e in errors if e.code == "W602"] == []
+    assert [e.code for e in errors if e.code == "W610"] == ["W610"]
+
+
+def test_jinja_unknown_value_in_attachment_file_is_not_a_missing_template(
+    tmp_path: Path,
+) -> None:
+    from docassemble_lsp.core.validation import find_errors_from_string
+    from docassemble_lsp.core.workspace import WorkspaceIndex
+
+    errors = find_errors_from_string(
+        "# use jinja\n"
+        "---\n"
+        "id: attachment_block\n"
+        "attachment:\n"
+        "  name: A\n"
+        "  content file: {{ template_path }}\n",
+        input_file=str(tmp_path / "test.yml"),
+        workspace_index=WorkspaceIndex.empty(),
+    )
+
+    assert [e.code for e in errors if e.code == "W605"] == []
+    assert [e.code for e in errors if e.code == "W610"] == ["W610"]
 
 
 def test_jinja_sandbox_violation_reports_error() -> None:
@@ -1180,7 +1512,8 @@ def test_jinja_sandbox_violation_reports_error() -> None:
         path="sample.yml",
     )
 
-    e208 = next(diagnostic for diagnostic in diagnostics if diagnostic.code == "E208")
+    assert [diagnostic.code for diagnostic in diagnostics] == ["E208"]
+    e208 = diagnostics[0]
     assert e208.line == 4
     assert e208.severity == "error"
     assert "__class__" in e208.message

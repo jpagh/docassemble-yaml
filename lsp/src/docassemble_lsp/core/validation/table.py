@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 
 from docassemble_lsp.core.field_validators import _validator_error
+from docassemble_lsp.core.jinja import contains_placeholder
 from docassemble_lsp.core.line_helpers import _lc_key_line
 from docassemble_lsp.core.messages import MessageCode
 from docassemble_lsp.core.validation.fields import _seq_item_line
@@ -82,7 +83,11 @@ def validate_table_block_in_doc(
     if has_cols:
         cols_key = doc_keys_lower["columns"]
         cols_value = doc.get(cols_key)
-        if cols_value is not None and not isinstance(cols_value, list):
+        if (
+            cols_value is not None
+            and not isinstance(cols_value, list)
+            and not contains_placeholder(cols_value)
+        ):
             errors.append(
                 _yaml_error(
                     code=MessageCode.TABLE_COLUMNS_TYPE,
@@ -94,7 +99,7 @@ def validate_table_block_in_doc(
             )
         elif isinstance(cols_value, list):
             for idx, col in enumerate(cols_value):
-                if not isinstance(col, Mapping):
+                if not isinstance(col, Mapping) and not contains_placeholder(col):
                     errors.append(
                         _yaml_error(
                             code=MessageCode.TABLE_COLUMN_ITEM_TYPE,

@@ -145,6 +145,26 @@ remaining documents still map back to the original template lines.
 Syntax errors and runtime errors keep their fatal `E201`/`E202`
 behaviour; only unresolved includes become warnings.
 
+### Jinja Server Values
+
+Values that only the server supplies (``jinja data``, docassemble's Jinja
+context, or an imported macro's context) are unknown at validation time.
+Instead of rendering empty text, each substitution renders a distinct
+placeholder (``__docassemble_lsp_unknown_<n>__``, a valid YAML scalar and
+Python identifier) and records warning `W610` once per source site. The
+placeholder is what keeps the surrounding YAML parseable and stops two
+unknown values from looking like duplicates.
+
+`contains_placeholder` in `jinja.py` identifies rendered content that
+came from a server value. Checks that resolve names or value shapes must
+skip such values: they cannot be resolved against the rest of the
+interview, and a placeholder's string type says nothing about the runtime
+type. Cross-document checks skip a value containing a placeholder, the
+`interview order` guard check also skips a placeholder guard or a code
+block that contains one, and the `table`/`data` shape checks skip a
+placeholder where they expect a list or mapping. The `id` checks need no
+special casing because every substitution receives its own placeholder.
+
 ## Code Actions And Fixes
 
 ### Preferred Path

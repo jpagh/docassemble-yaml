@@ -20,6 +20,7 @@ from docassemble_lsp.core.files import templates_dir_for_path
 from docassemble_lsp.core.jinja import (
     JinjaIssue,
     contains_jinja_syntax,
+    contains_placeholder,
     contains_unresolved_include,
     has_jinja_header,
     preprocess_jinja,
@@ -135,6 +136,10 @@ def _validate_cross_document(
             )
             if not value or ":" in value or value in _BLOCK_SCALAR_MARKERS:
                 continue
+            if contains_placeholder(value):
+                # The value came from a server-supplied Jinja variable, so it
+                # cannot be resolved against the rest of the interview.
+                continue
 
             if key_name in _EVENT_REFERENCE_KEYS:
                 if (
@@ -221,6 +226,8 @@ def _validate_cross_document(
                 raw_value, list_match.start(2), list_match.end(2)
             )
             if not value or ":" in value:
+                continue
+            if contains_placeholder(value):
                 continue
             parent = parents[line_index]
 
