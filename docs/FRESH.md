@@ -8,8 +8,8 @@ Deliverable prototype lives in [`fresh/`](../fresh/README.md).
 - Fresh is a good fit for both goals. It highlights with **syntect**
   (TextMate/Sublime grammars) and speaks LSP natively — no editor fork or
   TypeScript plugin is required.
-- An **installable language pack** (`package.json` + one `.sublime-syntax`
-  + `fresh.lsp`) gets Docassemble highlighting and auto-starts
+- An **installable bundle** (manifest + one `.sublime-syntax` + a small
+  detection plugin + LSP wiring) gets Docassemble highlighting and auto-starts
   `docassemble-lsp`, including diagnostics, completion, hover, navigation,
   symbols, code actions, formatting, semantic tokens, inlay hints and
   folding. This is verified end-to-end with the pack in `fresh/`.
@@ -19,11 +19,13 @@ Deliverable prototype lives in [`fresh/`](../fresh/README.md).
   already reproduces the VS Code look for Docassemble keys, Mako `${...}` /
   `<%...%>`, Jinja `{{...}}` / `{%...%}`, and the Python injection for `code:`,
   `if:`, `need:`, `show if:` and `script:`.
-- One product decision is required: Docassemble files are plain `.yml`.
-  The pack deliberately claims **no extension** and detection is configured
-  with path globs (e.g. `**/data/questions/**/*.yml`), so Fresh does not
-  hijack every YAML file. A one-line config can claim `.yml` globally for
-  users who want that.
+- Detection ships in the pack. Docassemble files are plain `.yml`, and a
+  pack manifest cannot claim them without claiming every YAML file (its
+  `extensions` also lose to Fresh's built-in `.yml` mapping). The pack is
+  therefore a **bundle** whose plugin re-classifies
+  `data/questions/**/*.yml` buffers after they open, so Fresh never hijacks
+  other YAML files. Config globs still cover interviews kept elsewhere, and
+  a one-line config can claim `.yml` globally for users who want that.
 - Known gaps: Fresh has no `textDocument/documentLink` support (ctrl-click
   include paths), no `workspace/didChangeWatchedFiles` (external edits to
   `.py`/`.yml` are not re-indexed until a save inside Fresh), and LSP
@@ -31,16 +33,20 @@ Deliverable prototype lives in [`fresh/`](../fresh/README.md).
 
 ## How Fresh supports a new language
 
-Fresh loads language packs from `~/.config/fresh/languages/packages/<name>/`.
-A pack is a `package.json` whose `fresh` block carries up to three things
+Fresh loads language packs from `~/.config/fresh/languages/packages/<name>/`
+and bundles from `~/.config/fresh/bundles/packages/<name>/`. A language pack
+is a `package.json` whose `fresh` block carries up to three things
 (`crates/fresh-editor-core/src/packages.rs`,
-`crates/fresh-editor-core/src/primitives/grammar/loader.rs`):
+`crates/fresh-editor-core/src/primitives/grammar/loader.rs`); a bundle
+carries the same fields per entry under `fresh.languages[]` plus
+`fresh.plugins[]` for TypeScript plugins:
 
 | `fresh` key | Effect |
 |---|---|
 | `grammar` | loads `<file>.sublime-syntax`; maps `extensions` → grammar; optional `shortName` alias. (The `firstLine` field in the schema is not wired up in 0.5.2.) |
 | `language` | comment prefix, tab size, auto-indent, formatter |
 | `lsp` | command, args, auto-start, initialization options — registered under the pack name as the language id |
+| `plugins` | (bundles only) TypeScript plugin entry points loaded on startup |
 
 Pack `lsp`/`language` entries are applied only if the user hasn't defined the
 same language: `config.lsp.entry(lang).or_insert(pack_config)`. Overriding in
@@ -49,8 +55,10 @@ same language: `config.lsp.entry(lang).or_insert(pack_config)`. Overriding in
 Language detection is config-driven (`crates/fresh-editor-core/src/language_detect.rs`):
 exact filename → glob → extension, all from `[languages.<id>]`. Grammar
 resolution then reconciles the config id with a grammar entry by name
-(`detected_language.rs:align_with_config_id`). This is what lets a pack avoid
-claiming `.yml`:
+(`detected_language.rs:align_with_config_id`). A pack manifest can only claim
+extensions (and those lose to built-ins: a `.yml` claim added to the pack
+still opened as YAML in testing), so the pack avoids claiming `.yml` and the
+bundle's plugin re-classifies qualifying buffers instead:
 
 ```json
 { "languages": { "docassemble": {
@@ -84,8 +92,19 @@ plugin can set a per-language root. Semantic tokens are gated behind
 
 `fresh/` contains:
 
-- `package.json` — language pack manifest (`extensions: []`,
-  `shortName: "docassemble"`, LSP command `docassemble-lsp lsp`).
+- `package.json` — bundle manifest: `fresh.languages[0]` carries the grammar
+  (`extensions: ["dyml"]`, matching the syntax's own `file_extensions`),
+  `shortName: "docassemble"`, language settings, and the LSP command
+  `docassemble-lsp lsp`; `fresh.plugins` loads `docassemble.ts`.
+- `docassemble.ts` — detection plugin. On `after_file_open`, `ready`, and
+  `buffer_activated` it re-classifies `.yml` files under `data/questions/`
+  by calling `setBufferLanguage` with a synthetic `.dyml` name (which
+  resolves to the grammar's `docassemble` language id), then sends one
+  `workspace/symbol` request per window to make the LSP start deterministic
+  even in sessions that do not render. It respects user config
+  (`languages.docassemble.filenames` makes Fresh classify the file before the
+  plugin sees it), `lsp_enabled`/`auto_start`, workspace trust, preview
+  buffers, and a hand-picked language.
 - `grammars/Docassemble.sublime-syntax` — generated, committed.
 - `scripts/build_syntax.py` — lowers the VS Code TextMate grammars to the
   syntect subset.
@@ -96,9 +115,10 @@ plugin can set a per-language root. Semantic tokens are gated behind
 Verified in an isolated `HOME` with Fresh 0.5.2 and a copy of
 `lsp/tests/fixtures/demo_package`:
 
-1. `fresh --cmd grammar list` shows `Docassemble` from the pack.
-2. A file matching the glob opens with language **Docassemble** (status bar),
-   not YAML.
+1. `fresh --cmd grammar list` shows `Docassemble` from the bundle.
+2. A file under `data/questions/` opens with language **Docassemble** (status
+   bar), not YAML, and a non-interview `.yml` (a GitHub Actions workflow
+   fixture) stays YAML.
 3. The pack's LSP entry starts automatically: status line reads
    `LSP (docassemble) ready` / `LSP (on)`.
 4. A deliberate `E306` error in a fixture file shows the gutter marker and
@@ -176,36 +196,40 @@ uv run --project lsp python fresh/scripts/build_syntax.py
 | `begin`/`end` lowering fidelity | A scope-parity test compares the generated grammar against the original grammars under vscode-textmate (`mise run //tools/scope-parity:test`): 46 fixture lines, zero undocumented differences. The reference applies three documented engine patches (TextMate `\G`-across-lines, captures in zero-width lookaheads, and the fork's ineffective block-scalar Mako wrapper); see `tools/scope-parity/README.md`. |
 | Capture-nested `patterns` | Dropped (only affects an "invalid indent indicator" scope in the YAML grammar). |
 | Plain scalar scopes | The VS Code grammar names plain scalars `unquoted.plain.*.yaml`, which Fresh themes don't colour (the built-in YAML grammar uses `string.unquoted.*`). This matches VS Code's own behaviour but means plain values look flat in colour schemes that only style `string.*`. |
-| `.yml` detection | Solved with user-config globs; a public pack cannot ship globs, so installation is two steps (install + config block). Claiming `.yml` is a one-line alternative for users who never edit other YAML. |
+| `.yml` detection | Solved in-pack: the bundle's plugin re-classifies `data/questions/**/*.yml`. A manifest cannot ship globs and `extensions` lose to the built-in `.yml` mapping, so the plugin is the only route. Limit: a file opened after the server is already running joins on first interaction (or via the **docassemble: Reattach language server** command), because Fresh only sends `didOpen` for buffers classified before the server started. |
 | Document links | Not available in Fresh (no client support). Includes/assets are still navigable through go-to-definition/references. |
 | Watched files | Fresh does not send `workspace/didChangeWatchedFiles`; the server re-indexes on saves inside Fresh and on `didSave` of `.py`/`.yml`, but external changes need an LSP restart. |
 | Semantic highlighting | Off by default; enable with `editor.enable_semantic_tokens_full`. |
-| Server on PATH | The pack registers `docassemble-lsp lsp`; users with project venvs must override `[lsp.docassemble]` (user config replaces, not merges). Setting `root_markers: ["docassemble", "pyproject.toml", ".git"]` is recommended so the server indexes the package root. |
+| Server on PATH | The pack does not bundle the server: `fresh.languages[].lsp.command` is a plain PATH call (`docassemble-lsp`) resolved through the active authority. It is published to PyPI as `docassemble-lsp` (`uv tool install docassemble-lsp`); the VS Code extension instead vendors it under `vscode/bundled/` (25 MB of source + deps). Users with project venvs must override `[lsp.docassemble]` (user config replaces, not merges). Setting `root_markers: ["docassemble", "pyproject.toml", ".git"]` is recommended so the server indexes the package root. |
 | Distribution | `Package: Install from URL` supports monorepo subpaths (`https://github.com/jpagh/docassemble-yaml#fresh`), and the [fresh-plugins-registry](https://github.com/sinelaw/fresh-plugins-registry) accepts a PR adding a `repository` entry with the same fragment. Both are unverified end-to-end (the install flow itself was read, not run through the UI). |
 | Fresh version drift | Built and tested against 0.5.2; the pack targets the stable pack/LSP surface, which has been stable in the 0.5.x line. |
 
 ## Suggested next steps
 
-1. Decide the detection default (globs vs. global `.yml`) and publish the
-   pack — the prototype is installable as-is.
+1. Upstream the real fix: add `filenames` (globs) to the language-pack
+   manifest, the way user config already has them, so a pack can ship
+   detection declaratively. That removes the plugin's re-classification and
+   its after-start `didOpen` limitation entirely.
 2. Extend the scope-parity fixture as the VS Code grammars gain constructs;
    the harness and reference patches are in `tools/scope-parity/`.
-3. Optionally add a small TypeScript plugin for zero-config detection
-   (`after_file_open` → `setBufferLanguage` when the path contains
-   `/data/questions/`), but only if the config-glob step proves to be a
-   adoption problem.
+3. Publish the bundle (the pack install from a monorepo subpath is
+   documented in `fresh/README.md`).
 
 ## Reproducing the sandbox used for verification
 
 ```bash
 export HOME=/tmp/fresh-home                       # isolate Fresh state
-mkdir -p $HOME/.config/fresh/languages/packages/docassemble
-cp -R fresh/* $HOME/.config/fresh/languages/packages/docassemble/
-cat > $HOME/.config/fresh/config.json <<'JSON'
+mkdir -p $HOME/.config/fresh/bundles/packages/docassemble
+cp -R fresh/* $HOME/.config/fresh/bundles/packages/docassemble/
+cd /path/to/a/docassemble-package
+HOME=$HOME fresh --no-restore docassemble/<pkg>/data/questions/main.yml
+```
+
+The plugin detects the file with no config. To compare against the
+config-glob route (Fresh classifies the file before the plugin acts), add:
+
+```json
 { "languages": { "docassemble": {
     "filenames": ["**/data/questions/**/*.yml"],
     "grammar": "docassemble" } } }
-JSON
-cd /path/to/a/docassemble-package
-HOME=$HOME fresh --no-restore docassemble/<pkg>/data/questions/main.yml
 ```

@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Added
+
+- [Fresh] The Docassemble pack is now a bundle with a detection plugin: `.yml` files under a package's `data/questions/` directory open as Docassemble (grammar + `docassemble-lsp`) with no configuration, while other YAML files stay YAML. Interviews kept elsewhere still use `languages.docassemble.filenames` in `~/.config/fresh/config.json`.
+
 ### Changed
 
 - [CLI] `check` now builds a workspace index once per run and passes it through diagnostics. As a result the CLI also reports the existing cross-document checks (`W601`/`W602`, file references) that previously ran only in the language server.

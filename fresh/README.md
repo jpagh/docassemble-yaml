@@ -1,9 +1,13 @@
 # Docassemble support for Fresh
 
-A [Fresh](https://github.com/sinelaw/fresh) language pack for Docassemble
+A [Fresh](https://github.com/sinelaw/fresh) bundle for Docassemble
 interviews: syntax highlighting that matches the VS Code extension
-(`vscode/syntaxes/*.tmLanguage.json`) plus `docassemble-lsp` wiring.
+(`vscode/syntaxes/*.tmLanguage.json`), zero-config detection of interview
+files, and `docassemble-lsp` wiring.
 
+- `package.json` — bundle manifest (grammar, language settings, LSP, plugin).
+- `docassemble.ts` — detection plugin (see
+  [Detect Docassemble YAML files](#detect-docassemble-yaml-files)).
 - `grammars/Docassemble.sublime-syntax` — generated grammar (committed).
 - `scripts/build_syntax.py` — regenerates it from the VS Code TextMate
   grammars. Run it after editing those:
@@ -11,6 +15,8 @@ interviews: syntax highlighting that matches the VS Code extension
   ```bash
   uv run --project lsp python fresh/scripts/build_syntax.py
   ```
+
+- `validate.sh` — manifest sanity check (`mise run //fresh:check`).
 
 ## Install
 
@@ -35,18 +41,25 @@ fresh --cmd grammar list | grep Docassemble
 
 ## Detect Docassemble YAML files
 
-Docassemble interviews are ordinary `.yml` files, so the pack deliberately
-claims **no** file extension — otherwise every YAML file (GitHub Actions
-workflows included) would open as Docassemble. Point Fresh at the files that
-are Docassemble documents instead, in `~/.config/fresh/config.json`:
+Docassemble interviews are ordinary `.yml` files, so nothing in a language
+pack manifest can claim them without also claiming every other YAML file.
+The pack's plugin instead watches for files under a package's
+`data/questions/` directory (subdirectories included) — where docassemble
+itself looks for interviews — and switches those buffers to the
+`docassemble` language. That is what routes them to the grammar and the
+language server. Every other YAML file (GitHub Actions, Kubernetes, …)
+stays YAML and starts no server.
+
+Interviews kept outside `data/questions/` are still covered by the ordinary
+Fresh config route. Fresh detects these before the file opens, so the plugin
+never has to act:
 
 ```json
 {
   "languages": {
     "docassemble": {
       "filenames": [
-        "**/data/questions/**/*.yml",
-        "**/*.interview.yml"
+        "**/my-interviews/**/*.yml"
       ],
       "grammar": "docassemble"
     }
@@ -69,14 +82,22 @@ and claim the extension globally:
 }
 ```
 
-Files under a matching glob pick up the `docassemble` language id, which is
-what routes them to the language server below.
+### What the plugin does about the language server
+
+Switching the language also points the buffer at `docassemble-lsp`. Fresh's
+normal auto-start brings the server up on the next render, and the plugin
+sends one wake-up request so that also happens in sessions that do not
+render (a daemon with no attached client). A file opened *after* the server
+is already running joins it on first interaction (edit, hover,
+completion); run **docassemble: Reattach language server** from the command
+palette to attach it immediately. Fresh only sends `textDocument/didOpen`
+for buffers it had already classified when the server started.
 
 ## Language server
 
 The pack registers `docassemble-lsp lsp` (stdio) for the `docassemble`
-language, auto-starting it when a Docassemble file opens. Install the server
-so the command is on `PATH`:
+language, auto-starting it when an interview opens. Install the server so
+the command is on `PATH`:
 
 ```bash
 uv tool install docassemble-lsp
@@ -170,6 +191,11 @@ Regenerate the grammar after editing `vscode/syntaxes/*.tmLanguage.json`:
 ```bash
 uv run --project lsp python fresh/scripts/build_syntax.py
 ```
+
+The plugin (`docassemble.ts`) is not compiled or bundled; Fresh transpiles it
+at load time. To type-check it against the editor API, point a `tsconfig.json`
+at Fresh's `types/fresh.d.ts` (written to `~/.config/fresh/types/`) and run
+`npx tsc --noEmit`.
 
 ## Attribution
 

@@ -1,4 +1,4 @@
-"""Validate the committed Fresh language pack.
+"""Validate the committed Fresh bundle.
 
 Checks that ``package.json`` and the grammar agree and that the committed
 grammar is exactly what ``build_syntax.py`` produces (whitespace aside, the
@@ -35,9 +35,13 @@ def fail(message: str) -> None:
 
 def main() -> int:
     manifest = json.loads((PACK / "package.json").read_text())
-    grammar_path = PACK / manifest["fresh"]["grammar"]["file"]
-    if grammar_path != COMMITTED:
-        fail(f"manifest grammar path {grammar_path} is not {COMMITTED}")
+    grammar_files = [
+        PACK / language["grammar"]["file"]
+        for language in manifest["fresh"]["languages"]
+        if language.get("grammar", {}).get("file")
+    ]
+    if grammar_files != [COMMITTED]:
+        fail(f"manifest grammar paths {grammar_files} are not {[COMMITTED]}")
 
     committed = COMMITTED.read_text()
     # The file starts with a comment header before the YAML directive.
@@ -60,7 +64,7 @@ def main() -> int:
             "`uv run --project lsp python fresh/scripts/build_syntax.py`"
         )
 
-    print("fresh pack OK: manifest, grammar YAML, and generator output agree")
+    print("fresh bundle OK: manifest, grammar YAML, and generator output agree")
     return 0
 
 
