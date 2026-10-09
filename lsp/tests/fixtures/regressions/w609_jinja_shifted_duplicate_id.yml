@@ -1,0 +1,9 @@
+# use jinja
+{% for index in [1, 2] %}
+---
+id: shared
+question: Question {{ index }}
+{% endfor %}
+---
+id: shared
+question: Last question

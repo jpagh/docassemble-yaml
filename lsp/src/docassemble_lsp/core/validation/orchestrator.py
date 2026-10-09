@@ -53,6 +53,7 @@ from docassemble_lsp.core.validation.blocks import (
     _relative_top_level_error_line,
     _relative_unknown_key_line,
     _rewrite_yaml_parse_error_lines,
+    _source_line_for,
     _with_line_metadata,
     _yaml_error,
     big_dict,
@@ -389,6 +390,7 @@ def find_errors_from_string(
     runtime_options: RuntimeOptions | None = None,
     _jinja_affected_sections: frozenset[int] | None = None,
     workspace_index: WorkspaceIndex | None = None,
+    _source_line_map: Mapping[int, int] | None = None,
 ) -> list[YAMLError]:
     """Return list of YAMLError found in the given full_content string.
 
@@ -399,6 +401,11 @@ def find_errors_from_string(
             Type validators are skipped for those sections because rendered
             types may not reflect runtime values. Passed through from the
             ``# use jinja`` preprocessing branch.
+        _source_line_map: Internal — rendered-body line to source line map for
+            the ``# use jinja`` preprocessing branch. Findings that quote a
+            second line in their message (for example ``W609`` naming the
+            first use of an id) use it so the message agrees with the mapped
+            diagnostic anchor.
 
     Returns:
         list[YAMLError]: List of YAMLError instances found in the content.
@@ -420,24 +427,25 @@ def find_errors_from_string(
         for idx, section in enumerate(original_sections):
             if contains_jinja_syntax(section):
                 jinja_affected.add(idx + 1)
+        rendered_line_map = _map_rendered_lines_to_source_lines(
+            original_body,
+            rendered_body,
+            source_start_line=2,
+        )
         errors = find_errors_from_string(
             _blank_unresolved_include_documents(rendered_body),
             input_file=input_file,
             runtime_options=runtime_options,
             workspace_index=workspace_index,
             _jinja_affected_sections=frozenset(jinja_affected),
-        )
-        rendered_line_map = _map_rendered_lines_to_source_lines(
-            original_body,
-            rendered_body,
-            source_start_line=2,
+            _source_line_map=rendered_line_map,
         )
         for err in errors:
             if err.code == MessageCode.YAML_PARSE_ERROR:
                 problem_line = _extract_yaml_parse_problem_line(err.err_str)
                 if problem_line is not None:
-                    mapped_problem_line = rendered_line_map.get(
-                        problem_line, problem_line + 1
+                    mapped_problem_line = _source_line_for(
+                        problem_line, rendered_line_map
                     )
                     err.line_number = mapped_problem_line
                     err.err_str = _rewrite_yaml_parse_error_lines(
@@ -446,9 +454,7 @@ def find_errors_from_string(
                         new_line=mapped_problem_line,
                     )
                     continue
-            err.line_number = rendered_line_map.get(
-                err.line_number, err.line_number + 1
-            )
+            err.line_number = _source_line_for(err.line_number, rendered_line_map)
         errors.extend(_jinja_issue_errors(render_result.warnings, input_file))
         return [error for error in errors if runtime_options.allows_code(error.code)]
 
@@ -668,7 +674,7 @@ def find_errors_from_string(
                         line_number=id_line,
                         file_name=input_file,
                         id=id_text,
-                        first_line=first_use,
+                        first_line=_source_line_for(first_use, _source_line_map),
                     )
                 )
         question_key = doc_keys_lower.get("question")

@@ -169,6 +169,21 @@ def _map_rendered_lines_to_source_lines(
     return line_map
 
 
+def _source_line_for(
+    rendered_line: int, rendered_line_map: Mapping[int, int] | None
+) -> int:
+    """Return the source line for a line of a rendered ``# use jinja`` body.
+
+    ``None`` means the text was not Jinja-rendered, so the line already is a
+    source line. For a rendered body the first line follows the ``# use jinja``
+    header, so a line the map does not cover falls back to the next source
+    line, matching the post-hoc remap in ``find_errors_from_string``.
+    """
+    if rendered_line_map is None:
+        return rendered_line
+    return rendered_line_map.get(rendered_line, rendered_line + 1)
+
+
 def _extract_yaml_parse_problem_line(err_str: str) -> int | None:
     match = _YAML_ERROR_LINE_RE.search(err_str)
     if match is None:

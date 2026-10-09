@@ -292,6 +292,41 @@ def test_duplicate_block_id_reports_only_later_blocks() -> None:
     assert findings[1].message == "block id 'shared' is already used on line 2"
 
 
+def test_duplicate_block_id_message_names_first_id_source_line_in_jinja_file() -> None:
+    source = regression_fixture_text("w609_jinja_shifted_duplicate_id.yml")
+    path = "tests/fixtures/regressions/w609_jinja_shifted_duplicate_id.yml"
+    diagnostics = analyze_text(source, path=path)
+
+    findings = [d for d in diagnostics if d.code == "W609"]
+    assert [finding.line for finding in findings] == [4, 8]
+    # The loop renders the first block ahead of the literal document, so its
+    # rendered line (3) is the source separator, not the first id (source 4).
+    assert source.splitlines()[2] == "---"
+    assert source.splitlines()[3] == "id: shared"
+    assert [finding.message for finding in findings] == [
+        "block id 'shared' is already used on line 4",
+        "block id 'shared' is already used on line 4",
+    ]
+    # The literal duplicate is source line 8 but rendered line 12.
+    assert source.splitlines()[7] == "id: shared"
+    assert preprocess_jinja(source).text.splitlines()[11] == "id: shared"
+    assert analyze_text(source, path=path) == diagnostics
+
+
+def test_duplicate_block_id_message_maps_first_id_line_without_shift() -> None:
+    source = (
+        "# use jinja\n---\nid: shared\nquestion: First\n"
+        "---\nid: shared\nquestion: Second\n"
+    )
+    diagnostics = analyze_text(source, path="sample.yml")
+
+    findings = [d for d in diagnostics if d.code == "W609"]
+    # Rendering keeps the line count, but the header still offsets the
+    # rendered body from the source, so the message must name source line 3.
+    assert [finding.line for finding in findings] == [6]
+    assert findings[0].message == "block id 'shared' is already used on line 3"
+
+
 def test_duplicate_block_id_spans_block_types_and_key_case() -> None:
     source = (
         "---\nID: shared\nquestion: First\n"
