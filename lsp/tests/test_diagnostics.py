@@ -4993,6 +4993,42 @@ def test_yesno_shortcut_warns_for_every_shortcut_key() -> None:
     ]
 
 
+def test_yesno_shortcut_warns_for_case_variant_key() -> None:
+    source = (
+        "question: A?\nYesNo: a\n"
+        "---\nquestion: B?\nNOYES: b\n"
+        "---\nquestion: C?\nYesnomaybe: c\n"
+        "---\nquestion: D?\nNoYesMaybe: d\n"
+    )
+
+    findings = _w510(analyze_text(source, path="sample.yml"))
+
+    assert [finding.line for finding in findings] == [2, 5, 8, 11]
+    assert [finding.message for finding in findings] == [
+        "Accessibility: screen uses `YesNo` question shorthand; prefer `fields` with an explicit datatype",
+        "Accessibility: screen uses `NOYES` question shorthand; prefer `fields` with an explicit datatype",
+        "Accessibility: screen uses `Yesnomaybe` question shorthand; prefer `fields` with an explicit datatype",
+        "Accessibility: screen uses `NoYesMaybe` question shorthand; prefer `fields` with an explicit datatype",
+    ]
+
+
+def test_yesno_shortcut_case_variant_and_questionless_fixture() -> None:
+    source = regression_fixture_text("w510_case_variant_and_questionless.yml")
+    path = "tests/fixtures/regressions/w510_case_variant_and_questionless.yml"
+    diagnostics = analyze_text(source, path=path)
+
+    findings = _w510(diagnostics)
+    # Both blocks use a case-variant `YesNo` key; the second has no usable
+    # question text and is still reported, only its fix is declined.
+    assert [finding.line for finding in findings] == [9, 13]
+    assert source.splitlines()[8] == "YesNo: user.agrees"
+    assert source.splitlines()[12] == "YesNo: user.agrees"
+    assert [finding.message for finding in findings] == [
+        "Accessibility: screen uses `YesNo` question shorthand; prefer `fields` with an explicit datatype",
+        "Accessibility: screen uses `YesNo` question shorthand; prefer `fields` with an explicit datatype",
+    ]
+
+
 def test_yesno_shortcut_is_quiet_for_explicit_fields() -> None:
     source = "question: A?\nfields:\n  - no label: a\n    datatype: yesnoradio\n"
 

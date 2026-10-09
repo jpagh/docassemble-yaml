@@ -350,6 +350,67 @@ def test_check_command_fix_expands_yesno_shortcut(tmp_path: Path) -> None:
     assert source.read_text(encoding="utf-8") == fixed
 
 
+def test_check_command_fix_expands_case_variant_yesno_shortcut(tmp_path: Path) -> None:
+    source = tmp_path / "yesno_case.yml"
+    source.write_text(
+        "id: agree\nquestion: Do you agree?\nYesNo: user.agrees\n",
+        encoding="utf-8",
+    )
+    fixed = (
+        "id: agree\n"
+        "question: Do you agree?\n"
+        "fields:\n"
+        "  - no label: user.agrees\n"
+        "    datatype: yesnoradio\n"
+    )
+
+    exit_code = main(["check", "--quiet", "--fix", str(source)])
+
+    assert exit_code == 0
+    assert source.read_text(encoding="utf-8") == fixed
+
+    second_exit = main(["check", "--quiet", "--fix", str(source)])
+
+    assert second_exit == 0
+    assert source.read_text(encoding="utf-8") == fixed
+
+
+def test_check_command_fix_skips_shortcut_without_usable_question_text(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "yesno_no_question.yml"
+    original = "id: broken\nYesNo: user.agrees\n"
+    source.write_text(original, encoding="utf-8")
+
+    exit_code = main(["check", "--quiet", "--fix", str(source)])
+
+    # The warning stays (the fixer declines) and the block has no type
+    # (E306), so fix mode still reports an error.
+    assert exit_code == 1
+    assert source.read_text(encoding="utf-8") == original
+
+
+def test_check_command_fix_regression_fixture_skips_questionless_shortcut(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "w510_case_variant_and_questionless.yml"
+    source.write_text(
+        (FIXTURES_DIR / "w510_case_variant_and_questionless.yml").read_text(
+            encoding="utf-8"
+        ),
+        encoding="utf-8",
+    )
+
+    exit_code = main(["check", "--quiet", "--fix", str(source)])
+
+    # The second block has no type and no fix (E306/W510), so fix mode still
+    # reports an error.
+    assert exit_code == 1
+    fixed = source.read_text(encoding="utf-8")
+    assert "fields:\n  - no label: user.agrees\n    datatype: yesnoradio\n" in fixed
+    assert "---\nid: broken\nYesNo: user.agrees\n" in fixed
+
+
 def test_check_command_fix_reports_rejections_and_leaves_jinja_file_unchanged(
     tmp_path: Path, capsys
 ) -> None:

@@ -97,7 +97,10 @@ def has_usable_question_text(value: object) -> TypeGuard[str]:
     not add a second, unsatisfiable finding for it.
 
     The W608 rule and ``plan_missing_question_ids`` both call this so the
-    reported blocks and the planned fixes cannot drift apart.
+    reported blocks and the planned fixes cannot drift apart. The W510
+    shortcut planner also calls it: expanding a shortcut whose block has
+    no usable question text would leave the field with no accessible
+    label, so it declines.
     """
     return isinstance(value, str) and bool(value.strip())
 

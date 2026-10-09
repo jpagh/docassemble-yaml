@@ -1752,6 +1752,47 @@ def test_build_code_actions_expands_yesno_shortcut() -> None:
     assert text_edits[0].range.end.line == 2
 
 
+def test_build_code_actions_expands_case_variant_yesno_shortcut() -> None:
+    source = "id: agree\nquestion: Do you agree?\nYesNo: user.agrees\n"
+    diagnostics = build_lsp_diagnostics("file:///sample.yml", source)
+
+    actions = build_code_actions("file:///sample.yml", source, 2, diagnostics)
+
+    fixes = [
+        action
+        for action in actions
+        if action.title == "Expand 'yesno' into an explicit field"
+    ]
+    assert len(fixes) == 1
+    fix = fixes[0]
+    assert fix.edit is not None and fix.edit.changes is not None
+    text_edits = fix.edit.changes["file:///sample.yml"]
+    assert [text_edit.new_text for text_edit in text_edits] == [
+        "fields:\n  - no label: user.agrees\n    datatype: yesnoradio"
+    ]
+    assert text_edits[0].range.start.line == 2
+
+
+def test_build_code_actions_offers_no_yesno_fix_without_usable_question_text() -> None:
+    source = "id: agree\nYesNo: user.agrees\n"
+    diagnostics = build_lsp_diagnostics("file:///sample.yml", source)
+
+    codes = [diagnostic.code for diagnostic in diagnostics]
+    assert "W510" in codes
+    actions = build_code_actions("file:///sample.yml", source, 1, diagnostics)
+
+    assert not [action for action in actions if action.title.startswith("Expand '")]
+
+    fix_all = build_code_actions(
+        "file:///sample.yml",
+        source,
+        1,
+        diagnostics,
+        only_kinds=["source.fixAll"],
+    )
+    assert fix_all == []
+
+
 def test_build_code_actions_offers_no_yesno_fix_when_fields_exists() -> None:
     source = (
         "id: agree\nquestion: Do you agree?\n"

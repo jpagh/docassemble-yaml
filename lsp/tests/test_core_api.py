@@ -609,6 +609,47 @@ def test_core_fix_text_uses_matching_datatype_for_shortcut_variants() -> None:
         assert f"    datatype: {datatype}\n" in result.text, shortcut
 
 
+def test_core_fix_text_expands_case_variant_shortcut() -> None:
+    result = core.fix_text("id: agree\nquestion: Do you agree?\nYesNo: user.agrees\n")
+
+    assert result.changed is True
+    assert result.applied_codes == ("W510",)
+    assert result.rejected == ()
+    assert result.text == (
+        "id: agree\n"
+        "question: Do you agree?\n"
+        "fields:\n"
+        "  - no label: user.agrees\n"
+        "    datatype: yesnoradio\n"
+    )
+
+
+def test_core_fix_text_expands_case_variant_three_state_shortcut() -> None:
+    result = core.fix_text(
+        "id: agree\nQuestion: Do you agree?\nNoYesMaybe: user.agrees\n"
+    )
+
+    assert result.changed is True
+    assert result.applied_codes == ("W510",)
+    assert result.text == (
+        "id: agree\n"
+        "Question: Do you agree?\n"
+        "fields:\n"
+        "  - no label: user.agrees\n"
+        "    datatype: noyesmaybe\n"
+    )
+
+
+def test_core_fix_text_case_variant_shortcut_is_idempotent() -> None:
+    source = "id: agree\nquestion: Do you agree?\nYesNo: user.agrees\n"
+    first = core.fix_text(source)
+    second = core.fix_text(first.text)
+
+    assert second.changed is False
+    assert second.text == first.text
+    assert second.applied_codes == ()
+
+
 def test_core_fix_text_preserves_shortcut_inline_comment() -> None:
     result = core.fix_text(
         "id: agree\nquestion: Do you agree?\nyesno: user.agrees  # keep me\n"
@@ -663,6 +704,31 @@ def test_core_fix_text_declines_shortcut_with_non_string_value() -> None:
     assert result.text == source
 
 
+def test_core_fix_text_declines_shortcut_without_usable_question_text() -> None:
+    sources = (
+        "id: agree\nYesNo: user.agrees\n",
+        "id: agree\nquestion:\nYesNo: user.agrees\n",
+        "id: agree\nquestion: '   '\nYesNo: user.agrees\n",
+        "id: agree\nquestion:\n  - Do you agree?\nYesNo: user.agrees\n",
+    )
+
+    for source in sources:
+        shortcut_line = len(source.splitlines())
+        diagnostics = core.analyze_text(source, path="sample.yml")
+        # The rule still reports the shortcut; only the fixer declines, so an
+        # already-broken question-less block stays untouched (W502 parity).
+        assert [
+            diagnostic.line for diagnostic in diagnostics if diagnostic.code == "W510"
+        ] == [shortcut_line], source
+
+        result = core.fix_text(source)
+
+        assert result.changed is False, source
+        assert result.text == source, source
+        assert result.applied_codes == (), source
+        assert result.rejected == (), source
+
+
 def test_core_fix_text_expands_one_shortcut_per_document() -> None:
     source = (
         "---\nid: a\nquestion: A?\nyesno: a\n---\nid: b\nquestion: B?\nyesnomaybe: b\n"
@@ -696,6 +762,26 @@ def test_validate_fix_candidates_accepts_w510_shortcut_candidate() -> None:
 
     validation = validate_fix_candidates(
         _YESNO_SHORTCUT_SOURCE,
+        fixes,
+        diagnostics=diagnostics,
+        path="sample.yml",
+    )
+
+    assert [fix.code for fix in validation.accepted] == ["W510"]
+    assert validation.rejected == ()
+
+
+def test_validate_fix_candidates_accepts_case_variant_w510_candidate() -> None:
+    source = "id: agree\nquestion: Do you agree?\nYesNo: user.agrees\n"
+    diagnostics = core.analyze_text(source, path="sample.yml")
+    fixes = [
+        fix
+        for fix in resolve_diagnostic_fixes(source, diagnostics)
+        if fix.code == "W510"
+    ]
+
+    validation = validate_fix_candidates(
+        source,
         fixes,
         diagnostics=diagnostics,
         path="sample.yml",

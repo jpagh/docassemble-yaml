@@ -198,8 +198,8 @@ only turned into a `SourceEdit` by `fixes.py`. The planner parses the
 source once, returns a frozen plan describing the one safe edit (or
 `None` to decline), and never manipulates line text. That keeps the
 fixer's line surgery mechanical, lets the rule and the fixer share one
-predicate (for example `field_lacks_usable_label`), and gives the
-decline cases a single tested home.
+predicate (for example `field_lacks_usable_label` or `shortcut_keys`),
+and gives the decline cases a single tested home.
 
 ### Main Files
 

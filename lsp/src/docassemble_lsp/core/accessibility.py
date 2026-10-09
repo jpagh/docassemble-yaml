@@ -6,7 +6,7 @@ from typing import Any
 
 from docassemble_lsp.core.line_helpers import _is_internal_metadata_key, _lc_key_line
 from docassemble_lsp.core.messages import MessageCode
-from docassemble_lsp.core.yesno_shortcuts import YESNO_SHORTCUTS
+from docassemble_lsp.core.yesno_shortcuts import shortcut_keys
 
 TEXT_SECTION_KEYS = ("question", "subquestion", "under", "help", "note", "html")
 # Keys that turn a fields-list item into a presentation item rather than an
@@ -251,8 +251,8 @@ def _check_yesno_shortcuts(
     doc: dict[str, Any], document_start_line: int
 ) -> list[AccessibilityFinding]:
     findings: list[AccessibilityFinding] = []
-    for shortcut in YESNO_SHORTCUTS:
-        if doc.get(shortcut) is None:
+    for key in shortcut_keys(doc):
+        if doc.get(key) is None:
             continue
         findings.append(
             AccessibilityFinding(
@@ -260,10 +260,10 @@ def _check_yesno_shortcuts(
                 code=MessageCode.ACCESSIBILITY_YESNO_SHORTCUT,
                 message=(
                     "Accessibility: screen uses "
-                    f"`{shortcut}` question shorthand; prefer `fields` with an "
+                    f"`{key}` question shorthand; prefer `fields` with an "
                     "explicit datatype"
                 ),
-                line_number=(document_start_line + _lc_key_line(doc, shortcut) - 1),
+                line_number=(document_start_line + _lc_key_line(doc, key) - 1),
             )
         )
     return findings

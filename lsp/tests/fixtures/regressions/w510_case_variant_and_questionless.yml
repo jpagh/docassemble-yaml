@@ -1,0 +1,13 @@
+# Regression fixture for W510: docassemble top-level keys are
+# case-insensitive, so `YesNo:` still names the shortcut and must be
+# reported. The second block has no usable question text, so the expanded
+# field would have no accessible label: the warning stays but the fixer
+# declines (the same decline W502 makes), leaving the block untouched.
+---
+id: agrees
+question: Do you agree?
+YesNo: user.agrees
+
+---
+id: broken
+YesNo: user.agrees
