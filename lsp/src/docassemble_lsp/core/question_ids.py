@@ -11,7 +11,8 @@ becomes ``city only address`` instead of an empty or broken ID.
 ``plan_missing_question_ids`` parses a source file once and returns the
 unique ID every question block without one should receive, in document
 order. The validation rule reports those blocks and the fixer inserts
-the planned ID, so both agree on the same deterministic assignment.
+the planned ID, so both agree on the same deterministic assignment, and
+both ask ``has_usable_id`` whether a block already declares an ID.
 
 ``plan_duplicate_question_ids`` covers the other half of uniqueness: it
 keeps the first block that uses an ID and plans the suffix for every
@@ -68,6 +69,23 @@ def unique_question_id(
     return f"{candidate} {number}"
 
 
+def has_usable_id(value: object) -> bool:
+    """Return whether *value* means the block already declares an ID.
+
+    A non-empty string is an ID. A non-string value (for example the
+    numeric ``id: 42``) counts as present because the YAML string type
+    check reports the value itself, so the missing-ID rule must not add a
+    second finding. A missing key, a null value, and an empty or
+    whitespace-only string all mean the block has no ID.
+
+    The W608 rule and ``plan_missing_question_ids`` both call this so the
+    reported blocks and the planned fixes cannot drift apart.
+    """
+    if isinstance(value, str):
+        return bool(value.strip())
+    return value is not None
+
+
 def usable_id(value: object) -> str | None:
     """Return *value* when it is a usable block ID, otherwise ``None``.
 
@@ -75,9 +93,9 @@ def usable_id(value: object) -> str | None:
     reported by the YAML string type check, and empty (or whitespace-only)
     strings count as missing, so neither is a duplicate candidate.
     """
-    if not isinstance(value, str) or not value.strip():
-        return None
-    return value
+    if isinstance(value, str) and has_usable_id(value):
+        return value
+    return None
 
 
 @dataclass(frozen=True, slots=True)
@@ -213,10 +231,7 @@ def plan_missing_question_ids(source: str) -> tuple[MissingQuestionId, ...]:
 
         id_key = _find_key(document, "id")
         id_value = document.get(id_key) if id_key is not None else None
-        has_id = id_value is not None and (
-            not isinstance(id_value, str) or bool(id_value.strip())
-        )
-        if has_id:
+        if has_usable_id(id_value):
             continue
 
         base = normalize_question_id(question) or _DEFAULT_ID_BASE

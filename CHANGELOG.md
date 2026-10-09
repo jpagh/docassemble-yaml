@@ -15,6 +15,7 @@
 
 ### Changed
 
+- [LSP] The missing-ID rule (`W608`) and its fixer now share one predicate, `has_usable_id` in `core/question_ids.py`, for whether a block already declares an ID, so the reported blocks and the planned IDs cannot drift apart. Behaviour is unchanged for non-empty string, non-string, empty, and blank IDs.
 - Relicensed the project from Apache-2.0 to MIT: the repository, the `docassemble-lsp` package, the VS Code extension, and the Fresh pack are now MIT. Releases already published under Apache-2.0 remain Apache-2.0.
 - [CLI/LSP] `--fix` and the fix-all code action now re-check every candidate before writing: a fix is applied only when the result still parses, adds no finding of any code, and removes the finding it was made for. Rejected fixes are reported on stderr (CLI) or the log (LSP) and leave the file unchanged, and Jinja-rendered files are excluded from automatic rewriting.
 - [CLI] `check` now builds a workspace index once per run and passes it through diagnostics. As a result the CLI also reports the existing cross-document checks (`W601`/`W602`, file references) that previously ran only in the language server.

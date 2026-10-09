@@ -10,6 +10,10 @@ from docassemble_lsp.core.fixes import (
     validate_fix_candidates,
 )
 from docassemble_lsp.core.messages import MessageCode, message_severity
+from docassemble_lsp.core.question_ids import (
+    has_usable_id,
+    plan_missing_question_ids,
+)
 from docassemble_lsp.core.validation_config import RuntimeOptions
 
 
@@ -164,6 +168,72 @@ def test_core_fix_text_missing_id_is_idempotent() -> None:
     assert second.changed is False
     assert second.text == first.text
     assert second.applied_codes == ()
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        (None, False),
+        ("", False),
+        ("   ", False),
+        ("\t\n", False),
+        ("hello", True),
+        (" hello ", True),
+        (42, True),
+        (0, True),
+        (False, True),
+        ([], True),
+        ({}, True),
+    ],
+)
+def test_has_usable_id_matches_w608_presence(value: object, expected: bool) -> None:
+    assert has_usable_id(value) == expected
+
+
+@pytest.mark.parametrize(
+    "id_line",
+    [None, "id:\n", 'id: ""\n', 'id: "  "\n', "id: 42\n", "id: hello\n"],
+)
+def test_missing_id_rule_and_plan_agree_on_presence(id_line: str | None) -> None:
+    source = "question: Hello\n" + (id_line or "")
+
+    reported = [
+        diagnostic
+        for diagnostic in core.analyze_text(source, path="sample.yml")
+        if diagnostic.code == "W608"
+    ]
+    planned = plan_missing_question_ids(source)
+
+    assert bool(reported) == bool(planned)
+
+
+@pytest.mark.parametrize(
+    "source", ["question: Hello\nid: 42\n", 'question: Hello\nid: "  "\n']
+)
+def test_core_fix_text_leaves_non_string_and_blank_ids_alone(
+    source: str,
+) -> None:
+    result = core.fix_text(source)
+
+    assert result.changed is False
+    assert result.text == source
+    assert result.applied_codes == ()
+
+
+def test_core_fix_text_missing_id_with_other_id_shapes_is_idempotent() -> None:
+    source = (
+        "---\nid: 42\nquestion: Numeric\n"
+        '---\nid: "  "\nquestion: Blank\n'
+        "---\nquestion: Missing\n"
+    )
+    first = core.fix_text(source)
+    second = core.fix_text(first.text)
+
+    assert first.applied_codes == ("W608",)
+    assert first.text.count("id:") == 3
+    assert 'id: "missing"\n' in first.text
+    assert second.changed is False
+    assert second.text == first.text
 
 
 def test_core_fix_text_declines_missing_id_in_jinja_template() -> None:

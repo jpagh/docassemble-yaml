@@ -223,6 +223,24 @@ def test_missing_question_id_warns_for_empty_id_value() -> None:
     assert findings[0].line == 1
 
 
+@pytest.mark.parametrize("id_value", ["", "   "])
+def test_missing_question_id_warns_for_blank_id_string(id_value: str) -> None:
+    diagnostics = analyze_text(
+        f'question: Hello\nid: "{id_value}"\n', path="sample.yml"
+    )
+
+    findings = [d for d in diagnostics if d.code == "W608"]
+    assert len(findings) == 1
+    assert findings[0].line == 1
+
+
+@pytest.mark.parametrize("id_value", ["42", "true", "[]", "{}"])
+def test_missing_question_id_ignores_non_string_id(id_value: str) -> None:
+    diagnostics = analyze_text(f"question: Hello\nid: {id_value}\n", path="sample.yml")
+
+    assert not [d for d in diagnostics if d.code == "W608"]
+
+
 def test_missing_question_id_ignores_empty_question_text() -> None:
     diagnostics = analyze_text("question:\n", path="sample.yml")
 
