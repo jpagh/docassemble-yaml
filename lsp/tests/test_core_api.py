@@ -1,9 +1,16 @@
 from __future__ import annotations
 
-import pytest
+from collections.abc import Callable
 
+import pytest
+from ruamel.yaml.comments import CommentedMap
+
+import docassemble_lsp.core.field_labels as field_labels_module
 import docassemble_lsp.core.fixes as fixes_module
+import docassemble_lsp.core.question_ids as question_ids_module
+import docassemble_lsp.core.yesno_shortcuts as yesno_shortcuts_module
 from docassemble_lsp import core
+from docassemble_lsp.core.field_labels import plan_multifield_label
 from docassemble_lsp.core.fixes import (
     ResolvedFix,
     SourceEdit,
@@ -18,6 +25,7 @@ from docassemble_lsp.core.question_ids import (
     plan_missing_question_ids,
 )
 from docassemble_lsp.core.validation_config import RuntimeOptions
+from docassemble_lsp.core.yesno_shortcuts import plan_yesno_shortcut
 
 
 def test_core_public_exports_match_supported_surface() -> None:
@@ -418,9 +426,11 @@ def test_fix_text_plans_question_ids_once_per_resolution_pass(
     calls: list[str] = []
     real_plan_question_ids = fixes_module.plan_question_ids
 
-    def counting_plan_question_ids(source: str) -> QuestionIdPlan:
+    def counting_plan_question_ids(
+        source: str, *, documents: tuple[CommentedMap, ...] | None = None
+    ) -> QuestionIdPlan:
         calls.append(source)
-        return real_plan_question_ids(source)
+        return real_plan_question_ids(source, documents=documents)
 
     monkeypatch.setattr(fixes_module, "plan_question_ids", counting_plan_question_ids)
     source = (
@@ -442,6 +452,93 @@ def test_fix_text_plans_question_ids_once_per_resolution_pass(
         for diagnostic in core.analyze_text(result.text, path="sample.yml")
         if diagnostic.code in {"W608", "W609"}
     ]
+
+
+def _count_planner_parses(monkeypatch: pytest.MonkeyPatch) -> list[str]:
+    """Count every parse a planner could reach in a fix pass."""
+    calls: list[str] = []
+    for module in (
+        fixes_module,
+        field_labels_module,
+        question_ids_module,
+        yesno_shortcuts_module,
+    ):
+        real_parse = module._yaml_documents
+
+        def counting_parse(source: str, _real=real_parse) -> tuple[CommentedMap, ...]:
+            calls.append(source)
+            return _real(source)
+
+        monkeypatch.setattr(module, "_yaml_documents", counting_parse)
+    return calls
+
+
+def _many_w502_documents(count: int) -> str:
+    """Return *count* screens with exactly one unlabeled field each."""
+    return "".join(
+        f"---\nid: q{index}\nquestion: Question {index}?\n"
+        f"fields:\n  - field: a{index}\n  - label: B\n    field: b{index}\n"
+        for index in range(count)
+    )
+
+
+def _many_w510_documents(count: int) -> str:
+    """Return *count* screens with a yes/no shortcut each."""
+    return "".join(
+        f"---\nid: q{index}\nquestion: Question {index}?\nyesno: user.answer{index}\n"
+        for index in range(count)
+    )
+
+
+@pytest.mark.parametrize(
+    ("build_source", "code"),
+    [
+        (_many_w502_documents, "W502"),
+        (_many_w510_documents, "W510"),
+    ],
+)
+def test_fix_pass_planner_parse_count_is_constant_in_diagnostics(
+    monkeypatch: pytest.MonkeyPatch, build_source: Callable[[int], str], code: str
+) -> None:
+    calls = _count_planner_parses(monkeypatch)
+
+    small = core.fix_text(build_source(1))
+    small_parses = len(calls)
+
+    calls.clear()
+    large = core.fix_text(build_source(30))
+    large_parses = len(calls)
+
+    # W502 fixes the screen's single unlabeled field; W510 fixes the
+    # single shortcut of every screen.
+    assert small.applied_codes == (code,)
+    assert large.applied_codes == (code,) * 30
+    # 1 and 30 diagnostics yield the same planner parse count.
+    assert small_parses == 1
+    assert large_parses == 1
+
+    second = core.fix_text(large.text)
+
+    assert second.changed is False
+    assert second.text == large.text
+
+
+def test_fix_pass_planner_parse_count_is_constant_across_planner_families(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls = _count_planner_parses(monkeypatch)
+    source = (
+        "question: One?\nyesno: user.one\n"
+        "---\nid: shared\nquestion: Two?\nfields:\n  - field: a\n  - field: b\n"
+        "---\nid: shared\nquestion: Three?\nfields:\n  - field: c\n  - field: d\n"
+    )
+
+    result = core.fix_text(source)
+
+    # W608 (missing id), W510 (shortcut), two W502 (one per screen), and
+    # W609 (duplicate id) share one parse of the source.
+    assert len(calls) == 1
+    assert sorted(result.applied_codes) == ["W502", "W502", "W510", "W608", "W609"]
 
 
 def test_core_fix_text_duplicate_and_missing_ids_stay_unique() -> None:
@@ -864,6 +961,66 @@ def test_validate_fix_candidates_accepts_case_variant_w510_candidate() -> None:
 
     assert [fix.code for fix in validation.accepted] == ["W510"]
     assert validation.rejected == ()
+
+
+_PLANNER_PARITY_SOURCES = (
+    # W502 plans and declines.
+    _W502_SOURCE,
+    (
+        "id: colors\nquestion: What is your favorite color?\n"
+        "fields:\n  - field: favorite_color\n  - field: backup_color\n"
+    ),
+    (
+        "id: colors\nquestion: What is your favorite color?\n"
+        "fields:\n  - label: ''\n    field: favorite_color\n  - field: other\n"
+    ),
+    (
+        "id: colors\nquestion: What is your favorite color?\n"
+        "fields:\n  - no label: favorite_color\n    default: blue\n  - field: other\n"
+    ),
+    "id: colors\nfields:\n  - field: favorite_color\n  - field: other\n",
+    (
+        "id: colors\nquestion: What is your favorite color?\n"
+        "fields:\n  - What is your favorite color?: favorite_color\n  - field: other\n"
+    ),
+    (
+        "id: colors\nquestion: What is your favorite color?\n"
+        "fields:\n  - no label: favorite_color\n    field: favorite_color\n"
+        "  - field: other\n"
+    ),
+    (
+        "id: colors\nquestion:\n  - not a string\n"
+        "fields:\n  - field: favorite_color\n  - field: other\n"
+    ),
+    (
+        "---\nid: one\nquestion: One?\nfields:\n  - field: a\n  - field: b\n"
+        "---\nid: two\nquestion: Two?\nfields:\n  - field: c\n  - field: d\n"
+    ),
+    # W510 plans and declines.
+    _YESNO_SHORTCUT_SOURCE,
+    "id: agree\nquestion: Do you agree?\nYesNo: user.agrees\n",
+    (
+        "id: agree\nquestion: Do you agree?\n"
+        "fields:\n  - no label: other\n    datatype: yesnoradio\nyesno: user.agrees\n"
+    ),
+    "id: agree\nquestion: Agree?\nyesno: a\nnoyes: b\n",
+    "id: agree\nquestion: Do you agree?\nyesno:\n  - bad\n",
+    "id: agree\nYesNo: user.agrees\n",
+    # A source that does not parse at all.
+    "question: [unclosed\n",
+)
+
+
+def test_shared_pass_documents_yield_the_same_plans_as_per_line_planners() -> None:
+    for source in _PLANNER_PARITY_SOURCES:
+        documents = question_ids_module._yaml_documents(source)
+        for line in range(1, len(source.splitlines()) + 1):
+            assert plan_multifield_label(source, line) == plan_multifield_label(
+                source, line, documents=documents
+            ), (source, line)
+            assert plan_yesno_shortcut(source, line) == plan_yesno_shortcut(
+                source, line, documents=documents
+            ), (source, line)
 
 
 def test_resolve_diagnostic_fixes_uses_unknown_key_diagnostic_line() -> None:

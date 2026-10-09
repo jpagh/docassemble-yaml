@@ -392,6 +392,60 @@ def test_check_command_fix_expands_case_variant_yesno_shortcut(tmp_path: Path) -
     assert source.read_text(encoding="utf-8") == fixed
 
 
+def test_check_command_fix_labels_first_offender_on_every_screen(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "multifield_many.yml"
+    source.write_text(
+        "---\nid: one\nquestion: One?\nfields:\n  - field: a\n  - field: b\n"
+        "---\nid: two\nquestion: Two?\nfields:\n  - field: c\n  - field: d\n",
+        encoding="utf-8",
+    )
+    fixed = (
+        "---\nid: one\nquestion: One?\nfields:\n"
+        '  - label: "One?"\n    field: a\n  - field: b\n'
+        "---\nid: two\nquestion: Two?\nfields:\n"
+        '  - label: "Two?"\n    field: c\n  - field: d\n'
+    )
+
+    exit_code = main(["check", "--strict", "--quiet", "--fix", str(source)])
+
+    # The first offender of every screen is labelled; the remaining one
+    # of each screen keeps failing strict.
+    assert exit_code == 1
+    assert source.read_text(encoding="utf-8") == fixed
+
+    second_exit = main(["check", "--strict", "--quiet", "--fix", str(source)])
+
+    assert second_exit == 1
+    assert source.read_text(encoding="utf-8") == fixed
+
+
+def test_check_command_fix_expands_every_yesno_shortcut(tmp_path: Path) -> None:
+    source = tmp_path / "yesno_many.yml"
+    source.write_text(
+        "---\nid: one\nquestion: One?\nyesno: user.one\n"
+        "---\nid: two\nquestion: Two?\nnoyes: user.two\n",
+        encoding="utf-8",
+    )
+    fixed = (
+        "---\nid: one\nquestion: One?\nfields:\n"
+        "  - no label: user.one\n    datatype: yesnoradio\n"
+        "---\nid: two\nquestion: Two?\nfields:\n"
+        "  - no label: user.two\n    datatype: noyesradio\n"
+    )
+
+    exit_code = main(["check", "--quiet", "--fix", str(source)])
+
+    assert exit_code == 0
+    assert source.read_text(encoding="utf-8") == fixed
+
+    second_exit = main(["check", "--quiet", "--fix", str(source)])
+
+    assert second_exit == 0
+    assert source.read_text(encoding="utf-8") == fixed
+
+
 def test_check_command_fix_skips_shortcut_without_usable_question_text(
     tmp_path: Path,
 ) -> None:

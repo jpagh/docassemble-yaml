@@ -1729,6 +1729,33 @@ def test_build_code_actions_fix_all_includes_w502_label() -> None:
     ]
 
 
+def test_build_code_actions_fix_all_expands_shortcut_and_labels_fields() -> None:
+    source = (
+        "---\nid: one\nquestion: One?\nyesno: user.one\n"
+        "---\nid: two\nquestion: Two?\nfields:\n  - field: a\n  - field: b\n"
+    )
+    diagnostics = build_lsp_diagnostics("file:///sample.yml", source)
+
+    actions = build_code_actions(
+        "file:///sample.yml",
+        source,
+        0,
+        diagnostics,
+        only_kinds=["source.fixAll"],
+    )
+
+    assert [action.title for action in actions] == [
+        "Fix all auto-fixable docassemble-lsp issues"
+    ]
+    fix = actions[0]
+    assert fix.edit is not None and fix.edit.changes is not None
+    text_edits = fix.edit.changes["file:///sample.yml"]
+    assert [text_edit.new_text for text_edit in text_edits] == [
+        "fields:\n  - no label: user.one\n    datatype: yesnoradio",
+        '  - label: "Two?"\n    field: a',
+    ]
+
+
 def test_build_code_actions_expands_yesno_shortcut() -> None:
     source = "id: agree\nquestion: Do you agree?\nyesno: user.agrees\n"
     diagnostics = build_lsp_diagnostics("file:///sample.yml", source)

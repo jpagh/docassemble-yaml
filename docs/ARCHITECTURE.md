@@ -152,12 +152,21 @@ code, and must reduce the finding it was written for. Jinja-rendered
 files are excluded from automatic rewriting. Quick fixes requested
 explicitly for one diagnostic stay ungated because the user chose them.
 
-Fix resolution parses each source at most once per resolution pass: the
-shared question-ID plan (`plan_question_ids`) covers every W608/W609
-finding in the run, so the parse count does not grow with the number of
-diagnostics. Per-diagnostic providers keep the plain
-`(source, diagnostic, preferred_line)` signature; providers that need
-shared planning are registered separately and receive the plan.
+Fix resolution parses each source at most once per resolution pass.
+Providers that need the parsed YAML documents — the W502/W510
+accessibility planners and the W608/W609 ID planners — are registered
+separately from the plain `(source, diagnostic, preferred_line)`
+providers and receive a lazily built `_FixPassContext`. The first such
+provider to run parses the source, every later one reuses those
+documents, and the question-ID plan is derived from the same parse, so
+the parse count does not grow with the number of diagnostics or with
+the number of planner families. A per-pass parse cache was chosen over
+per-family plan objects so one parse serves every current and future
+document-backed planner; the providers pass those documents to the
+same per-line planner entry points (`plan_multifield_label`,
+`plan_yesno_shortcut`) the direct path uses, so the shared path cannot
+plan or decline differently. Those entry points still parse on their
+own for direct callers.
 
 Formatting is also shared across entry points. Whole-document
 formatting and on-type formatting are protocol features at the

@@ -199,7 +199,13 @@ source once, returns a frozen plan describing the one safe edit (or
 `None` to decline), and never manipulates line text. That keeps the
 fixer's line surgery mechanical, lets the rule and the fixer share one
 predicate (for example `field_lacks_usable_label` or `shortcut_keys`),
-and gives the decline cases a single tested home.
+and gives the decline cases a single tested home. One fix pass parses
+each source once: `resolve_diagnostic_fixes` builds a `_FixPassContext`
+whose documents are parsed on first use, and every document-backed
+provider plans against those documents through the planner's optional
+`documents` argument. The planner entry points still parse on their own
+for direct callers, so the shared path plans and declines exactly like
+the direct path.
 
 ### Main Files
 

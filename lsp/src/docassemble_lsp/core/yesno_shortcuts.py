@@ -31,7 +31,10 @@ and the planner both use to find those keys, so they cannot drift apart.
 
 The public entry points are ``shortcut_keys`` (the rule reports every key
 it returns) and ``plan_yesno_shortcut`` (the fixer turns the plan into a
-source edit).
+source edit). It accepts the fix pass's already-parsed documents so a
+pass with many W510 diagnostics plans them all from one parse; the plan
+and the declines are the same as when it parses itself, because both
+paths run the same per-line planning function.
 """
 
 from __future__ import annotations
@@ -125,9 +128,22 @@ def _plan_for_document(
     )
 
 
-def plan_yesno_shortcut(source: str, diagnostic_line: int) -> YesNoShortcutPlan | None:
-    """Return the W510 edit for *diagnostic_line*, or ``None`` to decline."""
-    for document in _yaml_documents(source):
+def plan_yesno_shortcut(
+    source: str,
+    diagnostic_line: int,
+    *,
+    documents: tuple[CommentedMap, ...] | None = None,
+) -> YesNoShortcutPlan | None:
+    """Return the W510 edit for *diagnostic_line*, or ``None`` to decline.
+
+    *documents* lets a caller that already parsed *source* (the shared
+    fix-pass context in ``fixes.py``) plan against that parse; when it is
+    ``None`` the source is parsed here. The plan and the declines are the
+    same either way, because both paths run the same per-line planning.
+    """
+    if documents is None:
+        documents = _yaml_documents(source)
+    for document in documents:
         plan = _plan_for_document(document, diagnostic_line)
         if plan is not None:
             return plan

@@ -23,7 +23,10 @@ plan describing the single safe edit, or ``None`` when no safe edit exists.
   target.
 
 ``plan_multifield_label`` is the only public entry point; the fixer turns
-the plan into a source edit.
+the plan into a source edit. It accepts the fix pass's already-parsed
+documents so a pass with many W502 diagnostics plans them all from one
+parse; the plan and the declines are the same as when it parses itself,
+because both paths run the same per-line planning function.
 """
 
 from __future__ import annotations
@@ -154,9 +157,22 @@ def _plan_for_document(
     return _target_plan(offending[0], question_text)
 
 
-def plan_multifield_label(source: str, diagnostic_line: int) -> FieldLabelPlan | None:
-    """Return the W502 edit for *diagnostic_line*, or ``None`` to decline."""
-    for document in _yaml_documents(source):
+def plan_multifield_label(
+    source: str,
+    diagnostic_line: int,
+    *,
+    documents: tuple[CommentedMap, ...] | None = None,
+) -> FieldLabelPlan | None:
+    """Return the W502 edit for *diagnostic_line*, or ``None`` to decline.
+
+    *documents* lets a caller that already parsed *source* (the shared
+    fix-pass context in ``fixes.py``) plan against that parse; when it is
+    ``None`` the source is parsed here. The plan and the declines are the
+    same either way, because both paths run the same per-line planning.
+    """
+    if documents is None:
+        documents = _yaml_documents(source)
+    for document in documents:
         plan = _plan_for_document(document, diagnostic_line)
         if plan is not None:
             return plan

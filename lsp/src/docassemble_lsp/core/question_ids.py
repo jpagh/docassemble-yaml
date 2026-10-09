@@ -19,7 +19,9 @@ document order, and the replacement for every later block that repeats
 an earlier ID. ``plan_missing_question_ids`` and
 ``plan_duplicate_question_ids`` expose the two halves; fix resolution
 uses ``plan_question_ids`` directly so one resolution pass parses the
-source once no matter how many W608/W609 diagnostics it covers.
+source once no matter how many W608/W609 diagnostics it covers. The
+planners also accept the pass's already-parsed documents, so the same
+parse serves every planner in the pass.
 
 The validation rule reports the missing and duplicate blocks and the
 fixer inserts or renames to the planned IDs, so both agree on the same
@@ -228,15 +230,22 @@ def _yaml_documents(source: str) -> tuple[CommentedMap, ...]:
     return tuple(document for document in loaded if isinstance(document, CommentedMap))
 
 
-def plan_question_ids(source: str) -> QuestionIdPlan:
+def plan_question_ids(
+    source: str, *, documents: tuple[CommentedMap, ...] | None = None
+) -> QuestionIdPlan:
     """Plan both ID fixes from a single parse of *source*.
 
     Returns an empty plan when the source does not parse (for example a
     ``# use jinja`` template), so no automatic rewrite is offered there.
     The fixers call this once per resolution pass, so a file with many
     W608/W609 diagnostics is parsed once instead of once per diagnostic.
+
+    *documents* lets a caller that already parsed *source* (the shared
+    fix-pass context in ``fixes.py``) reuse that parse; when it is
+    ``None`` the source is parsed here. Either way the plan is the same.
     """
-    documents = _yaml_documents(source)
+    if documents is None:
+        documents = _yaml_documents(source)
     if not documents:
         return QuestionIdPlan()
     duplicates = _plan_duplicate_ids(documents)

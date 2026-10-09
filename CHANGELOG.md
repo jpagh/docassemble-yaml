@@ -15,6 +15,7 @@
 
 ### Changed
 
+- [CLI/LSP] Fix resolution now parses each source once per pass for the accessibility planners too: the `W502` and `W510` planners share the pass's parsed YAML documents (and the `W608`/`W609` question-ID plan) through one lazily built per-pass context, so a file with many of those findings is parsed once instead of once per diagnostic. The plans, accepted edits, decline cases, and idempotence are unchanged.
 - [CLI/LSP] Fix resolution now parses each source once per pass: the missing-ID and duplicate-ID plans are derived by a shared `plan_question_ids(source)`, so a file with many `W608`/`W609` diagnostics is parsed once instead of once per diagnostic. The plans and the accepted edits are unchanged.
 - [LSP] Author-written block IDs are compared and reserved with surrounding whitespace stripped, matching docassemble's own parsing (`self.id = str(data['id']).strip()`): `id: " x "` and `id: x` now name the same block for duplicate detection (`W609`), for the message the finding quotes, and for the IDs a `W608` fix reserves.
 - [LSP] `# use jinja` rendering no longer falls back to an unbounded in-process render when the isolated render process cannot be created. The file reports error `E213` instead, so no render ever runs without the wall-clock and rlimit bounds.

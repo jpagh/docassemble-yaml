@@ -9,6 +9,8 @@ from difflib import get_close_matches
 from itertools import pairwise
 from pathlib import Path
 
+from ruamel.yaml.comments import CommentedMap
+
 from docassemble_lsp.core.completion_registry import format_property_insert_text
 from docassemble_lsp.core.completion_rules import get_property_rule
 from docassemble_lsp.core.diagnostics import Diagnostic, analyze_text
@@ -18,6 +20,7 @@ from docassemble_lsp.core.jinja import has_jinja_header
 from docassemble_lsp.core.messages import MessageCode
 from docassemble_lsp.core.question_ids import (
     QuestionIdPlan,
+    _yaml_documents,
     plan_question_ids,
 )
 from docassemble_lsp.core.schema import load_schema
@@ -78,8 +81,41 @@ class FixResult:
 
 
 FixProvider = Callable[[str, Diagnostic, int | None], list[ResolvedFix]]
-QuestionIdFixProvider = Callable[
-    [str, Diagnostic, int | None, QuestionIdPlan], list[ResolvedFix]
+
+
+class _FixPassContext:
+    """The parsed views of one source, shared by every planner in a pass.
+
+    ``resolve_diagnostic_fixes`` creates one per resolution pass and hands
+    it to the providers registered in ``_SHARED_FIX_PROVIDERS``. The YAML
+    documents are parsed on first use and reused by every planner, and the
+    question-ID plan is derived from that same parse, so the pass parses
+    the source once no matter how many diagnostics it covers or how many
+    planner families are involved.
+    """
+
+    def __init__(self, source: str) -> None:
+        self.source = source
+        self._documents: tuple[CommentedMap, ...] | None = None
+        self._question_ids: QuestionIdPlan | None = None
+
+    def documents(self) -> tuple[CommentedMap, ...]:
+        """Return the parsed documents, parsing ``source`` on first use."""
+        if self._documents is None:
+            self._documents = _yaml_documents(self.source)
+        return self._documents
+
+    def question_ids(self) -> QuestionIdPlan:
+        """Return the shared ID plan, derived from the shared parse."""
+        if self._question_ids is None:
+            self._question_ids = plan_question_ids(
+                self.source, documents=self.documents()
+            )
+        return self._question_ids
+
+
+SharedFixProvider = Callable[
+    [_FixPassContext, Diagnostic, int | None], list[ResolvedFix]
 ]
 
 
@@ -398,16 +434,15 @@ def _table_missing_keys_fixes(
 
 
 def _missing_question_id_fixes(
-    source: str,
+    context: _FixPassContext,
     diagnostic: Diagnostic,
     preferred_line: int | None,
-    question_ids: QuestionIdPlan,
 ) -> list[ResolvedFix]:
     """W608: insert the planned unique id before the question key."""
     if diagnostic.code != "W608":
         return []
 
-    plan = {entry.line: entry for entry in question_ids.missing}
+    plan = {entry.line: entry for entry in context.question_ids().missing}
     target = diagnostic.line
     if target not in plan and preferred_line is not None:
         target = preferred_line + 1
@@ -417,7 +452,7 @@ def _missing_question_id_fixes(
 
     quoted = json.dumps(entry.generated_id, ensure_ascii=False)
     title = f"Add missing id {quoted}"
-    lines = _document_lines(source)
+    lines = _document_lines(context.source)
 
     if entry.id_line is not None:
         # The block already has an empty `id:` key: fill it in rather than
@@ -469,16 +504,15 @@ def _missing_question_id_fixes(
 
 
 def _duplicate_block_id_fixes(
-    source: str,
+    context: _FixPassContext,
     diagnostic: Diagnostic,
     preferred_line: int | None,
-    question_ids: QuestionIdPlan,
 ) -> list[ResolvedFix]:
     """W609: rename a later duplicate id to its planned unique replacement."""
     if diagnostic.code != "W609":
         return []
 
-    plan = {entry.line: entry for entry in question_ids.duplicates}
+    plan = {entry.line: entry for entry in context.question_ids().duplicates}
     target = diagnostic.line
     if target not in plan and preferred_line is not None:
         target = preferred_line + 1
@@ -486,7 +520,7 @@ def _duplicate_block_id_fixes(
     if entry is None:
         return []
 
-    lines = _document_lines(source)
+    lines = _document_lines(context.source)
     line_index = entry.line - 1
     if line_index < 0 or line_index >= len(lines):
         return []
@@ -900,18 +934,22 @@ def _convert_no_label_fix(
 
 
 def _multifield_label_fixes(
-    source: str, diagnostic: Diagnostic, preferred_line: int | None
+    context: _FixPassContext,
+    diagnostic: Diagnostic,
+    preferred_line: int | None,
 ) -> list[ResolvedFix]:
     """W502: promote the screen's question text to the first unlabeled field."""
     del preferred_line
     if diagnostic.code != "W502":
         return []
 
-    plan = plan_multifield_label(source, diagnostic.line)
+    plan = plan_multifield_label(
+        context.source, diagnostic.line, documents=context.documents()
+    )
     if plan is None:
         return []
 
-    lines = _document_lines(source)
+    lines = _document_lines(context.source)
     line_index = plan.key_line - 1
     if line_index < 0 or line_index >= len(lines):
         return []
@@ -927,18 +965,22 @@ def _multifield_label_fixes(
 
 
 def _yesno_shortcut_fixes(
-    source: str, diagnostic: Diagnostic, preferred_line: int | None
+    context: _FixPassContext,
+    diagnostic: Diagnostic,
+    preferred_line: int | None,
 ) -> list[ResolvedFix]:
     """W510: expand a yes/no shortcut into an explicit single-field screen."""
     del preferred_line
     if diagnostic.code != "W510":
         return []
 
-    plan = plan_yesno_shortcut(source, diagnostic.line)
+    plan = plan_yesno_shortcut(
+        context.source, diagnostic.line, documents=context.documents()
+    )
     if plan is None:
         return []
 
-    lines = _document_lines(source)
+    lines = _document_lines(context.source)
     line_index = plan.key_line - 1
     if line_index < 0 or line_index >= len(lines):
         return []
@@ -982,8 +1024,6 @@ _FIX_PROVIDERS: dict[str, FixProvider] = {
     "E301": _unknown_key_fixes,
     "E414": _field_label_without_target_fixes,
     "E415": _field_target_without_label_fixes,
-    "W502": _multifield_label_fixes,
-    "W510": _yesno_shortcut_fixes,
     "E921": _table_missing_keys_fixes,
     "E419": _missing_choices_fixes,
     "E420": _ajax_missing_action_fixes,
@@ -994,10 +1034,15 @@ _FIX_PROVIDERS: dict[str, FixProvider] = {
     # which a single-file fixer cannot reliably infer.
 }
 
-#: ID providers read the run's shared question-ID plan. ``resolve_diagnostic_fixes``
-#: plans it once per resolution pass and passes it in, so a file with many
-#: W608/W609 diagnostics is parsed once instead of once per diagnostic.
-_QUESTION_ID_FIX_PROVIDERS: dict[str, QuestionIdFixProvider] = {
+#: Providers that read the pass's shared parse of the source. They are
+#: registered separately from the plain ``(source, diagnostic,
+#: preferred_line)`` providers because they receive a ``_FixPassContext``
+#: instead. ``resolve_diagnostic_fixes`` builds the context lazily, so the
+#: source is parsed once per resolution pass no matter how many W502,
+#: W510, W608, or W609 diagnostics the run covers.
+_SHARED_FIX_PROVIDERS: dict[str, SharedFixProvider] = {
+    "W502": _multifield_label_fixes,
+    "W510": _yesno_shortcut_fixes,
     "W608": _missing_question_id_fixes,
     "W609": _duplicate_block_id_fixes,
 }
@@ -1010,7 +1055,7 @@ def resolve_diagnostic_fixes(
     preferred_line: int | None = None,
 ) -> list[ResolvedFix]:
     resolved: list[ResolvedFix] = []
-    question_ids: QuestionIdPlan | None = None
+    context: _FixPassContext | None = None
     for diagnostic in diagnostics:
         if diagnostic.code is None:
             continue
@@ -1018,14 +1063,12 @@ def resolve_diagnostic_fixes(
         if provider is not None:
             resolved.extend(provider(source, diagnostic, preferred_line))
             continue
-        question_id_provider = _QUESTION_ID_FIX_PROVIDERS.get(diagnostic.code)
-        if question_id_provider is None:
+        shared_provider = _SHARED_FIX_PROVIDERS.get(diagnostic.code)
+        if shared_provider is None:
             continue
-        if question_ids is None:
-            question_ids = plan_question_ids(source)
-        resolved.extend(
-            question_id_provider(source, diagnostic, preferred_line, question_ids)
-        )
+        if context is None:
+            context = _FixPassContext(source)
+        resolved.extend(shared_provider(context, diagnostic, preferred_line))
 
     deduped: list[ResolvedFix] = []
     seen: set[tuple[object, ...]] = set()
