@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pytest
 
+import docassemble_lsp.core.fixes as fixes_module
 from docassemble_lsp import core
 from docassemble_lsp.core.fixes import (
     ResolvedFix,
@@ -11,6 +12,7 @@ from docassemble_lsp.core.fixes import (
 )
 from docassemble_lsp.core.messages import MessageCode, message_severity
 from docassemble_lsp.core.question_ids import (
+    QuestionIdPlan,
     has_usable_id,
     has_usable_question_text,
     plan_missing_question_ids,
@@ -367,6 +369,79 @@ def test_core_fix_text_duplicate_id_fix_is_idempotent() -> None:
     assert second.changed is False
     assert second.text == first.text
     assert second.applied_codes == ()
+
+
+def test_core_fix_text_reserves_whitespace_padded_author_ids() -> None:
+    source = '---\nid: " x "\nquestion: First\n---\nquestion: X\n'
+
+    result = core.fix_text(source)
+
+    assert result.applied_codes == ("W608",)
+    assert 'id: "x 2"\n' in result.text
+
+
+def test_core_fix_text_renames_whitespace_padded_duplicate_ids() -> None:
+    source = '---\nid: " x "\nquestion: First\n---\nid: x\nquestion: Second\n'
+
+    first = core.fix_text(source)
+
+    assert first.applied_codes == ("W609",)
+    assert first.text == (
+        '---\nid: " x "\nquestion: First\n---\nid: "x 2"\nquestion: Second\n'
+    )
+    second = core.fix_text(first.text)
+    assert second.changed is False
+    assert second.text == first.text
+
+
+def test_core_fix_text_padded_duplicate_and_missing_ids_stay_unique() -> None:
+    source = (
+        '---\nid: " x "\nquestion: First\n'
+        "---\nid: x\nquestion: Second\n"
+        "---\nquestion: X\n"
+    )
+
+    result = core.fix_text(source)
+
+    assert 'id: "x 2"\n' in result.text
+    assert 'id: "x 3"\n' in result.text
+    assert not [
+        diagnostic
+        for diagnostic in core.analyze_text(result.text, path="sample.yml")
+        if diagnostic.code in {"W608", "W609"}
+    ]
+
+
+def test_fix_text_plans_question_ids_once_per_resolution_pass(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[str] = []
+    real_plan_question_ids = fixes_module.plan_question_ids
+
+    def counting_plan_question_ids(source: str) -> QuestionIdPlan:
+        calls.append(source)
+        return real_plan_question_ids(source)
+
+    monkeypatch.setattr(fixes_module, "plan_question_ids", counting_plan_question_ids)
+    source = (
+        "---\nid: shared\nquestion: One\n"
+        "---\nid: shared\nquestion: Two\n"
+        "---\nquestion: Three\n"
+        "---\nid: shared\nquestion: Four\n"
+        "---\nquestion: Five\n"
+    )
+
+    result = core.fix_text(source)
+
+    # Four diagnostics (two W609, two W608) share one plan, so the parse
+    # count does not grow with the number of diagnostics.
+    assert len(calls) == 1
+    assert sorted(result.applied_codes) == ["W608", "W608", "W609", "W609"]
+    assert not [
+        diagnostic
+        for diagnostic in core.analyze_text(result.text, path="sample.yml")
+        if diagnostic.code in {"W608", "W609"}
+    ]
 
 
 def test_core_fix_text_duplicate_and_missing_ids_stay_unique() -> None:

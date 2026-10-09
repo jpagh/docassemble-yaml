@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import multiprocessing
 import re
 import sys
 import time
@@ -354,6 +355,26 @@ def test_duplicate_block_id_is_case_sensitive() -> None:
     diagnostics = analyze_text(source, path="sample.yml")
 
     assert not [d for d in diagnostics if d.code == "W609"]
+
+
+@pytest.mark.parametrize(
+    ("first_id", "second_id"),
+    [('" x "', "x"), ("x", '" x "'), ('"x "', '" x"')],
+)
+def test_duplicate_block_id_normalizes_surrounding_whitespace(
+    first_id: str, second_id: str
+) -> None:
+    # Docassemble strips an id when it reads it, so padded spellings name
+    # the same block and the finding quotes the normalized id.
+    source = (
+        f"---\nid: {first_id}\nquestion: First\n"
+        f"---\nid: {second_id}\nquestion: Second\n"
+    )
+
+    findings = [d for d in analyze_text(source, path="sample.yml") if d.code == "W609"]
+
+    assert [finding.line for finding in findings] == [5]
+    assert findings[0].message == "block id 'x' is already used on line 2"
 
 
 def test_duplicate_block_id_hidden_without_warnings() -> None:
@@ -1717,6 +1738,65 @@ def test_oversized_jinja_output_is_rejected_without_rendering(
 
     assert [diagnostic.code for diagnostic in diagnostics] == ["E212"]
     assert "10-character" in diagnostics[0].message
+
+
+class _FailingRenderProcess:
+    """A render process whose ``start`` fails like a restricted parent's."""
+
+    exitcode = None
+
+    def start(self) -> None:
+        raise RuntimeError("process creation is unavailable")
+
+    def kill(self) -> None:  # pragma: no cover - the failure happens first
+        pass
+
+    def join(self, timeout: float | None = None) -> None:  # pragma: no cover
+        pass
+
+    def is_alive(self) -> bool:  # pragma: no cover
+        return False
+
+
+class _UnavailableProcessContext:
+    """A multiprocessing context that cannot start the bounded renderer."""
+
+    def Pipe(self, duplex: bool = False):
+        return multiprocessing.Pipe(duplex=duplex)
+
+    def Process(self, target: object, args: tuple[object, ...], daemon: bool):
+        return _FailingRenderProcess()
+
+
+def test_unavailable_render_process_reports_e213_without_in_process_render(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fail_in_process_render(*args: object, **kwargs: object) -> None:
+        raise AssertionError("Jinja must not render in the parent process")
+
+    monkeypatch.setattr(jinja_module, "_render_jinja", fail_in_process_render)
+    monkeypatch.setattr(jinja_module, "_process_context", _UnavailableProcessContext)
+
+    diagnostics = analyze_text(
+        "# use jinja\n---\nid: bounded\nquestion: Hello {{ name }}\n",
+        path="sample.yml",
+    )
+
+    assert [diagnostic.code for diagnostic in diagnostics] == ["E213"]
+    assert diagnostics[0].severity == "error"
+    assert diagnostics[0].line == 4
+
+
+def test_unavailable_render_process_leaves_source_unrendered(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(jinja_module, "_process_context", _UnavailableProcessContext)
+    source = "# use jinja\n---\nid: bounded\nquestion: Hello {{ name }}\n"
+
+    result = preprocess_jinja(source)
+
+    assert [issue.code for issue in result.errors] == ["E213"]
+    assert result.text == source
 
 
 class _RecordingResource:

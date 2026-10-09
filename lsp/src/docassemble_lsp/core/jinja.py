@@ -55,7 +55,9 @@ class JinjaRenderLimits:
     ``cpu_seconds`` and ``address_space_headroom_bytes`` become the render
     process's ``RLIMIT_CPU`` and ``RLIMIT_AS``. macOS does not enforce
     address-space limits, so that limit is skipped there and the wall
-    timeout remains the bound.
+    timeout remains the bound. A render is never run in the parent
+    process: if the bounded render process cannot be created, the render
+    is refused instead.
     """
 
     source_characters: int = 4 * 1024 * 1024
@@ -742,12 +744,19 @@ def _render_bounded(
             process.start()
     except (AssertionError, OSError, RuntimeError, ValueError):
         # Process creation can be unavailable (a daemonic or restricted
-        # parent). Fall back to a sandboxed in-process render; the sandbox
-        # and size caps still apply, but only normal operation bounds the
-        # wall clock.
+        # parent). Bounded rendering is a precondition for rendering at
+        # all: the in-process path is exactly the one the wall clock and
+        # rlimits exist to bound, so refuse the render instead of falling
+        # back to it. Upstream applies the same policy on platforms where
+        # resource limits are unavailable.
         receive_connection.close()
         send_connection.close()
-        return _render_jinja(content, input_file=input_file, limits=limits)
+        return _error_result(
+            content,
+            code=MessageCode.JINJA_RENDER_UNAVAILABLE,
+            message=format_message(MessageCode.JINJA_RENDER_UNAVAILABLE),
+            line_number=_first_jinja_line(content),
+        )
 
     # The child owns the write end now. Closing the parent's copy lets the
     # read end see EOF when the render finishes or is killed.
@@ -813,7 +822,9 @@ def preprocess_jinja(
     CPU and address-space rlimits. A render that outlives
     ``limits.wall_seconds`` is killed and reported as ``E209``. A sandbox
     violation or a render that passes a size limit is reported instead of
-    being rendered.
+    being rendered. When the child process cannot be created at all, the
+    render is refused with ``E213`` rather than falling back to an
+    unbounded in-process render.
     """
     render_limits = limits if limits is not None else JINJA_RENDER_LIMITS
     source_size = len(content)

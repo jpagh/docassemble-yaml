@@ -15,6 +15,9 @@
 
 ### Changed
 
+- [CLI/LSP] Fix resolution now parses each source once per pass: the missing-ID and duplicate-ID plans are derived by a shared `plan_question_ids(source)`, so a file with many `W608`/`W609` diagnostics is parsed once instead of once per diagnostic. The plans and the accepted edits are unchanged.
+- [LSP] Author-written block IDs are compared and reserved with surrounding whitespace stripped, matching docassemble's own parsing (`self.id = str(data['id']).strip()`): `id: " x "` and `id: x` now name the same block for duplicate detection (`W609`), for the message the finding quotes, and for the IDs a `W608` fix reserves.
+- [LSP] `# use jinja` rendering no longer falls back to an unbounded in-process render when the isolated render process cannot be created. The file reports error `E213` instead, so no render ever runs without the wall-clock and rlimit bounds.
 - [LSP] The missing-ID rule (`W608`) and its fixer now share one predicate, `has_usable_id` in `core/question_ids.py`, for whether a block already declares an ID, so the reported blocks and the planned IDs cannot drift apart. Behaviour is unchanged for non-empty string, non-string, empty, and blank IDs.
 - Relicensed the project from Apache-2.0 to MIT: the repository, the `docassemble-lsp` package, the VS Code extension, and the Fresh pack are now MIT. Releases already published under Apache-2.0 remain Apache-2.0.
 - [CLI/LSP] `--fix` and the fix-all code action now re-check every candidate before writing: a fix is applied only when the result still parses, adds no finding of any code, and removes the finding it was made for. Rejected fixes are reported on stderr (CLI) or the log (LSP) and leave the file unchanged, and Jinja-rendered files are excluded from automatic rewriting.

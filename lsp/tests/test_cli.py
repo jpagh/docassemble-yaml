@@ -294,6 +294,23 @@ def test_check_command_fix_renames_duplicate_block_ids(tmp_path: Path) -> None:
     )
 
 
+def test_check_command_fix_normalizes_whitespace_padded_duplicate_ids(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "padded_duplicate_id.yml"
+    source.write_text(
+        '---\nid: " x "\nquestion: First\n---\nid: x\nquestion: Second\n',
+        encoding="utf-8",
+    )
+
+    exit_code = main(["check", "--quiet", "--fix", str(source)])
+
+    assert exit_code == 0
+    assert source.read_text(encoding="utf-8") == (
+        '---\nid: " x "\nquestion: First\n---\nid: "x 2"\nquestion: Second\n'
+    )
+
+
 def test_check_command_fix_labels_first_multifield_offender(tmp_path: Path) -> None:
     source = tmp_path / "multifield.yml"
     source.write_text(

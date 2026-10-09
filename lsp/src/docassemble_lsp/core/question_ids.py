@@ -8,18 +8,27 @@ keeps accented letters. Mako expressions in the question text are left
 literal: their delimiters separate words, so ``${city_only_address}``
 becomes ``city only address`` instead of an empty or broken ID.
 
-``plan_missing_question_ids`` parses a source file once and returns the
-unique ID every question block without one should receive, in document
-order. The validation rule reports those blocks and the fixer inserts
-the planned ID, so both agree on the same deterministic assignment, and
-both ask ``has_usable_id`` whether a block already declares an ID and
-``has_usable_question_text`` whether its question can produce one.
+Docassemble strips surrounding whitespace from a block ID when it reads
+it (``self.id = str(data['id']).strip()``), so ``id: " x "`` names the
+same block as ``id: x``. ``usable_id`` returns that normalized form, so
+both rules and both planners compare the same ID.
 
-``plan_duplicate_question_ids`` covers the other half of uniqueness: it
-keeps the first block that uses an ID and plans the suffix for every
-later block that repeats it. Missing-ID planning reserves those planned
-replacements, so one fix run cannot hand the same ID to a missing block
-and to a renamed duplicate.
+``plan_question_ids`` parses a source file once and returns both plans:
+the unique ID every question block without one should receive, in
+document order, and the replacement for every later block that repeats
+an earlier ID. ``plan_missing_question_ids`` and
+``plan_duplicate_question_ids`` expose the two halves; fix resolution
+uses ``plan_question_ids`` directly so one resolution pass parses the
+source once no matter how many W608/W609 diagnostics it covers.
+
+The validation rule reports the missing and duplicate blocks and the
+fixer inserts or renames to the planned IDs, so both agree on the same
+deterministic assignment. Both ask ``has_usable_id`` whether a block
+already declares an ID and ``has_usable_question_text`` whether its
+question can produce one. Missing-ID planning reserves every
+author-written ID and every planned duplicate replacement, so one fix
+run cannot hand the same ID to a missing block and to a renamed
+duplicate.
 """
 
 from __future__ import annotations
@@ -106,14 +115,19 @@ def has_usable_question_text(value: object) -> TypeGuard[str]:
 
 
 def usable_id(value: object) -> str | None:
-    """Return *value* when it is a usable block ID, otherwise ``None``.
+    """Return the normalized block ID for *value*, otherwise ``None``.
 
-    Docassemble block IDs are non-empty strings. Non-string values are
-    reported by the YAML string type check, and empty (or whitespace-only)
-    strings count as missing, so neither is a duplicate candidate.
+    Docassemble block IDs are non-empty strings, and docassemble itself
+    strips surrounding whitespace when it reads one
+    (``self.id = str(data['id']).strip()``), so ``id: " x "`` names the
+    same block as ``id: x``. The stripped value is what duplicate
+    detection compares, what missing-ID planning reserves, and what the
+    ``W609`` message reports. Non-string values are reported by the YAML
+    string type check, and empty (or whitespace-only) strings count as
+    missing, so neither is a duplicate candidate.
     """
     if isinstance(value, str) and has_usable_id(value):
-        return value
+        return value.strip()
     return None
 
 
@@ -137,6 +151,14 @@ class DuplicateQuestionId:
     replacement_id: str
 
 
+@dataclass(frozen=True, slots=True)
+class QuestionIdPlan:
+    """The missing-ID and duplicate-ID plans derived from one parse."""
+
+    missing: tuple[MissingQuestionId, ...] = ()
+    duplicates: tuple[DuplicateQuestionId, ...] = ()
+
+
 def shorten_question_text(value: object, limit: int = 160) -> str:
     """Collapse whitespace and truncate question text for a diagnostic."""
     rendered = _WHITESPACE_RE.sub(" ", str(value or "")).strip()
@@ -153,7 +175,11 @@ def _find_key(document: CommentedMap, name: str) -> object | None:
 
 
 def _id_entries(documents: tuple[CommentedMap, ...]) -> list[tuple[int, str]]:
-    """Return ``(line, id)`` for every usable top-level ID in document order."""
+    """Return ``(line, id)`` for every usable top-level ID in document order.
+
+    IDs are normalized by ``usable_id``, so differently padded spellings
+    of the same docassemble ID collide here as they do at runtime.
+    """
     entries: list[tuple[int, str]] = []
     for document in documents:
         id_key = _find_key(document, "id")
@@ -202,43 +228,67 @@ def _yaml_documents(source: str) -> tuple[CommentedMap, ...]:
     return tuple(document for document in loaded if isinstance(document, CommentedMap))
 
 
+def plan_question_ids(source: str) -> QuestionIdPlan:
+    """Plan both ID fixes from a single parse of *source*.
+
+    Returns an empty plan when the source does not parse (for example a
+    ``# use jinja`` template), so no automatic rewrite is offered there.
+    The fixers call this once per resolution pass, so a file with many
+    W608/W609 diagnostics is parsed once instead of once per diagnostic.
+    """
+    documents = _yaml_documents(source)
+    if not documents:
+        return QuestionIdPlan()
+    duplicates = _plan_duplicate_ids(documents)
+    return QuestionIdPlan(
+        missing=_plan_missing_ids(documents, duplicates),
+        duplicates=duplicates,
+    )
+
+
 def plan_duplicate_question_ids(source: str) -> tuple[DuplicateQuestionId, ...]:
     """Plan a unique ID for every block that repeats an earlier block ID.
 
     The first occurrence is never planned. Later occurrences receive the
     same ``<id> <n>`` suffix scheme as generated question IDs, and the
     counter skips every author-written ID in the file as well as every
-    replacement already planned. Returns an empty tuple when the source
-    does not parse (for example a ``# use jinja`` template).
+    replacement already planned. IDs are compared in the normalized form
+    ``usable_id`` returns, so surrounding whitespace does not make two
+    spellings of one docassemble ID look distinct. Returns an empty tuple
+    when the source does not parse (for example a ``# use jinja``
+    template).
     """
-    documents = _yaml_documents(source)
-    if not documents:
-        return ()
-    return _plan_duplicate_ids(documents)
+    return plan_question_ids(source).duplicates
 
 
 def plan_missing_question_ids(source: str) -> tuple[MissingQuestionId, ...]:
     """Plan an ID for every question block that lacks one.
 
-    Returns an empty tuple when the source does not parse (for example a
-    ``# use jinja`` template), so no automatic rewrite is offered there.
+    Author-written IDs are reserved in the normalized form ``usable_id``
+    returns, so a padded spelling such as ``id: " x "`` still keeps a
+    generated ID from colliding with it. Returns an empty tuple when the
+    source does not parse (for example a ``# use jinja`` template), so no
+    automatic rewrite is offered there.
     """
-    documents = _yaml_documents(source)
-    if not documents:
-        return ()
+    return plan_question_ids(source).missing
 
+
+def _plan_missing_ids(
+    documents: tuple[CommentedMap, ...],
+    duplicates: tuple[DuplicateQuestionId, ...],
+) -> tuple[MissingQuestionId, ...]:
     author_ids: set[str] = set()
     for document in documents:
         id_key = _find_key(document, "id")
         id_value = document.get(id_key) if id_key is not None else None
         usable = usable_id(id_value)
         if usable is not None:
-            author_ids.add(usable.strip())
+            author_ids.add(usable)
 
     # Duplicate replacements are about to claim their IDs, so a missing-ID
     # fix must not generate one of them as well.
     used = set(author_ids)
-    used.update(entry.replacement_id for entry in _plan_duplicate_ids(documents))
+    used.update(entry.replacement_id for entry in duplicates)
     planned: list[MissingQuestionId] = []
     for document in documents:
         question_key = _find_key(document, "question")

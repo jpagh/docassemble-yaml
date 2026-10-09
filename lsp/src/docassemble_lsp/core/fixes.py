@@ -17,8 +17,8 @@ from docassemble_lsp.core.field_labels import FieldLabelPlan, plan_multifield_la
 from docassemble_lsp.core.jinja import has_jinja_header
 from docassemble_lsp.core.messages import MessageCode
 from docassemble_lsp.core.question_ids import (
-    plan_duplicate_question_ids,
-    plan_missing_question_ids,
+    QuestionIdPlan,
+    plan_question_ids,
 )
 from docassemble_lsp.core.schema import load_schema
 from docassemble_lsp.core.validation_config import RuntimeOptions
@@ -78,6 +78,9 @@ class FixResult:
 
 
 FixProvider = Callable[[str, Diagnostic, int | None], list[ResolvedFix]]
+QuestionIdFixProvider = Callable[
+    [str, Diagnostic, int | None, QuestionIdPlan], list[ResolvedFix]
+]
 
 
 def _line_key_range(source: str, line: int) -> tuple[str, int, int] | None:
@@ -395,13 +398,16 @@ def _table_missing_keys_fixes(
 
 
 def _missing_question_id_fixes(
-    source: str, diagnostic: Diagnostic, preferred_line: int | None
+    source: str,
+    diagnostic: Diagnostic,
+    preferred_line: int | None,
+    question_ids: QuestionIdPlan,
 ) -> list[ResolvedFix]:
     """W608: insert the planned unique id before the question key."""
     if diagnostic.code != "W608":
         return []
 
-    plan = {entry.line: entry for entry in plan_missing_question_ids(source)}
+    plan = {entry.line: entry for entry in question_ids.missing}
     target = diagnostic.line
     if target not in plan and preferred_line is not None:
         target = preferred_line + 1
@@ -463,13 +469,16 @@ def _missing_question_id_fixes(
 
 
 def _duplicate_block_id_fixes(
-    source: str, diagnostic: Diagnostic, preferred_line: int | None
+    source: str,
+    diagnostic: Diagnostic,
+    preferred_line: int | None,
+    question_ids: QuestionIdPlan,
 ) -> list[ResolvedFix]:
     """W609: rename a later duplicate id to its planned unique replacement."""
     if diagnostic.code != "W609":
         return []
 
-    plan = {entry.line: entry for entry in plan_duplicate_question_ids(source)}
+    plan = {entry.line: entry for entry in question_ids.duplicates}
     target = diagnostic.line
     if target not in plan and preferred_line is not None:
         target = preferred_line + 1
@@ -975,8 +984,6 @@ _FIX_PROVIDERS: dict[str, FixProvider] = {
     "E415": _field_target_without_label_fixes,
     "W502": _multifield_label_fixes,
     "W510": _yesno_shortcut_fixes,
-    "W608": _missing_question_id_fixes,
-    "W609": _duplicate_block_id_fixes,
     "E921": _table_missing_keys_fixes,
     "E419": _missing_choices_fixes,
     "E420": _ajax_missing_action_fixes,
@@ -987,6 +994,14 @@ _FIX_PROVIDERS: dict[str, FixProvider] = {
     # which a single-file fixer cannot reliably infer.
 }
 
+#: ID providers read the run's shared question-ID plan. ``resolve_diagnostic_fixes``
+#: plans it once per resolution pass and passes it in, so a file with many
+#: W608/W609 diagnostics is parsed once instead of once per diagnostic.
+_QUESTION_ID_FIX_PROVIDERS: dict[str, QuestionIdFixProvider] = {
+    "W608": _missing_question_id_fixes,
+    "W609": _duplicate_block_id_fixes,
+}
+
 
 def resolve_diagnostic_fixes(
     source: str,
@@ -995,13 +1010,22 @@ def resolve_diagnostic_fixes(
     preferred_line: int | None = None,
 ) -> list[ResolvedFix]:
     resolved: list[ResolvedFix] = []
+    question_ids: QuestionIdPlan | None = None
     for diagnostic in diagnostics:
         if diagnostic.code is None:
             continue
         provider = _FIX_PROVIDERS.get(diagnostic.code)
-        if provider is None:
+        if provider is not None:
+            resolved.extend(provider(source, diagnostic, preferred_line))
             continue
-        resolved.extend(provider(source, diagnostic, preferred_line))
+        question_id_provider = _QUESTION_ID_FIX_PROVIDERS.get(diagnostic.code)
+        if question_id_provider is None:
+            continue
+        if question_ids is None:
+            question_ids = plan_question_ids(source)
+        resolved.extend(
+            question_id_provider(source, diagnostic, preferred_line, question_ids)
+        )
 
     deduped: list[ResolvedFix] = []
     seen: set[tuple[object, ...]] = set()

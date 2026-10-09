@@ -130,10 +130,14 @@ output have size caps, the parent kills a render that outlives the wall
 timeout, and the child sets CPU and address-space rlimits (the
 address-space limit is skipped on macOS, which does not enforce it). A
 sandbox violation or a limit is reported as a diagnostic instead of
-rendering unbounded. Unknown values are assumed to come from the server:
-each substitution renders a distinct placeholder and reports warning
-`W610` at its template line, so the surrounding YAML still parses and
-workspace-aware checks can skip values that are not really author-written.
+rendering unbounded. A render never runs in the parent process: when the
+child process cannot be created, the file is not rendered and reports
+error `E213` instead, because the parent is the one place the
+wall-clock bound does not apply. Unknown values are assumed to come from
+the server: each substitution renders a distinct placeholder and reports
+warning `W610` at its template line, so the surrounding YAML still parses
+and workspace-aware checks can skip values that are not really
+author-written.
 
 Diagnostics and fixes are shared by CLI and LSP. Validation remains a
 relatively large subsystem, but the intended direction is still the
@@ -147,6 +151,13 @@ context as the run: it must still parse, must not add a finding of any
 code, and must reduce the finding it was written for. Jinja-rendered
 files are excluded from automatic rewriting. Quick fixes requested
 explicitly for one diagnostic stay ungated because the user chose them.
+
+Fix resolution parses each source at most once per resolution pass: the
+shared question-ID plan (`plan_question_ids`) covers every W608/W609
+finding in the run, so the parse count does not grow with the number of
+diagnostics. Per-diagnostic providers keep the plain
+`(source, diagnostic, preferred_line)` signature; providers that need
+shared planning are registered separately and receive the plan.
 
 Formatting is also shared across entry points. Whole-document
 formatting and on-type formatting are protocol features at the

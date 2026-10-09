@@ -25,6 +25,7 @@ class MessageCode(str, Enum):
     JINJA_RENDER_RESOURCE_LIMIT = "E210"
     JINJA_SOURCE_TOO_LARGE = "E211"
     JINJA_OUTPUT_TOO_LARGE = "E212"
+    JINJA_RENDER_UNAVAILABLE = "E213"
     UNKNOWN_KEYS = "E301"
 
     YAML_STRING_TYPE = "E103"
@@ -288,6 +289,15 @@ MESSAGE_DEFINITIONS: dict[str, MessageDefinition] = {
         code=MessageCode.JINJA_OUTPUT_TOO_LARGE,
         summary="Jinja2 render produced too much output",
         template="Jinja2 rendering produced more than the {limit}-character output limit.",
+    ),
+    MessageCode.JINJA_RENDER_UNAVAILABLE: MessageDefinition(
+        code=MessageCode.JINJA_RENDER_UNAVAILABLE,
+        summary="Jinja2 rendering is unavailable without resource limits",
+        template=(
+            "Jinja2 rendering is unavailable: the bounded render process "
+            "could not be created and this server never renders without "
+            "resource limits."
+        ),
     ),
     MessageCode.UNKNOWN_KEYS: MessageDefinition(
         code=MessageCode.UNKNOWN_KEYS,
