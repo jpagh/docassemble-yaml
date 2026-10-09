@@ -247,6 +247,25 @@ def test_missing_question_id_ignores_empty_question_text() -> None:
     assert not [d for d in diagnostics if d.code == "W608"]
 
 
+@pytest.mark.parametrize("question_value", ["[a, b]", "{a: b}", "42", "true"])
+def test_missing_question_id_ignores_non_string_question_text(
+    question_value: str,
+) -> None:
+    diagnostics = analyze_text(f"question: {question_value}\n", path="sample.yml")
+
+    assert {d.code for d in diagnostics} == {"E103"}
+
+
+def test_missing_question_id_ignores_list_question_in_regression_fixture() -> None:
+    source = regression_fixture_text("w608_non_string_question.yml")
+    path = "tests/fixtures/regressions/w608_non_string_question.yml"
+    diagnostics = analyze_text(source, path=path)
+
+    findings = [d for d in diagnostics if d.code == "W608"]
+    assert [finding.line for finding in findings] == [12]
+    assert [d.line for d in diagnostics if d.code == "E103"] == [7]
+
+
 def test_missing_question_id_hidden_without_warnings() -> None:
     source = "question: Hello\n"
 

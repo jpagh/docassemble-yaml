@@ -34,6 +34,7 @@ from docassemble_lsp.core.messages import MessageCode
 from docassemble_lsp.core.python_paths import path_from_uri_or_path
 from docassemble_lsp.core.question_ids import (
     has_usable_id,
+    has_usable_question_text,
     shorten_question_text,
     usable_id,
 )
@@ -674,7 +675,7 @@ def find_errors_from_string(
         if question_key is not None:
             id_value = _get_case_insensitive(doc, "id")
             question_value = doc.get(question_key)
-            if not has_usable_id(id_value) and str(question_value or "").strip():
+            if not has_usable_id(id_value) and has_usable_question_text(question_value):
                 all_errors.append(
                     _yaml_error(
                         code=MessageCode.MISSING_QUESTION_ID,

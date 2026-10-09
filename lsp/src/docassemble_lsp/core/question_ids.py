@@ -12,7 +12,8 @@ becomes ``city only address`` instead of an empty or broken ID.
 unique ID every question block without one should receive, in document
 order. The validation rule reports those blocks and the fixer inserts
 the planned ID, so both agree on the same deterministic assignment, and
-both ask ``has_usable_id`` whether a block already declares an ID.
+both ask ``has_usable_id`` whether a block already declares an ID and
+``has_usable_question_text`` whether its question can produce one.
 
 ``plan_duplicate_question_ids`` covers the other half of uniqueness: it
 keeps the first block that uses an ID and plans the suffix for every
@@ -26,6 +27,7 @@ from __future__ import annotations
 import re
 from collections.abc import Iterable
 from dataclasses import dataclass
+from typing import TypeGuard
 
 from ruamel.yaml import YAML
 from ruamel.yaml.comments import CommentedMap
@@ -84,6 +86,20 @@ def has_usable_id(value: object) -> bool:
     if isinstance(value, str):
         return bool(value.strip())
     return value is not None
+
+
+def has_usable_question_text(value: object) -> TypeGuard[str]:
+    """Return whether *value* can be normalized into a generated ID.
+
+    Only a non-empty string has text to normalize. Every other YAML value
+    (a list, mapping, number, boolean, or null) is reported by the string
+    type check and can never produce an ID, so the missing-ID rule must
+    not add a second, unsatisfiable finding for it.
+
+    The W608 rule and ``plan_missing_question_ids`` both call this so the
+    reported blocks and the planned fixes cannot drift apart.
+    """
+    return isinstance(value, str) and bool(value.strip())
 
 
 def usable_id(value: object) -> str | None:
@@ -226,7 +242,7 @@ def plan_missing_question_ids(source: str) -> tuple[MissingQuestionId, ...]:
         if question_key is None:
             continue
         question = document.get(question_key)
-        if not isinstance(question, str) or not question.strip():
+        if not has_usable_question_text(question):
             continue
 
         id_key = _find_key(document, "id")

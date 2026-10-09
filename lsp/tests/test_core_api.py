@@ -12,6 +12,7 @@ from docassemble_lsp.core.fixes import (
 from docassemble_lsp.core.messages import MessageCode, message_severity
 from docassemble_lsp.core.question_ids import (
     has_usable_id,
+    has_usable_question_text,
     plan_missing_question_ids,
 )
 from docassemble_lsp.core.validation_config import RuntimeOptions
@@ -191,6 +192,30 @@ def test_has_usable_id_matches_w608_presence(value: object, expected: bool) -> N
 
 
 @pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        (None, False),
+        ("", False),
+        ("   ", False),
+        ("\t\n", False),
+        ("hello", True),
+        (" hello ", True),
+        ("!", True),
+        (42, False),
+        (0, False),
+        (False, False),
+        ([], False),
+        ({}, False),
+        (["hello"], False),
+    ],
+)
+def test_has_usable_question_text_matches_id_generation(
+    value: object, expected: bool
+) -> None:
+    assert has_usable_question_text(value) == expected
+
+
+@pytest.mark.parametrize(
     "id_line",
     [None, "id:\n", 'id: ""\n', 'id: "  "\n', "id: 42\n", "id: hello\n"],
 )
@@ -208,11 +233,48 @@ def test_missing_id_rule_and_plan_agree_on_presence(id_line: str | None) -> None
 
 
 @pytest.mark.parametrize(
+    "question_line",
+    [
+        "question:\n",
+        'question: ""\n',
+        'question: "  "\n',
+        "question: 42\n",
+        "question: true\n",
+        "question: [a, b]\n",
+        "question: {a: b}\n",
+        "question: Hello\n",
+    ],
+)
+def test_missing_id_rule_and_plan_agree_on_question_text(
+    question_line: str,
+) -> None:
+    reported = [
+        diagnostic
+        for diagnostic in core.analyze_text(question_line, path="sample.yml")
+        if diagnostic.code == "W608"
+    ]
+    planned = plan_missing_question_ids(question_line)
+
+    assert bool(reported) == bool(planned)
+
+
+@pytest.mark.parametrize(
     "source", ["question: Hello\nid: 42\n", 'question: Hello\nid: "  "\n']
 )
 def test_core_fix_text_leaves_non_string_and_blank_ids_alone(
     source: str,
 ) -> None:
+    result = core.fix_text(source)
+
+    assert result.changed is False
+    assert result.text == source
+    assert result.applied_codes == ()
+
+
+@pytest.mark.parametrize("question_value", ["[a, b]", "{a: b}", "42", "true"])
+def test_core_fix_text_leaves_non_string_question_alone(question_value: str) -> None:
+    source = f"question: {question_value}\n"
+
     result = core.fix_text(source)
 
     assert result.changed is False

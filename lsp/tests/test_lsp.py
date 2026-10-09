@@ -1829,6 +1829,16 @@ def test_build_code_actions_offers_no_missing_id_fix_when_id_present() -> None:
     assert actions == []
 
 
+def test_build_code_actions_offers_no_missing_id_fix_for_non_string_question() -> None:
+    source = "question:\n  - What is your name?\n  - What is your quest?\n"
+    diagnostics = build_lsp_diagnostics("file:///sample.yml", source)
+
+    assert [diagnostic.code for diagnostic in diagnostics] == ["E103"]
+    actions = build_code_actions("file:///sample.yml", source, 1, diagnostics)
+
+    assert actions == []
+
+
 def test_build_code_actions_fix_all_includes_missing_question_id() -> None:
     source = "---\nquestion: What is your name?\n"
     diagnostics = build_lsp_diagnostics("file:///sample.yml", source)

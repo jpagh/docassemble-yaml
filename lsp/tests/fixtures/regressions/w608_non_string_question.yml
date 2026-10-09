@@ -1,0 +1,12 @@
+# Regression fixture for W608: a `question` that is a YAML list cannot
+# produce an ID (the fixer has no text to normalize), so the missing-ID
+# warning must stay quiet; the string type check (`E103`) is the only
+# finding. The second document has usable question text, so it still
+# reports W608 and still receives the generated-ID fix.
+---
+question:
+  - What is your name?
+  - What is your quest?
+
+---
+question: What is your favorite colour?

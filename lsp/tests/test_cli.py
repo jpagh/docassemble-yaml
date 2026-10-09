@@ -251,6 +251,28 @@ def test_check_command_fix_adds_missing_question_id(tmp_path: Path) -> None:
     )
 
 
+def test_check_command_fix_skips_missing_id_without_usable_question_text(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "non_string_question.yml"
+    source.write_text(
+        (FIXTURES_DIR / "w608_non_string_question.yml").read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+
+    exit_code = main(["check", "--quiet", "--fix", str(source)])
+
+    # The list question keeps its type error, so fix mode still exits nonzero.
+    assert exit_code == 1
+    fixed = source.read_text(encoding="utf-8")
+    assert fixed.count("id:") == 1
+    assert (
+        'id: "what is your favorite colour"\n'
+        "question: What is your favorite colour?\n" in fixed
+    )
+    assert "question:\n  - What is your name?\n  - What is your quest?\n" in fixed
+
+
 def test_check_command_fix_renames_duplicate_block_ids(tmp_path: Path) -> None:
     source = tmp_path / "duplicate_id.yml"
     source.write_text(
