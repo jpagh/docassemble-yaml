@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [26.10.0] - 2026-10-10
+
 ### Added
 
 - [LSP] New warning `W510` reports the question-level yes/no shortcuts (`yesno`, `noyes`, `yesnomaybe`, `noyesmaybe`): prefer an explicit `fields` screen with a `datatype`. `--fix`, the quick fix, and fix-all expand a single shortcut into an explicit single-field screen whose field keeps the question text as its label (the `no label` shorthand) and gets the matching radio datatype — `yesnoradio`/`noyesradio` for the boolean variants and `yesnomaybe`/`noyesmaybe` for the three-state ones. A trailing comment on the shortcut line moves to the rewritten `fields:` line, targets that are not plain identifiers are quoted, and the fix declines when the screen already has a `fields` block or more than one shortcut, because merging would change semantics. Repeated runs make no further change and every candidate passes the fixer gate.

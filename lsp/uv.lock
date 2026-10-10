@@ -2560,7 +2560,7 @@ wheels = [
 
 [[package]]
 name = "docassemble-lsp"
-version = "26.8.1"
+version = "26.10.0"
 source = { editable = "." }
 dependencies = [
     { name = "black", version = "26.1.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
