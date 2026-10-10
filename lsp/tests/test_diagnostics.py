@@ -6,6 +6,7 @@ import sys
 import time
 from dataclasses import replace
 from functools import cache
+from multiprocessing.connection import Connection
 from pathlib import Path
 
 import pytest
@@ -1797,6 +1798,59 @@ def test_unavailable_render_process_leaves_source_unrendered(
 
     assert [issue.code for issue in result.errors] == ["E213"]
     assert result.text == source
+
+
+@pytest.mark.parametrize("failure_stage", ["context", "pipe", "process", "start"])
+@pytest.mark.parametrize(
+    "failure_type", [AssertionError, OSError, RuntimeError, ValueError]
+)
+def test_jinja_renderer_setup_failure_reports_e213(
+    monkeypatch: pytest.MonkeyPatch,
+    failure_stage: str,
+    failure_type: type[Exception],
+) -> None:
+    context = multiprocessing.get_context()
+    real_pipe = context.Pipe
+    connections: list[Connection] = []
+
+    def fail_setup(*args: object, **kwargs: object) -> None:
+        raise failure_type("bounded renderer setup failed")
+
+    def recording_pipe(duplex: bool = False):
+        pair = real_pipe(duplex=duplex)
+        connections.extend(pair)
+        return pair
+
+    def fail_in_process_render(*args: object, **kwargs: object) -> None:
+        raise AssertionError("Jinja must not render in the parent process")
+
+    monkeypatch.setattr(jinja_module, "_render_jinja", fail_in_process_render)
+    monkeypatch.setattr(multiprocessing, "get_context", lambda *args: context)
+    monkeypatch.setattr(context, "Pipe", recording_pipe)
+    if failure_stage == "context":
+        monkeypatch.setattr(multiprocessing, "get_context", fail_setup)
+    elif failure_stage == "pipe":
+        monkeypatch.setattr(context, "Pipe", fail_setup)
+    elif failure_stage == "process":
+        monkeypatch.setattr(context, "Process", fail_setup)
+    else:
+        monkeypatch.setattr(multiprocessing.process.BaseProcess, "start", fail_setup)
+
+    source = "# use jinja\n---\nid: bounded\nquestion: Hello {{ name }}\n"
+    try:
+        diagnostics = analyze_text(source, path="sample.yml")
+        assert [diagnostic.code for diagnostic in diagnostics] == ["E213"]
+        assert diagnostics[0].severity == "error"
+        assert diagnostics[0].line == 4
+        assert all(connection.closed for connection in connections)
+
+        result = preprocess_jinja(source)
+        assert [issue.code for issue in result.errors] == ["E213"]
+        assert result.text == source
+        assert all(connection.closed for connection in connections)
+    finally:
+        for connection in connections:
+            connection.close()
 
 
 class _RecordingResource:

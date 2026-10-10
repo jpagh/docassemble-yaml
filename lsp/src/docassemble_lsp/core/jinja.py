@@ -726,15 +726,23 @@ def _format_seconds(seconds: float) -> str:
 def _render_bounded(
     content: str, *, input_file: str | None, limits: JinjaRenderLimits
 ) -> JinjaRenderResult:
-    """Render ``content`` in a bounded child process."""
-    context = _process_context()
-    receive_connection, send_connection = context.Pipe(duplex=False)
-    process = context.Process(
-        target=_render_worker,
-        args=(send_connection, content, input_file, limits),
-        daemon=True,
-    )
+    """Render ``content`` in a bounded child process.
+
+    Renderer setup is part of the bounded path: if the context, the pipe,
+    or the render process cannot be created, the render is refused with
+    ``E213`` instead of escaping as an exception. Handles are closed only
+    when they were opened.
+    """
+    receive_connection: Connection | None = None
+    send_connection: Connection | None = None
     try:
+        context = _process_context()
+        receive_connection, send_connection = context.Pipe(duplex=False)
+        process = context.Process(
+            target=_render_worker,
+            args=(send_connection, content, input_file, limits),
+            daemon=True,
+        )
         with warnings.catch_warnings():
             # A host process may be multi-threaded (test runners, editor
             # hosts), which makes Python 3.12+ warn about fork. The render
@@ -749,14 +757,19 @@ def _render_bounded(
         # rlimits exist to bound, so refuse the render instead of falling
         # back to it. Upstream applies the same policy on platforms where
         # resource limits are unavailable.
-        receive_connection.close()
-        send_connection.close()
+        if receive_connection is not None:
+            receive_connection.close()
+        if send_connection is not None:
+            send_connection.close()
         return _error_result(
             content,
             code=MessageCode.JINJA_RENDER_UNAVAILABLE,
             message=format_message(MessageCode.JINJA_RENDER_UNAVAILABLE),
             line_number=_first_jinja_line(content),
         )
+
+    assert receive_connection is not None
+    assert send_connection is not None
 
     # The child owns the write end now. Closing the parent's copy lets the
     # read end see EOF when the render finishes or is killed.
