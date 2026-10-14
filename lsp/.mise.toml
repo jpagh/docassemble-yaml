@@ -1,3 +1,6 @@
+[env]
+    UV_PYTHON = { value = "{{ tools.python.version }}", tools = true }
+
 [tools]
     "pipx:pyrefly" = "latest"
     "pipx:ruff"    = "latest"
@@ -5,7 +8,11 @@
     uv             = "latest"
 
 [settings]
-    python.uv_venv_auto = "create|source"
+    experimental        = true
+    python.uv_venv_auto = "source"
+
+[deps.uv]
+    auto = true
 
 [tasks.sync]
     description = "Install/sync LSP dev dependencies"
