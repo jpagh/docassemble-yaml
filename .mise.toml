@@ -5,7 +5,14 @@ monorepo_root = true
     "pipx:bump-my-version" = "latest"
 
 [monorepo]
-    config_roots = ["fresh", "grammars", "lsp", "vscode", "tools/scope-parity"]
+    config_roots = [
+        "fresh",
+        "grammars",
+        "kakoune",
+        "lsp",
+        "vscode",
+        "tools/scope-parity"
+    ]
 
 [tasks."format:toml"]
     description = "Format TOML files with tombi (uses root .tombi.toml)"
@@ -27,6 +34,7 @@ monorepo_root = true
         "//vscode:check",
         "//fresh:check",
         "//grammars:check",
+        "//kakoune:check",
         "//tools/scope-parity:check",
     ]
 

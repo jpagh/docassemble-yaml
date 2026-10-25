@@ -1,0 +1,10 @@
+---
+question: |
+  café 😀 ${ 1 + 2 } / {{ café }}
+---
+code: |
+  result = "é😀"
+---
+if: True and not False
+# {{ ignored }} ${ ignored }
+plain: value

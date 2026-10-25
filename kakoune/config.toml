@@ -1,0 +1,7 @@
+# Copy alongside grammars/ into ~/.config/giallo.kak/.
+# Explicit paths are required in giallo-kak 0.4.0.
+grammars_path = "~/.config/giallo.kak/grammars"
+theme         = "catppuccin-frappe"
+
+[language_map]
+    docassemble = "docassemble"

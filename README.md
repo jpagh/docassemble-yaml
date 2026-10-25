@@ -1,13 +1,15 @@
 # docassemble-yaml
 
 Monorepo for the docassemble-lsp language server, its VS Code extension, and
-optional support for the Fresh terminal editor.
+optional support for the Fresh and Kakoune terminal editors.
 
 - **`lsp/`** — Python language server (CalVer versioned; published to PyPI as
   `docassemble-lsp`)
 - **`vscode/`** — VS Code extension (same version as lsp/)
 - **`fresh/`** — Fresh language pack (syntax highlighting + LSP wiring); see
   [`docs/FRESH.md`](docs/FRESH.md) for the investigation and setup
+- **`kakoune/`** — manually activated giallo.kak highlighting example; see
+  [`docs/KAKOUNE.md`](docs/KAKOUNE.md) for evidence and limitations
 
 ## Install
 
@@ -19,7 +21,8 @@ uv tool install docassemble-lsp
 ```
 
 Editor setup is covered in [`lsp/README.md`](lsp/README.md),
-[`vscode/README.md`](vscode/README.md), and [`fresh/README.md`](fresh/README.md).
+[`vscode/README.md`](vscode/README.md), [`fresh/README.md`](fresh/README.md), and
+[`kakoune/README.md`](kakoune/README.md).
 
 ## Required tools
 

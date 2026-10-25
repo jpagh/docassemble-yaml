@@ -1,0 +1,13 @@
+{
+  "scopeName": "mako.injection",
+  "injectionSelector": "R:source.docassemble.yaml -comment",
+  "patterns": [
+    {
+      "include": "source.mako"
+    }
+  ],
+  "name": "docassemble-mako-injection",
+  "injectTo": [
+    "docassemble"
+  ]
+}

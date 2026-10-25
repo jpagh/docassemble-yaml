@@ -19,7 +19,9 @@
 - VS Code owns **real-file packaging copies** in `vscode/syntaxes/`, its manifest,
   dependency resolution, and injection registration. Fresh owns its committed
   `fresh/grammars/Docassemble.sublime-syntax`, bundle manifest, and detection/LSP
-  plugin. Neither installed editor needs this shared directory or build tools.
+  plugin. Kakoune owns generated metadata-adapted TextMate copies under
+  `kakoune/grammars/` and a [manually activated giallo.kak example](../kakoune/README.md).
+  Installed editors do not need this shared directory or build tools.
 
 ## Edit and regenerate
 
@@ -27,9 +29,11 @@ After changing shared sources or the converter, run from the repository root:
 
 ```bash
 mise run //vscode:grammar:sync
+mise run //kakoune:grammar:sync
 uv run --no-project --with pyyaml python grammars/scripts/build_syntax.py
 mise run //grammars:check
 mise run //fresh:check
+mise run //kakoune:check
 mise run //vscode:check
 mise run //tools/scope-parity:test
 ```
@@ -46,7 +50,11 @@ not the source of truth. Do not manually update the header during regeneration.
 fixture assertions, both existing editor checks, input validation, and formatting.
 VS Code builds fail on stale copies; Fresh checks compare regenerated output
 byte-for-byte without overwriting it. A packaging test checks all six registered
-grammars and the three injection targets.
+grammars and the three injection targets. Kakoune's packaging tests enforce
+metadata-only adaptation and stale-copy detection; its real-editor smoke check
+skips loudly when Kakoune or giallo-kak is unavailable. See the
+[Kakoune investigation](../docs/KAKOUNE.md) for the observed shared-corpus
+boundaries and the separate Unicode fixture.
 
 `mise run //tools/scope-parity:test` is a separate, heavier **transformed
 compatibility-reference** comparison against syntect. `mise run gate` also runs

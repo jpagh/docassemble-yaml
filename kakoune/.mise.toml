@@ -1,0 +1,29 @@
+[tools]
+    "pipx:ruff" = "latest"
+    uv          = "latest"
+
+[tasks."format:check"]
+    description = "Check Kakoune example tooling formatting"
+    depends     = ["//:format:toml:check"]
+    run         = "ruff format --check scripts tests"
+
+[tasks.lint]
+    description = "Lint Kakoune example tooling"
+    depends     = ["//:lint:toml"]
+    run         = "ruff check scripts tests"
+
+[tasks."grammar:sync"]
+    description = "Package shared TextMate grammars with giallo registration metadata"
+    run         = "uv run --no-project python scripts/sync_grammars.py"
+
+[tasks."grammar:check"]
+    description = "Check giallo grammar packaging and staleness without editor dependencies"
+    run         = "uv run --no-project python -m unittest discover -s tests -v"
+
+[tasks.test]
+    description = "Check highlighting in real Kakoune (loud skip without kak/giallo-kak)"
+    run         = "uv run --no-project python scripts/check_highlighting.py"
+
+[tasks.check]
+    description = "Validate the manually activated Kakoune highlighting example"
+    depends     = ["format:check", "lint", "grammar:check", "test"]

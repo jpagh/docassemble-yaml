@@ -1,0 +1,75 @@
+{
+  "name": "docassemble-probe",
+  "colors": {
+    "editor.foreground": "#aaaaaa",
+    "editor.background": "#111111"
+  },
+  "tokenColors": [
+    {
+      "scope": "entity.name.tag.yaml",
+      "settings": {
+        "foreground": "#ff0000"
+      }
+    },
+    {
+      "scope": "source.python",
+      "settings": {
+        "foreground": "#00ff00"
+      }
+    },
+    {
+      "scope": "source.mako.expression",
+      "settings": {
+        "foreground": "#0000ff"
+      }
+    },
+    {
+      "scope": "source.mako.substitution",
+      "settings": {
+        "foreground": "#0000ff"
+      }
+    },
+    {
+      "scope": "variable.meta.scope.jinja",
+      "settings": {
+        "foreground": "#ff00ff"
+      }
+    },
+    {
+      "scope": "meta.scope.jinja.tag",
+      "settings": {
+        "foreground": "#ff00ff"
+      }
+    },
+    {
+      "scope": "comment",
+      "settings": {
+        "foreground": "#999999"
+      }
+    },
+    {
+      "scope": "storage.type.function.python",
+      "settings": {
+        "foreground": "#00ffff"
+      }
+    },
+    {
+      "scope": "keyword.control.flow.python",
+      "settings": {
+        "foreground": "#00ffff"
+      }
+    },
+    {
+      "scope": "keyword.operator.logical.python",
+      "settings": {
+        "foreground": "#00ffff"
+      }
+    },
+    {
+      "scope": "storage.type.js",
+      "settings": {
+        "foreground": "#ffff00"
+      }
+    }
+  ]
+}
