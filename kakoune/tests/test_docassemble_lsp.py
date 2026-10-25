@@ -373,11 +373,22 @@ class DocassembleLspTests(unittest.TestCase):
         result = self.request("textDocument/formatting", "lsp-formatting-sync")
         self.assertTrue(result)
         self.wait_for(lambda: "total = 1 + 2" in self.buffer_text())
-        # The server range excludes the original final newline; its replacement
-        # includes one. Assert the actual edit semantics, including the extra LF.
+        # A whole-document edit must also cover the original trailing newline;
+        # otherwise its own trailing newline is appended and every format adds a
+        # blank line.
         edit = result[0]
+        # The edit replaces document content and leaves the source's own final
+        # line break outside its range, so no format can add a blank line.
         self.assertEqual(edit["range"]["end"], {"line": 1, "character": 11})
-        self.assertEqual(self.buffer_text(), edit["newText"] + "\n")
+        self.assertFalse(edit["newText"].endswith("\n"))
+        # The client applies the returned edit through its own deferred script, so
+        # poll for the converged buffer instead of sampling mid-application.
+        self.wait_for(lambda: self.buffer_text() == edit["newText"] + "\n")
+        self.assertEqual(self.buffer_text(), "code: |\n  total = 1 + 2\n")
+        # Idempotent: formatting the already-formatted buffer changes nothing.
+        self.assertEqual(
+            self.request("textDocument/formatting", "lsp-formatting-sync"), []
+        )
         self.assertEqual(path.read_text(), original)
         self.replace("question: Hello\nfields:\n  - field: user_name\n")
         self.wait_for(lambda: "E415" in json.dumps(self.messages()))

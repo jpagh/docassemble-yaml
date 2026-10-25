@@ -9,9 +9,15 @@ from lsprotocol.types import (
     DiagnosticSeverity,
     InsertTextFormat,
     MarkupContent,
+    TextEdit,
 )
 
-from docassemble_lsp.core import FormatterConfig, build_workspace_index, reset_logging
+from docassemble_lsp.core import (
+    FormatterConfig,
+    build_workspace_index,
+    format_text,
+    reset_logging,
+)
 from docassemble_lsp.core.python_paths import path_from_uri_or_path
 from docassemble_lsp.core.validation_config import RuntimeOptions
 from docassemble_lsp.core.workspace import WorkspaceIndex
@@ -2843,6 +2849,47 @@ def test_formatting_edits_replace_whole_document() -> None:
 
     assert len(edits) == 1
     assert 'x = {"a": 1}' in edits[0].new_text
+
+
+def _apply_whole_document_edit(source: str, edit: TextEdit) -> str:
+    """Apply an edit the way an LSP client does: line/character to offsets."""
+
+    def offset(line: int, character: int) -> int:
+        return sum(len(text) + 1 for text in source.split("\n")[:line]) + character
+
+    start = offset(edit.range.start.line, edit.range.start.character)
+    end = offset(edit.range.end.line, edit.range.end.character)
+    return source[:start] + edit.new_text + source[end:]
+
+
+def test_formatting_edits_cover_the_whole_document() -> None:
+    for source in (
+        "---\ncode: |\n  x={'a':1}\n",
+        "---\ncode: |\n  x={'a':1}",
+        "---\ncode: |\n  x={'a':1}\n\n",
+    ):
+        edits = build_formatting_edits(source)
+        assert len(edits) == 1
+        applied = _apply_whole_document_edit(source, edits[0])
+        # Applying the edit must leave exactly what the formatter produced: a
+        # replacement range that also excluded the trailing break duplicated it,
+        # so every format added a blank line.
+        assert applied == format_text(source).text
+        assert not applied.endswith("\n\n")
+        assert build_formatting_edits(applied) == []
+
+
+def test_formatting_edits_keep_the_source_line_ending() -> None:
+    source = "---\r\ncode: |\r\n  x={'a':1}\r\n"
+
+    edits = build_formatting_edits(source)
+    assert len(edits) == 1
+    applied = _apply_whole_document_edit(source, edits[0])
+    # The formatter normalises the final break to \n; the edit leaves the
+    # source's own break outside its range, so the file keeps its CRLF.
+    assert applied == '---\r\ncode: |\r\n  x = {"a": 1}\r\n'
+    # Terminator-only formatter changes must not produce a permanent no-op edit.
+    assert build_formatting_edits(applied) == []
 
 
 def test_formatting_edits_reader_error_returns_empty() -> None:

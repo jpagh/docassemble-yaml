@@ -237,7 +237,7 @@ from the server's feature list.
 | Cross-file definitions | `:lsp-definition` on `workflow_reset` in `main.yml` reaches `x_events.yml:16`; `case_title` reaches `workflow.py:1`. Both real response targets **and opened buffers** are asserted. |
 | Cross-file references | `:lsp-references` at `x_events.yml:16` returns `main.yml` uses, including its action button. Real response locations are asserted; interactive result selection is not. |
 | Package roots and spaces | A temporary copy of the committed demo package under `demo package with spaces` initializes at the package root, not `data/questions`. Executable paths with spaces/apostrophes are also covered. |
-| Formatting | `:lsp-formatting-sync` applies a real server edit to an unsaved buffer (`total=1+2` becomes `total = 1 + 2`); disk bytes stay unchanged. See the final-newline limitation below. |
+| Formatting | `:lsp-formatting-sync` applies a real server edit to an unsaved buffer (`total=1+2` becomes `total = 1 + 2`), leaves the document's own final newline outside the edit so no blank line is added, and is idempotent; disk bytes stay unchanged. |
 | Quick fixes | `:lsp-code-actions-sync quickfix` at a missing field label returns one E415 action and applies its `WorkspaceEdit`; exact resulting buffer bytes are asserted. Multi-action interactive menu selection is not tested. |
 | Shutdown | After `:lsp-exit`, the actual kak-lsp, stdio recorder and server PIDs disappear. Kakoune then exits with status 0 and rejects further connections. v22 sends `exit` directly, not a `shutdown` request/response handshake. |
 | Optional semantic-token request | With both highlighters enabled, `:lsp-semantic-tokens` returns empty data/legend and no semantic face ranges. giallo ranges remain identical and a JSON UI draw still renders Python `return` cyan in the probe theme. This is non-interference, **not overlap precedence**. |
@@ -254,7 +254,6 @@ from the server's feature list.
 
 | Limitation | Consequence / workaround |
 |---|---|
-| Formatting final newline | The server's whole-document edit ends **before** the original final LF but its replacement includes an LF. The verified client application therefore leaves an extra blank line for the tested buffer. The test asserts this exact result; byte-for-byte canonical formatter output/idempotence is not claimed. Remove the blank line manually if needed. No server patch is bundled here. |
 | Semantic-token precedence unestablished | This server version deliberately emits **no** semantic tokens (empty legend and data). There is no overlapping semantic face to compare against `buffer/giallo`; future nonempty tokens require a new overlap test. This wiring installs no semantic-token hook: leave requests off by default with giallo. Explicit requests are optional and currently have no visible effect. |
 | Unexercised client UI | Completion/hover appearance, choosing among multiple code actions/references, interactive idle latency and large-buffer behaviour remain manual. A JSON UI window verifies rendered keyword faces, not terminal pixel appearance. |
 | Server range formatting unavailable | v22 has `lsp-range-formatting`, but this server does not advertise range formatting, so it is absent from the captured capability listing. Use whole-document formatting. |

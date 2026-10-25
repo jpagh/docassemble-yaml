@@ -895,7 +895,16 @@ def test_lsp_process_formats_tabs_to_spaces_when_enabled(tmp_path: Path) -> None
         )
 
     assert len(edits) == 1
-    assert edits[0]["newText"] == "question:  Hi\n"
+    edit = edits[0]
+    assert edit["newText"] == "question:  Hi"
+    # The edit replaces document content only: the source's own final newline is
+    # left outside its range, so applying it cannot add a blank line.
+    end = edit["range"]["end"]
+    lines = source.split("\n")
+    tail = source[
+        sum(len(text) + 1 for text in lines[: end["line"]]) + end["character"] :
+    ]
+    assert edit["newText"] + tail == "question:  Hi\n"
 
 
 def test_lsp_process_indents_new_fields_line_on_type_formatting(tmp_path: Path) -> None:

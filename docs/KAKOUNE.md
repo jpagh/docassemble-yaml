@@ -442,11 +442,20 @@ cleanup, not a protocol handshake that the client does not perform.
 `test_formatting_and_code_action_apply_unsaved_edits` uses real synchronous
 client commands, asserting returned edits **and exact buffer contents**, while
 the original file stays untouched. Formatting changes `total=1+2` to
-`total = 1 + 2`. A discovered limitation is retained, not masked: the server's
-edit range excludes the original trailing newline while replacement text has
-one, so applying it leaves an extra blank line. This test asserts that extra LF;
-it does not certify canonical-output equality or formatting idempotence. No
-server fix is needed to verify/document the workflow, so none is included.
+`total = 1 + 2`, the applied buffer equals the formatter output with the
+document's own final newline, and a second format request returns no edits.
+That regression was found while writing this check: the replacement carried a
+trailing newline while the range stopped before the original one, so every
+format appended a blank line. The server now replaces document **content** only
+and leaves the source's final line break outside the range. Covering the break
+inside the range would be the other way to fix it, but kakoune-lsp v22 cannot
+apply a range ending on the empty line after that break: it maps the position to
+a Kakoune line that does not exist and corrupts the buffer. `build_formatting_edits`
+therefore suppresses edits that would only rewrite the terminator, and
+`test_formatting_edits_cover_the_whole_document` /
+`test_formatting_edits_keep_the_source_line_ending` in the server suite pin both
+the applied result and idempotence. The Kakoune check keeps asserting the
+real-client result rather than the old limitation.
 At a missing field label, `lsp-code-actions-sync quickfix` returns a single E415
 quick fix and applies its `WorkspaceEdit`, inserting `label: `. Selection among
 multiple actions and the asynchronous interactive menu remain manual.

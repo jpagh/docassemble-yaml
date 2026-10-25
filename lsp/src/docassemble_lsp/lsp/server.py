@@ -343,6 +343,22 @@ def build_hover(
     return None
 
 
+def _trailing_line_break(text: str) -> str:
+    """Return the document's final line break, or an empty string."""
+
+    for break_ in ("\r\n", "\n", "\r"):
+        if text.endswith(break_):
+            return break_
+    return ""
+
+
+def _strip_trailing_line_break(text: str) -> str:
+    """Drop one trailing line break, leaving any final blank line intact."""
+
+    trailing = _trailing_line_break(text)
+    return text[: -len(trailing)] if trailing else text
+
+
 def build_formatting_edits(
     source: str,
     *,
@@ -353,11 +369,21 @@ def build_formatting_edits(
         return []
 
     lines = _document_lines(source)
-    end_position = Position(line=len(lines) - 1, character=len(lines[-1]))
+    # Replace the document's content only and leave the source's own final line
+    # break outside the range. A replacement that carries its own trailing
+    # break duplicates it, and a range that also covers the break is applied
+    # inconsistently by clients (kak-lsp v22 corrupts the buffer).
+    trailing = _trailing_line_break(source)
+    new_text = _strip_trailing_line_break(result.text) if trailing else result.text
+    if new_text + trailing == source:
+        return []
     return [
         TextEdit(
-            range=Range(start=Position(line=0, character=0), end=end_position),
-            new_text=result.text,
+            range=Range(
+                start=Position(line=0, character=0),
+                end=Position(line=len(lines) - 1, character=len(lines[-1])),
+            ),
+            new_text=new_text,
         )
     ]
 
