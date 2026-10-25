@@ -1,4 +1,4 @@
-// Reference side of the scope-parity test.
+// Direct shipped TextMate tokenizer; compatibility parity is explicit opt-in.
 //
 // Tokenizes the fixture with the original VS Code TextMate grammars and
 // their injection selectors (vscode-textmate, the same engine VS Code uses),
@@ -6,7 +6,7 @@
 // `categories.json`. `src/main.rs` prints the same shape from syntect, and
 // `compare.py` diffs the two.
 //
-// Usage: node tokenize.mjs <fixture> <categories.json>
+// Usage: node tokenize.mjs <fixture> <categories.json> [--scopes] [--compatibility-reference]
 
 import fs from "node:fs";
 import path from "node:path";
@@ -15,6 +15,7 @@ import { fileURLToPath } from "node:url";
 
 import vsOnigPkg from "vscode-oniguruma";
 import textmatePkg from "vscode-textmate";
+import { patchReferenceRule } from "./compatibility-reference.mjs";
 
 const vsOnig = vsOnigPkg.default ?? vsOnigPkg;
 const { Registry, parseRawGrammar } = textmatePkg;
@@ -22,13 +23,18 @@ const { Registry, parseRawGrammar } = textmatePkg;
 const require = createRequire(import.meta.url);
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(here, "..", "..", "..");
-const syntaxes = path.join(repoRoot, "vscode", "syntaxes");
+const compatibilityReference = process.argv.includes("--compatibility-reference");
+const manifest = JSON.parse(fs.readFileSync(path.join(repoRoot, "vscode", "package.json"), "utf8"));
 
-const args = process.argv.slice(2).filter((arg) => arg !== "--scopes");
+const args = process.argv
+  .slice(2)
+  .filter((arg) => !["--scopes", "--compatibility-reference"].includes(arg));
 const scopesMode = process.argv.includes("--scopes");
 const [fixturePath, categoriesPath] = args;
 if (!fixturePath || !categoriesPath) {
-  console.error("usage: node tokenize.mjs <fixture> <categories.json>");
+  console.error(
+    "usage: node tokenize.mjs <fixture> <categories.json> [--scopes] [--compatibility-reference]",
+  );
   process.exit(2);
 }
 
@@ -55,14 +61,12 @@ function categoryFor(stack) {
 // Our own grammars must come from the repo, not from tm-grammars: they are
 // what the converter consumes.
 const ownGrammars = new Map(
-  [
-    ["source.docassemble.yaml", "yaml.tmLanguage.json"],
-    ["source.mako", "mako.tmLanguage.json"],
-    ["source.jinja", "jinja.tmLanguage.json"],
-    ["python.injection", "python-injection.json"],
-    ["mako.injection", "mako-injection.json"],
-    ["jinja.injection", "jinja-injection.json"],
-  ].map(([scope, file]) => [scope, path.join(syntaxes, file)]),
+  manifest.contributes.grammars.map(({ scopeName, path: grammarPath }) => [
+    scopeName,
+    compatibilityReference
+      ? path.join(repoRoot, "grammars", "textmate", path.basename(grammarPath))
+      : path.resolve(repoRoot, "vscode", grammarPath),
+  ]),
 );
 
 // Everything else (source.python, source.js, text.html.basic, ...) comes
@@ -70,9 +74,7 @@ const ownGrammars = new Map(
 // includes the candidate does.
 const tmGrammarIndex = new Map();
 function indexTmGrammars() {
-  const grammarsDir = path.dirname(
-    require.resolve("tm-grammars/grammars/python.json"),
-  );
+  const grammarsDir = path.dirname(require.resolve("tm-grammars/grammars/python.json"));
   for (const entry of fs.readdirSync(grammarsDir)) {
     if (!entry.endsWith(".json")) continue;
     const file = path.join(grammarsDir, entry);
@@ -88,72 +90,17 @@ function indexTmGrammars() {
   }
 }
 
-const INJECTIONS = {
-  "source.docassemble.yaml": [
-    "python.injection",
-    "mako.injection",
-    "jinja.injection",
-  ],
-};
-
-// vscode-textmate loses the TextMate `\\G` anchor at a line boundary, so the
-// idiom `end: "^(?=\\S)|(?!\\G)"` (block scalar bodies, the Python
-// `code:`/`show if:`/`script:` injections) pops at the first character of the
-// following line instead of holding the region open.  The converter lowers
-// those rules into match/push contexts where syntect keeps the region open,
-// so the reference applies this narrow, documented rewrite to compare against
-// the grammar's intent rather than that engine artifact.
-const RULE_REWRITES = [
-  {
-    // TextMate `\\G` anchors to the end of the previous match, which holds
-    // across a line boundary; vscode-textmate resets it per line, so the
-    // region pops at the first character of the next line.
-    field: "end",
-    from: "^(?=\\S)|(?!\\G)",
-    to: "^(?=\\S)",
-  },
-  {
-    field: "end",
-    from: "(?=\\S)|(?!\\G)",
-    to: "(?=\\S)",
-  },
-  {
-    // The end of these indentation-delimited regions back-references a
-    // capture from a zero-width lookahead begin; vscode-oniguruma does not
-    // return that group, so `\\1` resolves to the empty string and the
-    // region never ends.  Consuming the indentation (as the upstream YAML
-    // grammar does) records the capture.
-    field: "begin",
-    from: "^(?=([ ]+)(?! ))",
-    to: "^([ ]+)(?! )",
-  },
-];
-
-function patchReferenceRule(rule) {
-  if (!rule || typeof rule !== "object") return;
-  for (const rewrite of RULE_REWRITES) {
-    if (rule[rewrite.field] === rewrite.from) rule[rewrite.field] = rewrite.to;
-  }
-  // The docassemble fork wraps block-scalar bodies in `source.mako`; the
-  // wrapper never engages under vscode-textmate (it only ever coloured the
-  // body as unscoped text) and its injected context then traps the
-  // `code:`/`if:` injections inside the scalar.  Restore the upstream
-  // `string.unquoted.block.yaml` body; Mako still reaches the content
-  // through its injection.
-  if (rule.name === "source.mako" && rule.patterns) {
-    rule.name = "string.unquoted.block.yaml";
-    delete rule.patterns;
-  }
-  for (const child of Object.values(rule)) {
-    if (Array.isArray(child)) child.forEach(patchReferenceRule);
-    else if (child && typeof child === "object") patchReferenceRule(child);
-  }
+const INJECTIONS = {};
+for (const { scopeName, injectTo = [] } of manifest.contributes.grammars) {
+  for (const target of injectTo) (INJECTIONS[target] ??= []).push(scopeName);
 }
 
 function loadRawGrammar(scopeName) {
   const own = ownGrammars.get(scopeName);
   if (own) {
-    const raw = JSON.parse(fs.readFileSync(own, "utf8"));
+    const text = fs.readFileSync(own, "utf8");
+    if (!compatibilityReference) return parseRawGrammar(text, own);
+    const raw = JSON.parse(text);
     patchReferenceRule(raw);
     return parseRawGrammar(JSON.stringify(raw), own);
   }
@@ -164,9 +111,7 @@ function loadRawGrammar(scopeName) {
 
 async function main() {
   indexTmGrammars();
-  const wasm = fs.readFileSync(
-    require.resolve("vscode-oniguruma/release/onig.wasm"),
-  );
+  const wasm = fs.readFileSync(require.resolve("vscode-oniguruma/release/onig.wasm"));
   await vsOnig.loadWASM(wasm.buffer);
   const onigLib = Promise.resolve({
     createOnigScanner: vsOnig.createOnigScanner,
@@ -221,11 +166,7 @@ async function main() {
     for (const token of result.tokens) {
       const category = categoryFor(token.scopes);
       const previous = runs[runs.length - 1];
-      if (
-        previous &&
-        previous[1] === token.startIndex &&
-        previous[2] === category
-      ) {
+      if (previous && previous[1] === token.startIndex && previous[2] === category) {
         previous[1] = token.endIndex;
       } else {
         runs.push([token.startIndex, token.endIndex, category]);
@@ -235,7 +176,11 @@ async function main() {
   }
 
   process.stdout.write(
-    JSON.stringify({ engine: "vscode-textmate", lines }) + "\n",
+    JSON.stringify({
+      engine: "vscode-textmate",
+      referenceMode: compatibilityReference ? "compatibility" : "shipped",
+      lines,
+    }) + "\n",
   );
 }
 

@@ -1,0 +1,25 @@
+[tools]
+    "pipx:ruff" = "latest"
+    uv          = "latest"
+
+[tasks.format]
+    description = "Format shared grammar tooling"
+    run         = "ruff format scripts tests"
+
+[tasks."format:check"]
+    description = "Check shared grammar tooling formatting"
+    depends     = ["//:format:toml:check"]
+    run         = "ruff format --check scripts tests"
+
+[tasks.lint]
+    description = "Lint shared grammar tooling"
+    depends     = ["//:lint:toml"]
+    run         = "ruff check scripts tests"
+
+[tasks.test]
+    description = "Check shared conversion output against the committed Fresh artifact"
+    run         = "uv run --quiet --no-project --with pyyaml python -m unittest discover -s tests -v"
+
+[tasks.check]
+    description = "Shared conversion and direct shipped TextMate checks"
+    depends     = ["format:check", "lint", "test", "//tools/scope-parity:test:shipped"]

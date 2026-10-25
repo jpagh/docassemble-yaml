@@ -47,7 +47,7 @@ def check_expected_differences() -> None:
 
 
 def check_fixture() -> None:
-    text = (HERE / "fixtures" / "sample.yml").read_text()
+    text = (HERE.parents[1] / "grammars" / "fixtures" / "sample.yml").read_text()
     try:
         text.encode("ascii")
     except UnicodeEncodeError as error:

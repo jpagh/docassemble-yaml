@@ -1,19 +1,19 @@
 # Docassemble support for Fresh
 
 A [Fresh](https://github.com/sinelaw/fresh) bundle for Docassemble
-interviews: syntax highlighting that matches the VS Code extension
-(`vscode/syntaxes/*.tmLanguage.json`), zero-config detection of interview
-files, and `docassemble-lsp` wiring.
+interviews: syntax highlighting derived from shared TextMate sources
+(`grammars/textmate/*.json`) also packaged by the VS Code extension, zero-config
+detection of interview files, and `docassemble-lsp` wiring.
 
 - `package.json` — bundle manifest (grammar, language settings, LSP, plugin).
 - `docassemble.ts` — detection plugin (see
   [Detect Docassemble YAML files](#detect-docassemble-yaml-files)).
 - `grammars/Docassemble.sublime-syntax` — generated grammar (committed).
-- `scripts/build_syntax.py` — regenerates it from the VS Code TextMate
-  grammars. Run it after editing those:
+- `scripts/build_syntax.py` — compatibility entry point for the shared
+  converter in `grammars/scripts/`. Run after editing shared sources:
 
   ```bash
-  uv run --project lsp python fresh/scripts/build_syntax.py
+  uv run --no-project --with pyyaml python grammars/scripts/build_syntax.py
   ```
 
 - `validate.sh` — manifest sanity check (`mise run //fresh:check`).
@@ -174,22 +174,24 @@ The pack itself is checked by `mise run //fresh:check` (ruff formatting and
 lint, `validate.sh`, and a staleness check that regenerates the grammar and
 compares it byte-for-byte). That runs as part of `mise run check`.
 
-The generated grammar is additionally validated against the original VS Code
-TextMate grammars by a scope-parity test:
+Shared ownership and regeneration for both editors are documented in
+[`grammars/README.md`](../grammars/README.md). Direct, unmodified shipped
+TextMate tests run in the main check. Separately, the generated grammar is
+validated against a **transformed compatibility reference** by a scope-parity test:
 
 ```bash
 mise run //tools/scope-parity:test
 ```
 
-It tokenizes `tools/scope-parity/fixtures/sample.yml` with vscode-textmate
+It tokenizes `grammars/fixtures/sample.yml` with vscode-textmate
 (the VS Code engine) and with syntect (Fresh's engine) and diffs the
 per-character highlight categories. See `tools/scope-parity/README.md` for
 the documented reference patches and how to add fixture cases.
 
-Regenerate the grammar after editing `vscode/syntaxes/*.tmLanguage.json`:
+Regenerate the grammar after editing `grammars/textmate/*.json`:
 
 ```bash
-uv run --project lsp python fresh/scripts/build_syntax.py
+uv run --no-project --with pyyaml python grammars/scripts/build_syntax.py
 ```
 
 The plugin (`docassemble.ts`) is not compiled or bundled; Fresh transpiles it
@@ -202,4 +204,5 @@ at Fresh's `types/fresh.d.ts` (written to `~/.config/fresh/types/`) and run
 The grammar is generated from the TextMate grammars shipped in this
 repository's VS Code extension. The YAML base grammar is derived from
 [textmate/yaml.tmbundle](https://github.com/textmate/yaml.tmbundle) (MIT);
-the Mako and Jinja grammars come from the same `vscode/syntaxes/` directory.
+the Mako and Jinja grammars come from the same shared `grammars/textmate/`
+directory (packaged unchanged in `vscode/syntaxes/`).

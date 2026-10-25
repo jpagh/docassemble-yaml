@@ -1,9 +1,9 @@
 """Validate the committed Fresh bundle.
 
 Checks that ``package.json`` and the grammar agree and that the committed
-grammar is exactly what ``build_syntax.py`` produces (whitespace aside, the
-output should be byte-identical -- if it is not, the file was edited by hand
-or the generator changed without regenerating).
+grammar is exactly what the shared ``build_syntax.py`` produces (byte-identical;
+otherwise the file was edited by hand or the converter changed without
+regenerating).
 
 Run via ``mise run //fresh:check`` or::
 
@@ -21,7 +21,7 @@ import yaml
 
 HERE = Path(__file__).resolve().parent
 PACK = HERE.parent
-sys.path.insert(0, str(HERE))
+sys.path.insert(0, str(PACK.parent / "grammars" / "scripts"))
 
 import build_syntax
 

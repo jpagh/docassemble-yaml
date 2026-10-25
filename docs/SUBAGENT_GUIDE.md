@@ -27,6 +27,17 @@ inspect `lsp/src/docassemble_lsp/core/completion_rules.py` and the relevant
 modules in `lsp/src/docassemble_lsp/core/validation/` (especially
 `blocks.py` and `fields.py`) for the current rule data before coding.
 
+## Shared Grammar Changes
+
+Highlighting sources, conversion, and editor-independent fixtures live in
+`grammars/`; read [`grammars/README.md`](../grammars/README.md) before editing them.
+`vscode/syntaxes/` contains generated packaging copies, not canonical sources.
+Regenerate both editor artifacts after shared changes and commit them together.
+The main `mise run check` includes direct tests of unmodified shipped TextMate
+sources; the explicit scope-parity test uses documented compatibility rewrites
+and must not be mistaken for shipped editor behavior. Do not fix unrelated
+syntax rules while changing shared tooling.
+
 ## Repo Rules Of Thumb
 
 ### Use The Shared Semantic Model

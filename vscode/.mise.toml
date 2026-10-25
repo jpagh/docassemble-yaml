@@ -21,9 +21,17 @@
     depends     = ["sync"]
     run         = "tsc -p ./"
 
+[tasks."grammar:sync"]
+    description = "Copy shared canonical TextMate grammars into the VS Code package"
+    run         = "node scripts/sync-grammars.mjs"
+
+[tasks."grammar:check"]
+    description = "Check packaged TextMate grammar copies against shared sources"
+    run         = "node scripts/sync-grammars.mjs --check"
+
 [tasks.build]
     description = "Full build: bundle server + tsc + esbuild bundle"
-    depends     = ["bundle:server", "compile"]
+    depends     = ["bundle:server", "compile", "grammar:check"]
     run         = "esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --platform=node --target=node18 --format=cjs --sourcemap=external --minify"
 
 [tasks.format]

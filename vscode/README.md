@@ -85,3 +85,12 @@ DOCASSEMBLE_LSP_SHOW_WINDOW=1 mise run //vscode:test
 ```
 
 This controls the `--headless` flag — useful on Linux/Windows for debugging; no visible effect on macOS (the window is already visible).
+
+## Grammar development
+
+Canonical TextMate sources and shared fixtures live in
+[`grammars/`](../grammars/README.md). `syntaxes/` contains committed, byte-identical
+packaging copies so installed grammar paths, dependencies, and injection
+registration are unchanged. After editing shared sources, run
+`mise run //vscode:grammar:sync`; builds check for stale copies. Regenerate the
+Fresh artifact too, following the shared instructions.

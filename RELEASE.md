@@ -73,6 +73,18 @@ This runs ruff, pyrefly, and the full pytest suite across all supported Python v
 - Definitions + references: `test_definitions.py`, `test_lsp.py`, `test_references_integration.py`
 - Formatting: `test_formatting.py`, `test_lsp.py`
 
+## Shared Grammar Gate
+
+The root `mise run check` includes shared conversion-output tests and direct,
+unmodified shipped TextMate fixture assertions (`//grammars:check`), Fresh
+manifest/generated-artifact checks, and VS Code build/packaging-copy checks.
+The root release `gate` additionally retains syntect parity against the explicitly
+transformed compatibility reference (`//tools/scope-parity:gate`). These are
+different guarantees: compatibility-reference parity does not assert equivalence
+to the unmodified shipped TextMate grammar. See
+[`grammars/README.md`](grammars/README.md) for ownership and regeneration, and the
+[harness exceptions](tools/scope-parity/README.md#existing-reference-patches).
+
 ## Extension Status
 
 The VS Code extension lives at `vscode/` in this monorepo. 1.0.0 has been shipped (VSIX built, version bumped). The extension test suite has 13 tests covering:

@@ -15,7 +15,7 @@ Deliverable prototype lives in [`fresh/`](../fresh/README.md).
   folding. This is verified end-to-end with the pack in `fresh/`.
 - The main work is **grammar conversion**, not LSP: syntect only understands a
   subset of `.sublime-syntax` (no `begin`/`end`), so the VS Code TextMate
-  grammars are lowered by `fresh/scripts/build_syntax.py`. The prototype
+  grammars are lowered by `grammars/scripts/build_syntax.py`. The prototype
   already reproduces the VS Code look for Docassemble keys, Mako `${...}` /
   `<%...%>`, Jinja `{{...}}` / `{%...%}`, and the Python injection for `code:`,
   `if:`, `need:`, `show if:` and `script:`.
@@ -106,8 +106,8 @@ plugin can set a per-language root. Semantic tokens are gated behind
   plugin sees it), `lsp_enabled`/`auto_start`, workspace trust, preview
   buffers, and a hand-picked language.
 - `grammars/Docassemble.sublime-syntax` — generated, committed.
-- `scripts/build_syntax.py` — lowers the VS Code TextMate grammars to the
-  syntect subset.
+- `scripts/build_syntax.py` — compatibility entry point for the shared
+  `grammars/scripts/build_syntax.py` converter.
 - `validate.sh`, `README.md` — install and configuration instructions.
 
 `tools/scope-parity/` contains the scope-parity test described below.
@@ -183,17 +183,19 @@ Plus three sharp edges that cost debugging time and are worth knowing:
   The scope-parity reference applies the matching normalisation; see
   `tools/scope-parity/README.md`.
 
-Source of truth stays `vscode/syntaxes/*.tmLanguage.json`; regenerate with:
+Source of truth is now `grammars/textmate/*.json`; see
+[`grammars/README.md`](../grammars/README.md) for ownership and both editors'
+regeneration commands. Generate the Fresh artifact with:
 
 ```bash
-uv run --project lsp python fresh/scripts/build_syntax.py
+uv run --no-project --with pyyaml python grammars/scripts/build_syntax.py
 ```
 
 ## Gaps and risks
 
 | Area | Status |
 |---|---|
-| `begin`/`end` lowering fidelity | A scope-parity test compares the generated grammar against the original grammars under vscode-textmate (`mise run //tools/scope-parity:test`): 46 fixture lines, zero undocumented differences. The reference applies three documented engine patches (TextMate `\G`-across-lines, captures in zero-width lookaheads, and the fork's ineffective block-scalar Mako wrapper); see `tools/scope-parity/README.md`. |
+| `begin`/`end` lowering fidelity | A scope-parity test compares the generated grammar against a transformed compatibility reference under vscode-textmate (`mise run //tools/scope-parity:test`): 46 fixture lines, zero undocumented differences. The reference applies three documented engine patches (TextMate `\G`-across-lines, captures in zero-width lookaheads, and the fork's ineffective block-scalar Mako wrapper); see `tools/scope-parity/README.md`. |
 | Capture-nested `patterns` | Dropped (only affects an "invalid indent indicator" scope in the YAML grammar). |
 | Plain scalar scopes | The VS Code grammar names plain scalars `unquoted.plain.*.yaml`, which Fresh themes don't colour (the built-in YAML grammar uses `string.unquoted.*`). This matches VS Code's own behaviour but means plain values look flat in colour schemes that only style `string.*`. |
 | `.yml` detection | Solved in-pack: the bundle's plugin re-classifies `data/questions/**/*.yml`. A manifest cannot ship globs and `extensions` lose to the built-in `.yml` mapping, so the plugin is the only route. Limit: a file opened after the server is already running joins on first interaction (or via the **docassemble: Reattach language server** command), because Fresh only sends `didOpen` for buffers classified before the server started. |
@@ -211,7 +213,8 @@ uv run --project lsp python fresh/scripts/build_syntax.py
    detection declaratively. That removes the plugin's re-classification and
    its after-start `didOpen` limitation entirely.
 2. Extend the scope-parity fixture as the VS Code grammars gain constructs;
-   the harness and reference patches are in `tools/scope-parity/`.
+   the shared corpus is in `grammars/fixtures/`, and the harness and explicit
+   reference patches are in `tools/scope-parity/`.
 3. Publish the bundle (the pack install from a monorepo subpath is
    documented in `fresh/README.md`).
 

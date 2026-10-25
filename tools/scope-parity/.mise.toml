@@ -14,6 +14,9 @@
     run         = [
         "cargo fmt --check",
         "node --check node/tokenize.mjs",
+        "node --check node/compatibility-reference.mjs",
+        "node --check node/tokenize-shipped.test.mjs",
+        "node --check node/tokenize-compatibility.test.mjs",
         "ruff format --check compare.py lint.py",
     ]
 
@@ -31,12 +34,27 @@
 
 [tasks.check]
     description = "Fast checks: formatting, lint, and input validation"
-    depends     = ["format:check", "lint"]
+    depends     = ["format:check", "lint", "test:reference"]
+
+[tasks."node:sync"]
+    description = "Install the locked TextMate test dependencies"
+    run         = "npm ci --prefix node --silent"
+
+[tasks."test:shipped"]
+    description = "Direct tests of unmodified shipped TextMate grammars (no reference patches)"
+    depends     = ["node:sync"]
+    run         = "node --test node/tokenize-shipped.test.mjs"
+
+[tasks."test:reference"]
+    description = "Check explicit compatibility-reference mode stays distinct from shipped behavior"
+    depends     = ["node:sync"]
+    run         = "node --test node/tokenize-compatibility.test.mjs"
 
 [tasks.test]
-    description = "Scope parity: vscode-textmate reference vs the generated Fresh grammar"
+    description = "Scope parity: transformed compatibility reference vs generated Fresh grammar"
+    depends     = ["node:sync"]
     run         = "./run.sh"
 
 [tasks.gate]
     description = "Fast checks, clippy, and the parity run"
-    depends     = ["check", "lint:rust", "test"]
+    depends     = ["check", "lint:rust", "test:shipped", "test"]
