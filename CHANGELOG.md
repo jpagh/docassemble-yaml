@@ -2,6 +2,21 @@
 
 ## [Unreleased]
 
+### Added
+
+- [KAKOUNE] Docassemble support for Kakoune in `kakoune/`: interviews under a package's `data/questions/` directory (`.yml` and `.yaml`, nested directories included) open as the `docassemble` filetype with giallo.kak TextMate highlighting, two-space indentation and a YAML comment definition. Ordinary YAML stays untouched, and `:docassemble-enable` / `:docassemble-disable` cover interviews kept elsewhere. Optional kakoune-lsp v22 wiring launches `docassemble-lsp lsp`, selects the package/project root instead of the interview directory, and fails non-fatally with actionable instructions when the server is missing. [`docs/KAKOUNE.md`](docs/KAKOUNE.md) records tested versions, evidence and limitations; [`kakoune/README.md`](kakoune/README.md) carries the version-pinned support matrix and setup.
+- [GRAMMARS] Shared TextMate sources, the Fresh lowering script and the editor-independent corpus now live in `grammars/`, consumed by every editor's packaging step; VS Code and Fresh keep generated copies whose checks fail when they are stale.
+
+### Changed
+
+- [GRAMMARS] The grammar-engine harness gained giallo as a third engine: a canonical shipped-TextMate-vs-giallo comparison next to the existing compatibility reference-vs-syntect run, closed and stale-detected reason classes for the intentional differences, explicit UTF-16/UTF-8-to-codepoint offset normalisation, and separate Kakoune incremental-convergence checks that do not claim tokenization parity.
+- [KAKOUNE] The live Kakoune/kak-lsp/server suite is opt-in through `DOCASSEMBLE_LSP_LIVE_KAKOUNE=1`, because it drives a real editor, client and server together; `mise run check` stays deterministic with or without those tools.
+- [VSCODE] The extension-host test suites launch a real VS Code window on macOS, so they run only in `//vscode:gate` and `mise run gate`; `mise run check` is UI-free.
+
+### Fixed
+
+- [LSP] Whole-document formatting no longer appends a blank line: the edit replaces document content and leaves the source's own final line break outside its range, which is also the only form kakoune-lsp v22 applies correctly. Edits that would only rewrite the terminator are suppressed instead of being offered forever.
+
 ## [26.10.0] - 2026-10-10
 
 ### Added
