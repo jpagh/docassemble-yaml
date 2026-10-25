@@ -4,7 +4,8 @@ Status: automatic/explicit filetype activation verified with **Kakoune 2026.05.2
 **giallo-kak 0.4.0 (66d0731)** and its **giallo 0.5.2** dependency,
 on macOS arm64. Installable example: [`kakoune/`](../kakoune/README.md).
 Optional stdio LSP integration is verified with **kakoune-lsp 22.0.0** (binary
-`kak-lsp`) and **docassemble-lsp 26.10.0**. No cross-engine harness or support
+`kak-lsp`) and **docassemble-lsp 26.10.0**. The separate [cross-engine harness](../tools/scope-parity/README.md) compares
+canonical rules against giallo and retains Fresh compatibility parity; no support
 matrix is included here.
 
 ## Detection and buffer lifecycle
@@ -379,3 +380,25 @@ Overrides: `KAKOUNE_BIN`, `KAK_LSP_BIN`, `DOCASSEMBLE_LSP_BIN`, `GIALLO_KAK_BIN`
 The integration was exercised through clean-HOME headless sessions, not a human
 visual completion/hover inspection. Interactive menus, popup appearance and idle
 latency remain manual validation boundaries, not asserted by this ticket's test.
+
+
+## Shared regressions and editor updates (#24)
+
+The [scope-parity harness](../tools/scope-parity/README.md) now compares shipped
+TextMate against the giallo **library**, separately from transformed-reference
+Fresh/syntect parity. Two known shipped block-body/wrapper limitations are exact,
+pair-scoped, stale-checked exceptions; canonical-rule comparison is not universal
+equivalence or a visual VS Code claim. Shared Unicode normalization is explicit:
+TextMate UTF-16 code units and Rust UTF-8 bytes become codepoints.
+
+The real-editor check additionally edits `grammars/fixtures/regions.yml` in a
+buffer: insert one character, delete a line, paste a multiline block, and remove
+indentation. After each edit it verifies content and compares every byte-column
+range/colour with a fresh independent full-highlight editor session. The original
+source file stays unchanged. The normal timestamp-guarded `giallo-rehighlight`
+command is invoked explicitly with rate limiting disabled; interactive idle
+latency remains outside the headless claim. This verifies editor-path update
+convergence, not tokenizer parity or incremental reparsing inside giallo.
+`MISE_EXPERIMENTAL=1 mise run //kakoune:check` runs this path with tools installed,
+or loudly skips without them; main `check` includes it. Rust comparisons and
+diagnostic-theme inversion/negative controls run only in the scoped parity gate.

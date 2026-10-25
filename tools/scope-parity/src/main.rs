@@ -10,53 +10,12 @@
 
 use std::path::Path;
 
-use serde::Deserialize;
+use scope_parity::{category, Categories};
 use serde_json::json;
 use syntect::parsing::{
     ClearAmount, ParseState, ScopeStack, ScopeStackOp, SyntaxDefinition, SyntaxSet,
     SyntaxSetBuilder,
 };
-
-#[derive(Deserialize)]
-struct Categories {
-    embedded: Vec<Embedded>,
-    rules: Vec<Rule>,
-}
-
-#[derive(Deserialize)]
-struct Embedded {
-    scope: String,
-    category: String,
-}
-
-#[derive(Deserialize)]
-struct Rule {
-    prefix: String,
-    category: String,
-}
-
-fn category<'a>(stack: &[String], categories: &'a Categories) -> &'a str {
-    // Embedded languages are normalised to a single category: the grammar
-    // under test decides where Python/JS/HTML starts and stops, but the
-    // internals of those grammars belong to syntect, not to this project.
-    for embedded in categories.embedded.iter().rev() {
-        let scope = &embedded.scope;
-        if stack
-            .iter()
-            .any(|s| s == scope || s.starts_with(&format!("{scope}.")))
-        {
-            return &embedded.category;
-        }
-    }
-    for scope in stack.iter().rev() {
-        for rule in &categories.rules {
-            if scope.starts_with(&rule.prefix) {
-                return &rule.category;
-            }
-        }
-    }
-    "other"
-}
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
@@ -126,7 +85,11 @@ fn main() {
 
         // Collapse equal neighbouring categories into runs.
         let mut runs: Vec<(usize, usize, &str)> = Vec::new();
-        for (position, scopes) in contexts.iter().take(line.len()).enumerate() {
+        for (position, scopes) in contexts
+            .iter()
+            .take(line.trim_end_matches('\n').len())
+            .enumerate()
+        {
             let current = category(scopes, &categories);
             match runs.last_mut() {
                 Some((_, end, previous)) if *previous == current && *end == position => {
@@ -154,6 +117,7 @@ fn main() {
         "{}",
         serde_json::to_string(&json!({
             "engine": "syntect",
+            "offsetUnit": "utf8",
             "grammar": Path::new(grammar_path)
                 .file_name()
                 .map(|name| name.to_string_lossy().into_owned())

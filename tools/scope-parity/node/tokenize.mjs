@@ -163,7 +163,9 @@ async function main() {
     }
 
     const runs = [];
-    for (const token of result.tokens) {
+    for (const rawToken of result.tokens) {
+      const token = { ...rawToken, endIndex: Math.min(rawToken.endIndex, line.length) };
+      if (token.startIndex >= token.endIndex) continue;
       const category = categoryFor(token.scopes);
       const previous = runs[runs.length - 1];
       if (previous && previous[1] === token.startIndex && previous[2] === category) {
@@ -178,6 +180,7 @@ async function main() {
   process.stdout.write(
     JSON.stringify({
       engine: "vscode-textmate",
+      offsetUnit: "utf16",
       referenceMode: compatibilityReference ? "compatibility" : "shipped",
       lines,
     }) + "\n",

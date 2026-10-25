@@ -1,6 +1,6 @@
 """Diff the scope-parity JSON emitted by src/main.rs and tokenize.mjs.
 
-Usage: compare.py REFERENCE.json CANDIDATE.json
+Usage: compare.py REFERENCE.json CANDIDATE.json --pair PAIR --fixture NAME
 
 Per character, both sides are reduced to one highlight category from the
 shared categories.json. Any mismatch outside ``expected-differences.json``
@@ -9,41 +9,30 @@ fails the test; expected entries document why a difference is acceptable.
 
 from __future__ import annotations
 
+import argparse
 import json
 import sys
 from pathlib import Path
+
+from offsets import normalize
 
 HERE = Path(__file__).resolve().parent
 EXPECTED_PATH = HERE / "expected-differences.json"
 
 
-def expand(line: dict) -> list[str]:
-    """Expand runs into one category per character."""
-    length = len(line["text"])
-    categories = ["other"] * length
-    for start, end, category in line["runs"]:
-        for index in range(start, min(end, length)):
-            categories[index] = category
-    return categories
-
-
 def mismatch_runs(reference: list[str], candidate: list[str]):
     """Yield contiguous (start, end, ref_category, cand_category) runs."""
-    start = None
-    ref_category = cand_category = ""
-    for index in range(min(len(reference), len(candidate)) + 1):
-        differs = (
-            index < len(reference)
-            and index < len(candidate)
-            and reference[index] != candidate[index]
-        )
-        if differs and start is None:
-            start = index
-            ref_category = reference[index]
-            cand_category = candidate[index]
-        elif not differs and start is not None:
-            yield start, index, ref_category, cand_category
-            start = None
+    start = 0
+    while start < len(reference):
+        if reference[start] == candidate[start]:
+            start += 1
+            continue
+        pair = reference[start], candidate[start]
+        end = start + 1
+        while end < len(reference) and (reference[end], candidate[end]) == pair:
+            end += 1
+        yield start, end, *pair
+        start = end
 
 
 def expected_entries() -> list[dict]:
@@ -56,20 +45,38 @@ def is_expected(entry: dict, line_number: int, run) -> bool:
     start, end, ref_category, cand_category = run
     return (
         entry.get("line") == line_number
-        and entry.get("start") <= start
-        and entry.get("end") >= end
+        and entry.get("start") == start
+        and entry.get("end") == end
         and entry.get("ref") == ref_category
         and entry.get("cand") == cand_category
     )
 
 
 def main() -> int:
-    if len(sys.argv) != 3:
-        print(__doc__, file=sys.stderr)
-        return 2
-    reference = json.loads(Path(sys.argv[1]).read_text())
-    candidate = json.loads(Path(sys.argv[2]).read_text())
-    expected = expected_entries()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("reference", type=Path)
+    parser.add_argument("candidate", type=Path)
+    parser.add_argument("--pair", choices=["canonical", "compatibility"], required=True)
+    parser.add_argument("--fixture", required=True)
+    args = parser.parse_args()
+    reference = json.loads(args.reference.read_text())
+    candidate = json.loads(args.candidate.read_text())
+    expected = [
+        entry
+        for entry in expected_entries()
+        if entry["pair"] == args.pair and entry["fixture"] == args.fixture
+    ]
+    mode, engine = (
+        ("shipped", "giallo")
+        if args.pair == "canonical"
+        else ("compatibility", "syntect")
+    )
+    if (
+        reference["engine"] != "vscode-textmate"
+        or reference["referenceMode"] != mode
+        or candidate["engine"] != engine
+    ):
+        raise ValueError("wrong engine pair or reference mode")
 
     if len(reference["lines"]) != len(candidate["lines"]):
         print(
@@ -82,11 +89,14 @@ def main() -> int:
     failures = 0
     matched_expected: set[int] = set()
     for ref_line, cand_line in zip(reference["lines"], candidate["lines"]):
-        if ref_line["text"] != cand_line["text"]:
+        if (
+            ref_line["line"] != cand_line["line"]
+            or ref_line["text"] != cand_line["text"]
+        ):
             print(f"line {ref_line['line']}: fixture text differs", file=sys.stderr)
             return 1
-        ref_categories = expand(ref_line)
-        cand_categories = expand(cand_line)
+        ref_categories = normalize(ref_line, reference["offsetUnit"])
+        cand_categories = normalize(cand_line, candidate["offsetUnit"])
         for run in mismatch_runs(ref_categories, cand_categories):
             matched = None
             for index, entry in enumerate(expected):
@@ -126,14 +136,14 @@ def main() -> int:
         )
         if failures:
             print(
-                "Fix the grammar, or add an entry with a reason to "
+                "Investigate drift; approved intentional differences require a reason in "
                 f"{EXPECTED_PATH.name}",
                 file=sys.stderr,
             )
         return 1
 
     print(
-        f"scope parity OK: {len(reference['lines'])} lines, "
+        f"{args.pair} parity OK ({args.fixture}, codepoints): {len(reference['lines'])} lines, "
         f"{len(expected)} documented difference(s)"
     )
     return 0

@@ -1,0 +1,15 @@
+---
+# café, é, 中文 and 😀: codepoints are not bytes or UTF-16 units
+metadata:
+  title: "café 😀 é 中文"
+question: |
+  café 😀 é ${ prénom } and {{ résultat }}
+  <%doc>日本語 😀</%doc>
+---
+code: |
+  # naïve 😀 é
+  prénom = "中文 😀"
+question: Après 😀
+---
+show if: résultat is not None
+plain: fin é

@@ -1,0 +1,37 @@
+---
+metadata:
+  title: Region endings
+  count: 17
+  enabled: true
+---
+code: |
+  # a multiline Python content shape
+  total = 1
+  total += 2
+question: After code
+---
+show if: |
+  user_ready
+  and user_allowed
+question: After condition
+---
+question: |
+  Hello ${ user_name }
+  <%doc>
+  Mako comment across lines
+  </%doc>
+  {{ user_name }}
+  {% if ready %}
+  Ready
+  {% endif %}
+  Last scalar line
+help: After template dedent
+---
+question: |
+  First pasted line
+  Second pasted line ${ total }
+  Third pasted line {{ total }}
+fields:
+  - Result: result
+    datatype: text
+plain: back in YAML

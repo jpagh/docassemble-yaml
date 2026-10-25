@@ -1,33 +1,34 @@
 #!/usr/bin/env bash
-# Compatibility parity: tokenize the shared fixture with explicitly patched
-# TextMate reference grammars (vscode-textmate) and the generated Fresh grammar
-# (syntect), then diff the per-character highlight categories.
-#
-# Usage: tools/scope-parity/run.sh
+# Keep canonical-rule and transformed compatibility comparisons distinct.
 set -euo pipefail
 cd "$(dirname "$0")"
 REPO_ROOT="$(cd ../.. && pwd)"
-
-FIXTURE="$REPO_ROOT/grammars/fixtures/sample.yml"
-
 if [ ! -d node/node_modules ]; then
-  echo "installing reference tokenizer dependencies (one time)..."
   (cd node && npm ci --silent)
 fi
-
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
-
-# Test fresh output without changing the committed packaging artifact.
 GRAMMAR="$WORK/Docassemble.sublime-syntax"
 uv run --quiet --no-project --with pyyaml python \
   "$REPO_ROOT/grammars/scripts/build_syntax.py" --output "$GRAMMAR"
-
-echo "tokenizing with syntect (candidate)..."
-cargo run --quiet --release --manifest-path Cargo.toml -- \
-  "$GRAMMAR" "$FIXTURE" categories.json > "$WORK/candidate.json"
-
-echo "tokenizing with vscode-textmate (transformed compatibility reference)..."
-node node/tokenize.mjs "$FIXTURE" categories.json --compatibility-reference > "$WORK/reference.json"
-
-python3 compare.py "$WORK/reference.json" "$WORK/candidate.json"
+cargo build --quiet --release --bins
+status=0
+for pair in compatibility canonical; do
+  if [ "$pair" = compatibility ]; then
+    echo 'COMPATIBILITY: three explicit TextMate rule rewrites vs generated Fresh/syntect (not shipped parity)'
+  else
+    echo 'CANONICAL RULES: shipped TextMate vs giallo (name/injectTo metadata adaptation only; builtin dependencies differ)'
+  fi
+  for fixture in $(python3 -c "import json; print(' '.join(json.load(open('fixtures.json'))['$pair']))"); do
+    input="$REPO_ROOT/grammars/fixtures/$fixture"
+    if [ "$pair" = compatibility ]; then
+      target/release/scope-parity "$GRAMMAR" "$input" categories.json > "$WORK/candidate.json"
+      node node/tokenize.mjs "$input" categories.json --compatibility-reference > "$WORK/reference.json"
+    else
+      target/release/giallo "$REPO_ROOT/grammars/textmate" "$input" categories.json "$WORK" > "$WORK/candidate.json"
+      node node/tokenize.mjs "$input" categories.json > "$WORK/reference.json"
+    fi
+    python3 compare.py "$WORK/reference.json" "$WORK/candidate.json" --pair "$pair" --fixture "$fixture" || status=1
+  done
+done
+exit "$status"

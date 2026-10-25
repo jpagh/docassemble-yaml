@@ -1,0 +1,4 @@
+{
+  "compatibility": ["sample.yml", "regions.yml"],
+  "canonical": ["sample.yml", "regions.yml", "unicode.yml"]
+}

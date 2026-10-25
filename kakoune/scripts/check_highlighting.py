@@ -18,13 +18,18 @@ def quote(value):
 
 
 class Session:
-    def __init__(self, home, kak, giallo, omitted=None):
+    def __init__(self, home, kak, giallo, omitted=None, content=None):
         self.home = home
         self.kak = kak
         self.name = "da21-" + uuid.uuid4().hex[:8]
         self.buffer = home / "pkg/data/questions/sub/dir/sample.yaml"
         self.buffer.parent.mkdir(parents=True)
-        self.buffer.write_bytes((ROOT / "grammars/fixtures/sample.yml").read_bytes())
+        self.buffer.write_bytes(
+            content
+            if content is not None
+            else (ROOT / "grammars/fixtures/sample.yml").read_bytes()
+        )
+        self.line_count = len(self.buffer.read_text().splitlines())
         config = home / ".config/giallo.kak"
         config.mkdir(parents=True)
         shutil.copytree(ROOT / "kakoune/grammars", config / "grammars")
@@ -96,7 +101,7 @@ class Session:
         # refresh. Overlapping bootstrap FIFO writes can concatenate snapshots.
         time.sleep(0.3)
         self.send("set-option buffer giallo_last_update_ms 0\ngiallo-force-update")
-        self.wait_for(lambda: self.max_line() == 46)
+        self.wait_for(lambda: self.max_line() == self.line_count)
 
     def snapshot(self):
         commands = self.home / "commands"
@@ -128,6 +133,12 @@ class Session:
     def max_line(self):
         return max((row for row, *_ in self.ranges), default=0)
 
+    def colored_ranges(self):
+        return [
+            (row, start, end, self.faces.get(face, face))
+            for row, start, end, face in self.ranges
+        ]
+
     def wait_for(self, condition):
         deadline = time.monotonic() + 30
         while time.monotonic() < deadline:
@@ -148,6 +159,93 @@ class Session:
             except subprocess.TimeoutExpired:
                 self.process.kill()
                 self.process.wait()
+
+
+def incremental_checks(kak, giallo):
+    """Real buffer edits vs independent fresh editor sessions, NOT engine parity.
+
+    Headless sessions have no interactive NormalIdle timing. Invoke the same
+    timestamp-guarded rehighlight command used by that hook, not tokenization
+    directly and not the force-update command. Compare every range, not probes.
+    """
+    content = (ROOT / "grammars/fixtures/regions.yml").read_bytes()
+    with tempfile.TemporaryDirectory(prefix="docassemble-kak-edits-") as temp:
+        session = Session(Path(temp).resolve(), kak, giallo, content=content)
+        try:
+            session.start()
+            session.send("set-option buffer giallo_rate_limit_ms 0")
+            previous = session.colored_ranges()
+            edits = [
+                (
+                    "single-character insert",
+                    "select 19.9,19.9\nexecute-keys 'ix<esc>'",
+                    lambda text: text.replace(b"Hello ${", b"Hello x${"),
+                ),
+                (
+                    "delete a line",
+                    "select 20.1,20.1\nexecute-keys 'xd'",
+                    lambda text: text.replace(b"  <%doc>\n", b""),
+                ),
+                (
+                    "paste multiline block",
+                    "select 10.12,10.12\nexecute-keys 'a<ret>  pasted = 3<ret>  # pasted comment<esc>'",
+                    lambda text: text.replace(
+                        b"  total += 2\n",
+                        b"  total += 2\n  pasted = 3\n  # pasted comment\n",
+                    ),
+                ),
+                (
+                    "change indentation",
+                    "select 28.1,28.2\nexecute-keys 'd'",
+                    lambda text: text.replace(
+                        b"  Last scalar line", b"Last scalar line"
+                    ),
+                ),
+            ]
+            for label, commands, expected in edits:
+                session.send(commands)
+                # Export to a different file: the source file must remain untouched.
+                exported = session.home / "edited.yml"
+                exported.unlink(missing_ok=True)
+                session.send(f"write -force {quote(exported)}")
+                expected_content = expected(content)
+                deadline = time.monotonic() + 5
+                while time.monotonic() < deadline:
+                    if exported.exists() and exported.read_bytes() == expected_content:
+                        break
+                    time.sleep(0.05)
+                changed = exported.read_bytes()
+                assert changed != content, f"{label}: edit did not change content"
+                assert changed == expected_content, (label, changed)
+                content = changed
+                session.send("giallo-rehighlight")
+                with tempfile.TemporaryDirectory(
+                    prefix="docassemble-kak-full-"
+                ) as full_temp:
+                    fresh = Session(
+                        Path(full_temp).resolve(), kak, giallo, content=changed
+                    )
+                    try:
+                        fresh.start()
+                        full = fresh.colored_ranges()
+                        assert full != previous, (
+                            f"{label}: fixture must change highlight ranges"
+                        )
+                        session.wait_for(
+                            lambda full=full: session.colored_ranges() == full
+                        )
+                        previous = full
+                    finally:
+                        fresh.close()
+                assert (
+                    session.buffer.read_bytes()
+                    == (ROOT / "grammars/fixtures/regions.yml").read_bytes()
+                ), "original file was saved"
+                print(
+                    f"PASS incremental editor convergence: {label} ({len(full)} ranges)"
+                )
+        finally:
+            session.close()
 
 
 def check(kak, giallo):
@@ -233,6 +331,7 @@ def main():
     print(subprocess.check_output([kak, "-version"], text=True).strip())
     print(subprocess.check_output([giallo, "--version"], text=True).strip())
     check(str(Path(kak).resolve()), str(Path(giallo).resolve()))
+    incremental_checks(str(Path(kak).resolve()), str(Path(giallo).resolve()))
     print(
         "PASS: plugin activation, giallo shared boundaries, injection controls, unsaved Unicode buffer"
     )

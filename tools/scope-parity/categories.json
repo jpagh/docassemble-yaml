@@ -1,5 +1,5 @@
 {
-  "$comment": "Maps a scope-stack to one highlight category, for both the vscode-textmate reference and the syntect candidate. The most specific scope (last in the stack) that matches a prefix wins; unmatched is \"other\". Keep this file in sync with the normalisation in src/main.rs and node/tokenize.mjs.",
+  "$comment": "Maps a scope-stack to one highlight category, for TextMate, syntect, and the generated giallo diagnostic theme. The most specific scope (last in the stack) that matches a prefix wins; unmatched is \"other\". Keep this file in sync with the normalisation in src/lib.rs and node/tokenize.mjs.",
   "embedded": [
     {
       "scope": "source.python",

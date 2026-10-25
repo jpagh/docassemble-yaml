@@ -12,7 +12,10 @@
   not fix unrelated grammars or make those choices canonical TextMate behavior.
 - `fixtures/sample.yml` is the editor-independent, ASCII-only corpus shared by
   direct TextMate tests and transformed-reference parity. ASCII keeps UTF-16 and
-  byte offsets comparable. Extend it when adding constructs.
+  byte offsets comparable in that legacy fixture. Prefer new fixtures to avoid
+  invalidating its line-specific assertions. `fixtures/regions.yml` adds dedent
+  and multiline content shapes for both engine pairs; `fixtures/unicode.yml`
+  exercises explicit UTF-16/UTF-8-to-codepoint normalization in the canonical pair.
 - [`tools/scope-parity/`](../tools/scope-parity/README.md) owns reusable engine
   harnesses, category reduction, explicit reference patches, and intentional
   difference accounting; it consumes this directory's sources and corpus.
@@ -46,18 +49,31 @@ not the source of truth. Do not manually update the header during regeneration.
 
 ## Validation boundaries
 
-`mise run check` runs shared conversion tests, **unmodified shipped TextMate**
-fixture assertions, both existing editor checks, input validation, and formatting.
+`mise run check` (GUI-free) runs shared conversion tests, **unmodified shipped TextMate**
+fixture assertions, both existing editor checks, input validation, offset/exception-accounting tests, and formatting. The shared
+fast checks require no Rust toolchain or editor binaries; optional Kakoune checks
+skip loudly without their tools.
 VS Code builds fail on stale copies; Fresh checks compare regenerated output
 byte-for-byte without overwriting it. A packaging test checks all six registered
 grammars and the three injection targets. Kakoune's packaging tests enforce
 metadata-only adaptation and stale-copy detection; its real-editor smoke check
-skips loudly when Kakoune or giallo-kak is unavailable. See the
+skips loudly when Kakoune or giallo-kak is unavailable. With tools installed it
+separately checks real buffer edit convergence against fresh full highlights. See the
 [Kakoune investigation](../docs/KAKOUNE.md) for the observed shared-corpus
 boundaries and the separate Unicode fixture.
 
-`mise run //tools/scope-parity:test` is a separate, heavier **transformed
-compatibility-reference** comparison against syntect. `mise run gate` also runs
-it. It is not proof that Fresh matches the unmodified shipped VS Code grammar:
-see the documented reference exceptions and intentionally retained conversion
-limitations in the harness README.
+`MISE_EXPERIMENTAL=1 mise run //tools/scope-parity:gate` builds the heavier
+three-engine harness: **canonical rules** (unmodified shipped TextMate vs giallo,
+with explicit name/injectTo metadata adaptation) and **transformed compatibility
+reference** vs syntect/Fresh. Existing Fresh coverage is retained, with no
+exceptions, and extended with regions. The canonical pair additionally exercises
+Unicode offsets and documents two known shipped limitations as exact, stale-checked
+exceptions. Neither pair claims universal equivalence or VS Code visual parity.
+
+To add coverage, register a new fixture in `tools/scope-parity/fixtures.json`,
+keep compatibility inputs ASCII, and add independent shipped assertions. Never
+broaden exceptions to hide drift: each needs a known reason class and exact
+pair/fixture/line/codepoint range. See the [harness contributor guide](../tools/scope-parity/README.md#extending-the-shared-corpus)
+for commands, normalization, intentional-difference schema, stale detection, and
+the separate Kakoune incremental checks. The root release `gate` also invokes
+the harness, but launches VS Code; use the scoped parity gate for headless work.
