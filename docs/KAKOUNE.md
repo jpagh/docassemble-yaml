@@ -332,6 +332,10 @@ standalone manual-activation test also asserts its directory fallback root.
 `kakoune/tests/test_docassemble_lsp.py` starts real Kakoune daemons in temporary
 clean `HOME`/`XDG_CONFIG_HOME`, loads the **binary-generated upstream rc** and
 shipped plugins, and uses real `kak-lsp` and `docassemble-lsp lsp` processes.
+It is opt-in via `DOCASSEMBLE_LSP_LIVE_KAKOUNE=1`: those three processes plus a
+daemon-only client make some effects (diagnostic painting, buffer jumps)
+asynchronous, so the suite is a verification run rather than part of the
+every-machine `mise run check`. Without the variable it skips loudly.
 The test-only `lsp_stdio_probe.py` forwards framed stdio unchanged, recording
 both directions. It is not a replacement client/server or a user dependency.
 Checks are bounded, clean up sessions/processes and loudly skip missing tools:

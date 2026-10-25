@@ -28,7 +28,7 @@
     run         = "uv run --no-project python scripts/check_highlighting.py"
 
 [tasks."lsp:test"]
-    description = "Check real kak-lsp v22 wiring, cross-file edits and giallo interaction (loud skip without tools)"
+    description = "Live kak-lsp v22 wiring/cross-file checks (opt-in: DOCASSEMBLE_LSP_LIVE_KAKOUNE=1)"
     run         = "uv run --no-project python -m unittest discover -s tests -p test_docassemble_lsp.py -v"
 
 [tasks.check]

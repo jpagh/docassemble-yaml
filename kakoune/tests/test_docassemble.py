@@ -121,11 +121,19 @@ class DocassembleLifecycleTests(unittest.TestCase):
             timeout=5,
         )
         # Generous: the root gate runs this alongside CPU-saturating suites.
+        # `echo -to-file` creates the file before it writes, so wait for content
+        # that has settled across two reads rather than just for existence.
         deadline = time.monotonic() + 20
-        while not response.exists():
-            if time.monotonic() > deadline:
-                self.fail(f"Kakoune response timeout: {commands}")
+        previous = None
+        while time.monotonic() <= deadline:
+            if response.exists():
+                content = response.read_text()
+                if content and content == previous:
+                    break
+                previous = content
             time.sleep(0.01)
+        else:
+            self.fail(f"Kakoune response timeout: {commands}")
         self.assertEqual(response.read_text().strip(), "ok", commands)
 
     def options(self, *names):

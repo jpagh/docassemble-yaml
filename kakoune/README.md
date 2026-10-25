@@ -315,16 +315,25 @@ nested `.yaml` through this plugin, and retains all shared-boundary,
 per-injection omission, unsaved Unicode and removal assertions. Otherwise it
 prints **SKIP** and exits successfully. Optional executable overrides:
 `KAKOUNE_BIN` / `GIALLO_KAK_BIN` (paths or PATH names).
-`//kakoune:lsp:test` additionally tests real kak-lsp/server stdio, package-root
-initialization, saved/unsaved diagnostics and completion/hover responses,
-cross-file YAML/Python navigation, references, formatting and quick-fix edits,
-space-containing workspaces, PID-checked shutdown and optional semantic-token /
-giallo non-interference. The last uses a real off-screen JSON UI window; its
-idle hooks are disabled and requests are explicit for deterministic checks. It
-loudly skips when tools are absent. Optional overrides: `KAK_LSP_BIN` /
-`DOCASSEMBLE_LSP_BIN`; with giallo present it also proves highlighting survives a
-missing server. The root check includes these fast tasks; no tools are downloaded
-by probes. Headless tests assert diagnostic ranges and JSON responses, not visual
+The live client/server suite is **opt-in**, because it drives Kakoune, kak-lsp
+and the server together and depends on client-side effects (diagnostic painting,
+buffer jumps) that are asynchronous in a daemon with no terminal window:
+
+```sh
+DOCASSEMBLE_LSP_LIVE_KAKOUNE=1 \
+  PATH=/path/to/kak-lsp:$PATH MISE_EXPERIMENTAL=1 mise run //kakoune:lsp:test
+```
+
+It tests real stdio wiring, package-root initialization, saved/unsaved
+diagnostics and completion/hover responses, cross-file YAML/Python navigation,
+references, formatting and quick-fix edits, space-containing workspaces,
+PID-checked shutdown and optional semantic-token / giallo non-interference. The
+last uses a real off-screen JSON UI window; its idle hooks are disabled and
+requests are explicit. Without the variable it prints **SKIP**, so `mise run
+check` stays deterministic on every machine. Optional overrides: `KAK_LSP_BIN` /
+`DOCASSEMBLE_LSP_BIN` / `KAKOUNE_BIN` / `GIALLO_KAK_BIN`; with giallo present it
+also proves highlighting survives a missing server. No tools are downloaded by
+probes. Headless tests assert diagnostic ranges and JSON responses, not visual
 completion menus/hover popups; see the evidence document for that boundary.
 
 The clean-HOME installation route and explicit activation were also exercised
