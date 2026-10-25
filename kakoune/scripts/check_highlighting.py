@@ -75,7 +75,8 @@ class Session:
         )
 
     def start(self):
-        deadline = time.monotonic() + 5
+        # Generous: this runs alongside CPU-saturating suites in the root gate.
+        deadline = time.monotonic() + 20
         while True:
             try:
                 self.send("nop")
@@ -128,7 +129,7 @@ class Session:
         return max((row for row, *_ in self.ranges), default=0)
 
     def wait_for(self, condition):
-        deadline = time.monotonic() + 8
+        deadline = time.monotonic() + 30
         while time.monotonic() < deadline:
             self.snapshot()
             if condition():

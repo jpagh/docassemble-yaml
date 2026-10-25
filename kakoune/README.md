@@ -1,10 +1,11 @@
-# Docassemble highlighting in Kakoune
+# Docassemble in Kakoune
 
 A sourceable filetype plugin using [giallo.kak](https://github.com/Yukaii/giallo.kak),
 not a new highlighter. Tested with **Kakoune 2026.05.21** and
 **giallo-kak 0.4.0 (66d0731)** / giallo 0.5.2 on macOS arm64.
 See [the investigation](../docs/KAKOUNE.md) for evidence and limitations.
-No kak-lsp integration is included.
+Optional LSP wiring uses **kakoune-lsp 22.0.0** (binary name `kak-lsp`).
+Highlighting and LSP are independently sourceable; neither requires the other.
 
 ## Install
 
@@ -107,6 +108,116 @@ need not be saved. After a pause, `:giallo-force-update` can refresh delayed
 colours; giallo's macOS clock fallback can delay updates within one second.
 The upstream shared server is not stopped when just one buffer is disabled.
 
+## Optional diagnostics, completion and hover
+
+Install [kakoune-lsp v22.0.0](https://github.com/kakoune-lsp/kakoune-lsp/releases/tag/v22.0.0)
+and put `kak-lsp` on PATH. This example uses v22's **buffer `lsp_servers` TOML**,
+not the legacy `kak-lsp.toml` configuration (`roots` and `root_globs` are not
+interchangeable). Install the server on PATH, for example:
+
+```sh
+uv tool install docassemble-lsp
+kak-lsp --version                 # 22.0.0
+docassemble-lsp --help
+cp kakoune/rc/docassemble-lsp.kak "$config_home/kak/docassemble-lsp.kak"
+```
+
+After your highlighting/filetype setup, add the following to kakrc **before
+opening interviews**. Load upstream only once and call `lsp-enable` only once
+(omit those lines if already present):
+
+```kak
+evaluate-commands %sh{ kak-lsp }
+# Prevent upstream's default YAML server from attaching before manual activation.
+remove-hooks global lsp-filetype-yaml
+source %sh{ printf '%s/kak/docassemble-lsp.kak' "${XDG_CONFIG_HOME:-$HOME/.config}" }
+lsp-enable
+```
+
+The wiring replaces (does not append to) `lsp_servers` for `filetype=docassemble`
+and sets `lsp_language_id=docassemble`. Automatically detected interviews and
+`:docassemble-enable` buffers both use `docassemble-lsp lsp` over stdio.
+No keybindings are installed. Upstream supplies inline diagnostics, insert-idle
+completion and `:lsp-hover` (place the cursor on e.g. `question`). Unsaved edits
+are sent on upstream's idle hooks; `:lsp-did-change` explicitly synchronizes.
+The filename need not have been saved after edits; for a new interview give it
+a path with `:edit /absolute/path/new.yml` then `:docassemble-enable`.
+
+**Do not attach a generic YAML server to the same buffer.** Removing the default
+`lsp-filetype-yaml` hook above opts ordinary YAML out of LSP too, intentionally
+avoiding a server starting while an outside-package interview is still YAML.
+Remove or narrow any custom `filetype=yaml` / `filetype=.*` hooks that set
+`lsp_servers` or reset `lsp_language_id`; source this wiring after other server
+configuration. Inspect `:echo %opt{lsp_servers}` and
+`:echo %opt{lsp_language_id}` in the interview: there must be only a
+`[docassemble]` table and language `docassemble`. Do not combine this setup with
+a legacy generic YAML association. If YAML already attached, restart the
+session after correcting the hooks (changing filetype cannot undo a previous
+server launch).
+
+### Executable and virtualenv overrides
+
+The executable option is a single PATH name or absolute path, **not a shell
+command**; the plugin always supplies `args = ["lsp"]`. A global override applies
+to all interviews; a buffer override applies only there. For example, after
+sourcing the wiring:
+
+```kak
+set-option global docassemble_lsp_command '/absolute/path/to/docassemble-lsp'
+# Development checkout: first run `cd /absolute/path/to/docassemble-yaml/lsp && uv sync`.
+set-option global docassemble_lsp_command '/absolute/path/to/docassemble-yaml/lsp/.venv/bin/docassemble-lsp'
+# Or an interview package's environment, with docassemble-lsp installed:
+set-option buffer docassemble_lsp_command '/absolute/path/to/package/.venv/bin/docassemble-lsp'
+docassemble-lsp-enable
+```
+
+Use absolute paths (no literal `~`); the editor's environment must include
+needed runtime libraries too. The executable must be runnable in that environment.
+A missing/non-executable command leaves `lsp_servers` empty and writes an
+**actionable message in `*debug*`** explaining installation/override and retry.
+It does not abort filetype activation or highlighting. Fix the option then run
+`:docassemble-lsp-enable`. If an executable exists but fails at runtime, inspect
+`*debug*` for upstream's launch/stderr error and use `:lsp-restart` after fixing it.
+
+### Roots, disabling and independent operation
+
+The tested table is:
+
+```toml
+[docassemble]
+command = "docassemble-lsp"
+args = ["lsp"]
+root_globs = ["docassemble", "pyproject.toml", "setup.py", ".git"]
+single_instance = false
+```
+
+In v22 **marker order takes precedence**: for each glob, kak-lsp searches from
+the file's directory upwards and chooses its nearest matching ancestor; only
+if that marker is absent at every ancestor does it try the next glob. This is
+not nearest-among-all-markers. A `docassemble/` namespace directory selects the
+usual package root; `pyproject.toml` supports modern/src-layout projects;
+`setup.py` supports older packages; `.git` is the final project fallback.
+With no marker it uses the file's directory (an interview outside any project).
+A namespace directory at an outer ancestor intentionally wins over a closer
+manifest; nested projects needing another rule should override the buffer's
+`lsp_servers` table with an explicit `root = "/absolute/package"` instead of
+`root_globs`. Upstream `KAK_LSP_FORCE_PROJECT_ROOT` and
+`KAK_LSP_PROJECT_ROOT_DOCASSEMBLE*` environment variables also override detection;
+unset these when reproducing. `single_instance=false` keeps package indexes
+separate rather than sharing the first root across packages.
+
+`:docassemble-lsp-disable` clears this buffer's association without changing
+filetype/highlighting. `:docassemble-lsp-enable` retries/re-enables. Leaving the
+Docassemble filetype clears its association. To unload, disable active buffers,
+then `remove-hooks global docassemble-lsp`; leave upstream LSP available to other
+languages, or use upstream `:lsp-disable` to stop it entirely.
+
+For **LSP without giallo**, source upstream kak-lsp and this LSP file alone, then
+set `filetype=docassemble`; optionally source `docassemble.kak` for automatic
+filetype detection and manual commands (its missing-giallo failure is caught).
+For **highlighting without LSP**, omit the LSP file entirely. Neither component
+sources the other.
+
 ## Develop and check
 
 Canonical sources remain `grammars/textmate/*.json`; do not edit generated
@@ -129,7 +240,13 @@ nested `.yaml` through this plugin, and retains all shared-boundary,
 per-injection omission, unsaved Unicode and removal assertions. Otherwise it
 prints **SKIP** and exits successfully. Optional executable overrides:
 `KAKOUNE_BIN` / `GIALLO_KAK_BIN` (paths or PATH names).
-The root check includes these fast tasks; no tools are downloaded by probes.
+`//kakoune:lsp:test` additionally tests real kak-lsp/server stdio, package-root
+initialization, saved/unsaved diagnostics and completion/hover responses. It
+loudly skips when tools are absent. Optional overrides: `KAK_LSP_BIN` /
+`DOCASSEMBLE_LSP_BIN`; with giallo present it also proves highlighting survives a
+missing server. The root check includes these fast tasks; no tools are downloaded
+by probes. Headless tests assert diagnostic ranges and JSON responses, not visual
+completion menus/hover popups; see the evidence document for that boundary.
 
 The clean-HOME installation route and explicit activation were also exercised
 with the normal giallo theme. Visual equivalence, interactive idle timing and

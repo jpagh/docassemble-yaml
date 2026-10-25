@@ -1,9 +1,11 @@
-# Kakoune highlighting and detection
+# Kakoune highlighting, detection and LSP
 
 Status: automatic/explicit filetype activation verified with **Kakoune 2026.05.21**,
 **giallo-kak 0.4.0 (66d0731)** and its **giallo 0.5.2** dependency,
 on macOS arm64. Installable example: [`kakoune/`](../kakoune/README.md).
-No kak-lsp integration, cross-engine harness, or support matrix is included here.
+Optional stdio LSP integration is verified with **kakoune-lsp 22.0.0** (binary
+`kak-lsp`) and **docassemble-lsp 26.10.0**. No cross-engine harness or support
+matrix is included here.
 
 ## Detection and buffer lifecycle
 
@@ -284,3 +286,96 @@ committed. The test cleans up its own sessions and temporary HOME directories.
 The Mako selector-isolation control above stays manual; visual appearance and
 interactive idle timing also remain manual. No substantial converter/bridge or
 giallo patch was needed, so no expansion approval was required.
+
+## kak-lsp stdio integration (#23)
+
+[`docassemble-lsp.kak`](../kakoune/rc/docassemble-lsp.kak) is a separate sourceable
+file. The [installation instructions](../kakoune/README.md#optional-diagnostics-completion-and-hover)
+include the tested upstream init order, PATH installation, executable and project
+virtualenv overrides, disabling, and generic-YAML exclusion. Tested on the same
+macOS/Kakoune installation above, using unmodified upstream **kakoune-lsp
+v22.0.0**. The buffer option `lsp_servers` contains only `[docassemble]`, with
+`command="docassemble-lsp"`, `args=["lsp"]`,
+`root_globs=["docassemble", "pyproject.toml", "setup.py", ".git"]`, and
+`single_instance=false`; `lsp_language_id` is explicitly `docassemble`.
+This is v22's current configuration model, not legacy `kak-lsp.toml`.
+No server code, protocol patch, workspace crawl, or grammar change was needed.
+The server ignores upstream's unsolicited `workspace/didChangeConfiguration`
+notification (stderr); that did not prevent diagnostics or requests.
+
+### Actual root rule
+
+Source inspection of v22 `src/project_root.rs` and real initialization confirm
+**marker-priority, then nearest ancestor for that marker**, not nearest among
+all markers. `docassemble` selects the usual namespace-package directory's
+parent before an outer repository; `pyproject.toml` covers modern/src layouts,
+`setup.py` old packages, `.git` a final project fallback. If no ancestor contains
+any marker, kak-lsp uses the file's directory. This preserves explicitly
+activated standalone interviews without inventing a workspace scan. An outer
+namespace directory can win over a closer manifest: use explicit buffer `root`
+for exceptional nested layouts. Upstream root environment overrides take
+precedence; the tests remove them for deterministic evidence.
+
+The real-client test opens the **unchanged committed**
+`lsp/tests/fixtures/demo_package/docassemble/demo/data/questions/main.yml`.
+A transparent stdio recorder observes kak-lsp's `initialize.rootUri` equal to
+`lsp/tests/fixtures/demo_package`, **not** `data/questions`, the namespace's
+`demo` directory, or this repository root. The real server returns a successful
+initialize response. `single_instance=false` prevents reuse of another package's
+first root even though the server advertises workspace-folder support. The
+standalone manual-activation test also asserts its directory fallback root.
+
+### Headless evidence and boundary
+
+`kakoune/tests/test_docassemble_lsp.py` starts real Kakoune daemons in temporary
+clean `HOME`/`XDG_CONFIG_HOME`, loads the **binary-generated upstream rc** and
+shipped plugins, and uses real `kak-lsp` and `docassemble-lsp lsp` processes.
+The test-only `lsp_stdio_probe.py` forwards framed stdio unchanged, recording
+both directions. It is not a replacement client/server or a user dependency.
+Checks are bounded, clean up sessions/processes and loudly skip missing tools:
+
+- Both automatically detected `.yaml` and manually activated outside-package
+  `.yml` receive saved diagnostics (`E406`, malformed `fields`), then a changed
+  diagnostic mentioning `fieldz` after **unsaved** replacement. Actual Kakoune
+  `lsp_inline_diagnostics` range specs contain diagnostic faces before and after
+  the edit; disk bytes remain unchanged. In v22 this option is
+  **`lsp_inline_diagnostics`**, not `lsp_diagnostics` (the latter is a shell
+  variable in hover rendering, not a declared buffer option).
+- `didOpen.languageId=docassemble` and the single-server TOML association are
+  asserted. No giallo rc is loaded in these tests, proving LSP works even while
+  the filetype plugin catches missing highlighting commands.
+- Saved and unsaved content each receive nonempty hover documentation for
+  `question`, through the actual `lsp-hover` command. Each also receives a
+  completion response containing the `question` label. Completion uses the
+  upstream low-level `lsp-send textDocument/completion 1 3 1` request because
+  `lsp-completion` requires window options; a daemon has no interactive window.
+  Request IDs and real JSON responses are paired. These checks do **not** claim
+  that a menu/popup was visually rendered or that insert-idle timing was tested.
+- A nonexistent server leaves the association empty, keeps filetype and editing
+  settings, and logs an installation/absolute-override/retry instruction in
+  `*debug*`. Repeated sourcing, override quoting (spaces/apostrophes), disabling
+  and leaving the filetype are exercised. With giallo installed, a separate
+  real-highlighter session asserts Python keyword colour/ranges still refresh
+  with the server command broken.
+
+The documented init removes upstream `lsp-filetype-yaml` **before opening
+buffers**, so generic YAML cannot attach while an interview is still YAML
+before explicit activation. The Docassemble hook replaces the whole server table,
+never appends. Custom broad hooks must also be removed/narrowed. An experiment
+leaving the YAML default active attempted `yaml-language-server --stdio` before
+manual activation and could block that buffer after launch failure; changing
+filetype cannot retroactively prevent that launch. This is a configuration
+ordering issue, not a server protocol incompatibility.
+
+Reproduce with installed tools on PATH (no probe downloads):
+
+```sh
+MISE_EXPERIMENTAL=1 mise run //kakoune:lsp:test
+MISE_EXPERIMENTAL=1 mise run //kakoune:check
+MISE_EXPERIMENTAL=1 mise run check  # GUI-free; do not run gate for this check
+```
+
+Overrides: `KAKOUNE_BIN`, `KAK_LSP_BIN`, `DOCASSEMBLE_LSP_BIN`, `GIALLO_KAK_BIN`.
+The integration was exercised through clean-HOME headless sessions, not a human
+visual completion/hover inspection. Interactive menus, popup appearance and idle
+latency remain manual validation boundaries, not asserted by this ticket's test.

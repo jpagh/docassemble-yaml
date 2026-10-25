@@ -82,7 +82,9 @@ Kakoune's metadata-only packaging and shared detection tests, optional real-plug
 lifecycle tests (Kakoune only), plus a giallo.kak editor smoke check (loud
 successful skips when editor tools are absent). Kakoune now supports automatic
 package-path detection and explicit activation with buffer-local editing
-settings; see [`docs/KAKOUNE.md`](docs/KAKOUNE.md).
+settings, plus optional kakoune-lsp v22 stdio checks for package roots,
+saved/unsaved diagnostics, completion/hover responses and missing-server
+isolation; see [`docs/KAKOUNE.md`](docs/KAKOUNE.md).
 The root release `gate` additionally retains syntect parity against the explicitly
 transformed compatibility reference (`//tools/scope-parity:gate`). These are
 different guarantees: compatibility-reference parity does not assert equivalence

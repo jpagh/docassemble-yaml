@@ -18,12 +18,19 @@
 
 [tasks."grammar:check"]
     description = "Check grammar packaging, shared detection cases and optional Kakoune lifecycle"
-    run         = "uv run --no-project python -m unittest discover -s tests -v"
+    run         = [
+        "uv run --no-project python -m unittest discover -s tests -p test_sync_grammars.py -v",
+        "uv run --no-project python -m unittest discover -s tests -p test_docassemble.py -v",
+    ]
 
 [tasks.test]
     description = "Check highlighting in real Kakoune (loud skip without kak/giallo-kak)"
     run         = "uv run --no-project python scripts/check_highlighting.py"
 
+[tasks."lsp:test"]
+    description = "Check real kak-lsp v22 wiring (loud skip without installed tools)"
+    run         = "uv run --no-project python -m unittest discover -s tests -p test_docassemble_lsp.py -v"
+
 [tasks.check]
-    description = "Validate Kakoune detection, lifecycle and giallo highlighting"
-    depends     = ["format:check", "lint", "grammar:check", "test"]
+    description = "Validate Kakoune detection, highlighting and optional LSP integration"
+    depends     = ["format:check", "lint", "grammar:check", "test", "lsp:test"]

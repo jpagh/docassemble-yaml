@@ -73,7 +73,8 @@ class DocassembleLifecycleTests(unittest.TestCase):
             stderr=subprocess.DEVNULL,
         )
         self.addCleanup(self.stop_session)
-        deadline = time.monotonic() + 5
+        # Generous: the root gate runs this alongside CPU-saturating suites.
+        deadline = time.monotonic() + 20
         while subprocess.run(
             [KAK, "-p", self.name],
             input="nop",
@@ -119,7 +120,8 @@ class DocassembleLifecycleTests(unittest.TestCase):
             capture_output=True,
             timeout=5,
         )
-        deadline = time.monotonic() + 5
+        # Generous: the root gate runs this alongside CPU-saturating suites.
+        deadline = time.monotonic() + 20
         while not response.exists():
             if time.monotonic() > deadline:
                 self.fail(f"Kakoune response timeout: {commands}")
