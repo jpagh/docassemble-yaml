@@ -78,9 +78,11 @@ This runs ruff, pyrefly, and the full pytest suite across all supported Python v
 The root `mise run check` includes shared conversion-output tests and direct,
 unmodified shipped TextMate fixture assertions (`//grammars:check`), Fresh
 manifest/generated-artifact checks, VS Code build/packaging-copy checks, and
-Kakoune's metadata-only packaging tests plus an optional giallo.kak editor smoke
-check (loud successful skip when the editor tools are absent). The Kakoune
-example is manually activated highlighting only; see [`docs/KAKOUNE.md`](docs/KAKOUNE.md).
+Kakoune's metadata-only packaging and shared detection tests, optional real-plugin
+lifecycle tests (Kakoune only), plus a giallo.kak editor smoke check (loud
+successful skips when editor tools are absent). Kakoune now supports automatic
+package-path detection and explicit activation with buffer-local editing
+settings; see [`docs/KAKOUNE.md`](docs/KAKOUNE.md).
 The root release `gate` additionally retains syntect parity against the explicitly
 transformed compatibility reference (`//tools/scope-parity:gate`). These are
 different guarantees: compatibility-reference parity does not assert equivalence

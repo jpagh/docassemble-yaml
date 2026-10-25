@@ -31,6 +31,12 @@ Deliverable prototype lives in [`fresh/`](../fresh/README.md).
   `.py`/`.yml` are not re-indexed until a save inside Fresh), and LSP
   semantic tokens are off by default.
 
+Detection policy cases are shared with Kakoune in
+[`fixtures/detection/`](../fixtures/detection/README.md). Fresh retains its
+`.yml`-only rule; Kakoune also accepts `.yaml`. Fresh's check evaluates the
+plugin's existing path regex against every case; runtime implementations stay
+editor-specific.
+
 ## How Fresh supports a new language
 
 Fresh loads language packs from `~/.config/fresh/languages/packages/<name>/`

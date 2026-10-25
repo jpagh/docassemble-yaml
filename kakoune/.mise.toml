@@ -17,7 +17,7 @@
     run         = "uv run --no-project python scripts/sync_grammars.py"
 
 [tasks."grammar:check"]
-    description = "Check giallo grammar packaging and staleness without editor dependencies"
+    description = "Check grammar packaging, shared detection cases and optional Kakoune lifecycle"
     run         = "uv run --no-project python -m unittest discover -s tests -v"
 
 [tasks.test]
@@ -25,5 +25,5 @@
     run         = "uv run --no-project python scripts/check_highlighting.py"
 
 [tasks.check]
-    description = "Validate the manually activated Kakoune highlighting example"
+    description = "Validate Kakoune detection, lifecycle and giallo highlighting"
     depends     = ["format:check", "lint", "grammar:check", "test"]

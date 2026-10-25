@@ -1,0 +1,112 @@
+[
+  {
+    "path": "docassemble/demo/data/questions/main.yml",
+    "kakoune": true,
+    "fresh": true
+  },
+  {
+    "path": "docassemble/demo/data/questions/main.yaml",
+    "kakoune": true,
+    "fresh": false
+  },
+  {
+    "path": "data/questions/main.yml",
+    "kakoune": true,
+    "fresh": true
+  },
+  {
+    "path": "data/questions/sub/dir/main.yml",
+    "kakoune": true,
+    "fresh": true
+  },
+  {
+    "path": "data/questions/sub/dir/main.yaml",
+    "kakoune": true,
+    "fresh": false
+  },
+  {
+    "path": "/tmp/a package/data/questions/nested/interview.yaml",
+    "kakoune": true,
+    "fresh": false
+  },
+  {
+    "path": "/pkg/data/questions-old/data/questions/main.yml",
+    "kakoune": true,
+    "fresh": true
+  },
+  {
+    "path": "C:\\pkg\\data\\questions\\sub\\main.yml",
+    "kakoune": true,
+    "fresh": true
+  },
+  {
+    "path": "main.yml",
+    "kakoune": false,
+    "fresh": false
+  },
+  {
+    "path": "interviews/main.yaml",
+    "kakoune": false,
+    "fresh": false
+  },
+  {
+    "path": ".github/workflows/check.yml",
+    "kakoune": false,
+    "fresh": false
+  },
+  {
+    "path": "/pkg/notdata/questions/main.yml",
+    "kakoune": false,
+    "fresh": false
+  },
+  {
+    "path": "/pkg/data/questions-old/main.yml",
+    "kakoune": false,
+    "fresh": false
+  },
+  {
+    "path": "/pkg/data/questions.yml",
+    "kakoune": false,
+    "fresh": false
+  },
+  {
+    "path": "/pkg/data/questions.yaml",
+    "kakoune": false,
+    "fresh": false
+  },
+  {
+    "path": "/pkg/data/questions/main.yml.bak",
+    "kakoune": false,
+    "fresh": false
+  },
+  {
+    "path": "/pkg/data/questions/main.YML",
+    "kakoune": false,
+    "fresh": false
+  },
+  {
+    "path": "/pkg/data/questions/main.json",
+    "kakoune": false,
+    "fresh": false
+  },
+  {
+    "path": "/pkg/data/other/main.yml",
+    "kakoune": false,
+    "fresh": false
+  },
+  {
+    "path": "/pkg/metadata/questions/main.yaml",
+    "kakoune": false,
+    "fresh": false
+  },
+  {
+    "path": "/pkg/data/questions/README",
+    "kakoune": false,
+    "fresh": false
+  },
+  {
+    "path": "/pkg/data/questions",
+    "kakoune": false,
+    "fresh": false
+  }
+]

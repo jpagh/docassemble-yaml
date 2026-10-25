@@ -20,7 +20,7 @@
   dependency resolution, and injection registration. Fresh owns its committed
   `fresh/grammars/Docassemble.sublime-syntax`, bundle manifest, and detection/LSP
   plugin. Kakoune owns generated metadata-adapted TextMate copies under
-  `kakoune/grammars/` and a [manually activated giallo.kak example](../kakoune/README.md).
+  `kakoune/grammars/` and a [filetype/detection plugin using giallo.kak](../kakoune/README.md).
   Installed editors do not need this shared directory or build tools.
 
 ## Edit and regenerate

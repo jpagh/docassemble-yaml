@@ -1,10 +1,47 @@
-# Kakoune highlighting — investigation
+# Kakoune highlighting and detection
 
-Status: manually activated prototype verified with **Kakoune 2026.05.21**,
+Status: automatic/explicit filetype activation verified with **Kakoune 2026.05.21**,
 **giallo-kak 0.4.0 (66d0731)** and its **giallo 0.5.2** dependency,
 on macOS arm64. Installable example: [`kakoune/`](../kakoune/README.md).
-No auto-detection, kak-lsp integration, cross-engine harness, or support matrix
-is included here.
+No kak-lsp integration, cross-engine harness, or support matrix is included here.
+
+## Detection and buffer lifecycle
+
+`kakoune/rc/docassemble.kak` is safe to source from kakrc after giallo's init,
+with upstream `giallo_auto_enable=false`. It claims `.yml` **and** `.yaml` below
+an exact `data/questions/` path-component pair, including nested directories.
+There is no content sniffing, package manifest lookup or filesystem crawl.
+`notdata/questions/`, `data/questions-old/` and `data/questions.yml` do not match;
+ordinary YAML is untouched. Non-YAML filetypes selected by the user are respected.
+Interviews elsewhere use `docassemble-enable` / `docassemble-disable`.
+
+This follows [Fresh's detection policy](FRESH.md), with the intentional `.yaml`
+extension to Fresh's existing `.yml` rule. The editor-independent
+[case corpus](../fixtures/detection/README.md) records both expected outcomes.
+Fresh's check evaluates its existing regex against every case; Kakoune's check
+executes the shell decision block from the shipped plugin, and, when Kakoune is
+available, opens every case through the real hooks. Runtime implementations are
+not shared; Fresh's plugin is not rewritten.
+
+Activation sets buffer filetype/language, `indentwidth=2`, `tabstop=2`, and
+buffer-local comment options (`comment_line='#'`, block delimiters cleared),
+without global mappings. Kakoune core has no comment command and the plugin
+installs no mappings, so those options are configuration for the reader's own
+comment mapping rather than an added command. It saves effective buffer settings and
+giallo state. Deactivation restores those values (as local snapshots), previous
+filetype, and any previously enabled giallo language. A direct filetype change
+away from Docassemble performs teardown without re-claiming YAML. Explicit
+disable opts out until explicit activation or filetype assignment. Automatic
+activation follows renames; explicit activation stays attached across renames.
+Kakoune has no rename event: detection runs on next display, write
+or reload. Renaming out restores the old settings; renaming back can detect anew.
+
+The `docassemble` hook group is replaced on repeated sourcing; activation is
+buffer-guarded and adds no duplicate giallo highlighter. To unload, first disable
+active buffers, then `remove-hooks global docassemble`. Missing/failing giallo
+is caught: editing settings and filetype still work. Install/fix giallo, then
+disable/enable to retry. No substitute highlighter is installed. Kakoune owns
+its ordinary YAML window highlighter lifecycle as the filetype changes.
 
 ## Result
 
@@ -194,18 +231,20 @@ check waits for the first response, allows bootstrap to settle, then explicitly
 refreshes and requires the correct final line boundary. This is an upstream
 transport/update issue, not repaired here. Large buffers, incremental reparse
 windows, all Unicode scripts, grapheme rendering and interactive refresh timing
-are not certified by this small test. The example manually removes the built-in
-window YAML highlighter to avoid competing highlighting; disabling giallo does
-not restore it.
+are not certified by this small test. The plugin changes filetype, so Kakoune
+owns removal/restoration of the built-in window YAML highlighter rather than
+manually removing it.
 
 ## Reproduction and validation boundary
 
-Follow [`kakoune/README.md`](../kakoune/README.md) for copy/config/manual activation.
+Follow [`kakoune/README.md`](../kakoune/README.md) for installation and activation.
 The documented install and activation were also exercised by hand in a **clean
 temporary HOME and XDG_CONFIG_HOME**, using the normal Catppuccin theme (not
-just the diagnostic theme), loading `giallo-kak init`, opening an absolute
-fixture path and reading nonempty ranges back from Kakoune. Unicode and an
-unsaved template edit were exercised in that sandbox too.
+just the diagnostic theme), loading `giallo-kak init` followed by the installed
+plugin from kakrc. A nested `data/questions/sub/dir/file.yaml` auto-activated
+with two-space indentation, YAML comments and nonempty ranges; neighbouring YAML
+stayed YAML; explicit activation/deactivation outside that directory worked.
+The live smoke check also retains Unicode and unsaved template-edit assertions.
 
 Headless recipe (unlike an interactive client, daemon output from `echo` is
 discarded): start `kak -d -s <short-session> /absolute/fixture.yml` in the
@@ -232,8 +271,14 @@ mise run check                     # full monorepo gate, including this check
 ```
 
 With tools absent, the live portion loudly prints `SKIP` and exits 0; packaging
-staleness and three unit tests still run. With tools present the live check takes
-about five seconds locally. Executables resolve from PATH, with optional
+staleness and shell detection tests still run. Real-plugin deterministic tests
+need only Kakoune (no giallo or external server); they loudly skip without it.
+They cover the entire shared corpus, plain YAML isolation, settings restoration,
+filetype/reload/rename transitions, repeated activation/sourcing, named-hook
+unloading, and missing/failing giallo. The live smoke check now activates through
+the plugin on a nested `.yaml`, retaining all earlier range/colour assertions.
+With tools present the checks take several seconds locally. Executables resolve
+from PATH, with optional
 `KAKOUNE_BIN` / `GIALLO_KAK_BIN` overrides; no temporary-machine paths are
 committed. The test cleans up its own sessions and temporary HOME directories.
 The Mako selector-isolation control above stays manual; visual appearance and

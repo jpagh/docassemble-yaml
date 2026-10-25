@@ -1,10 +1,10 @@
-# Docassemble highlighting in Kakoune (manual example)
+# Docassemble highlighting in Kakoune
 
-A prototype using [giallo.kak](https://github.com/Yukaii/giallo.kak), not a new
-highlighting plugin. Tested with **Kakoune 2026.05.21** and
+A sourceable filetype plugin using [giallo.kak](https://github.com/Yukaii/giallo.kak),
+not a new highlighter. Tested with **Kakoune 2026.05.21** and
 **giallo-kak 0.4.0 (66d0731)** / giallo 0.5.2 on macOS arm64.
 See [the investigation](../docs/KAKOUNE.md) for evidence and limitations.
-This example does **not** detect interviews or configure kak-lsp.
+No kak-lsp integration is included.
 
 ## Install
 
@@ -21,74 +21,116 @@ kak -version
 giallo-kak --version
 ```
 
-From this repository's root, copy the **generated** grammar package:
+From this repository's root, copy the **generated** grammars and the plugin:
 
 ```sh
-mkdir -p "$HOME/.config/giallo.kak/grammars"
-cp kakoune/grammars/*.json "$HOME/.config/giallo.kak/grammars/"
-cp kakoune/config.toml "$HOME/.config/giallo.kak/config.toml"
+config_home="${XDG_CONFIG_HOME:-$HOME/.config}"
+mkdir -p "$config_home/giallo.kak/grammars" "$config_home/kak"
+cp kakoune/grammars/*.json "$config_home/giallo.kak/grammars/"
+cp kakoune/config.toml "$config_home/giallo.kak/config.toml"
+cp kakoune/rc/docassemble.kak "$config_home/kak/docassemble.kak"
 ```
 
 For an existing installation, **merge** `config.toml` instead of overwriting it.
-If `XDG_CONFIG_HOME` is set, put the config there and adjust `grammars_path` to
-that directory. giallo 0.4.0 requires the explicit path setting; merely copying
-the files to the default directory is not enough. Restart giallo/Kakoune after
-changing grammar files (they load at server startup).
+If `XDG_CONFIG_HOME` is set, adjust `grammars_path` in the copied config to that
+absolute directory. giallo 0.4.0 requires the explicit path setting; merely
+copying files to the default directory is not enough. Restart giallo/Kakoune
+after changing grammars (they load at server startup).
 
-## Activate by hand
-
-In Kakoune, load the upstream integration and disable its default auto-enable
-**before opening another buffer**:
+Add to `$config_home/kak/kakrc`, in this order:
 
 ```kak
 evaluate-commands %sh{ giallo-kak init }
 set-option global giallo_auto_enable false
+source %sh{ printf '%s/kak/docassemble.kak' "${XDG_CONFIG_HOME:-$HOME/.config}" }
 ```
 
-Open an interview, e.g. `:edit /absolute/path/to/grammars/fixtures/sample.yml`,
-and run these buffer-local commands:
+Disable upstream auto-enable **before opening files** so it does not highlight
+all YAML independently of this plugin. Sourcing the Docassemble plugin repeatedly
+is safe; do not repeatedly load the upstream `giallo-kak init` integration.
+No keybindings are installed or changed.
+
+## Automatic and explicit activation
+
+Opening either `.yml` or `.yaml` beneath a `data/questions/` directory, at any
+depth, sets buffer `filetype=docassemble`, `giallo_lang=docassemble`, two-space
+`indentwidth`/`tabstop`, and buffer-local comment options (`comment_line='#'`,
+no block comment delimiters). Kakoune core ships no comment command and this
+plugin installs no mappings, so the comment options are there for your own
+comment mapping to read (YAML has no block comments).
+Ordinary YAML is left alone, including `notdata/questions/`,
+`data/questions-old/`, and `data/questions.yml`. There is no workspace crawl
+or content sniffing; a package metadata file is not required.
+
+For an interview elsewhere (including `grammars/fixtures/sample.yml`):
 
 ```kak
-set-option buffer giallo_lang docassemble
-giallo-enable
-try %{ remove-highlighter window/yaml }
+edit /absolute/path/to/interview.yml
+docassemble-enable
 ```
 
-This sets only giallo's language, not Kakoune's `filetype`; other YAML buffers
-remain untouched. The final command avoids layering the built-in YAML
-highlighter over giallo's ranges. No detection or activation hooks are shipped.
-The upstream plugin itself supplies edit/idle refresh hooks once enabled.
+To stop highlighting and restore the buffer's previous filetype and effective
+indent/comment settings:
 
-The sample demonstrates YAML keys/comments/values, Python in `code:` / `if:` /
-`show if:`, Mako `${...}` and `<%doc>`, Jinja `{{...}}` and `{%...%}`,
-and JavaScript in `script:`. Open `kakoune/fixtures/unicode.yml` and repeat
-activation to check accented characters/emoji before embedded regions. Edit a
-region without saving; run `:giallo-force-update` after a pause if needed.
-Use `:giallo-disable` to stop highlighting this buffer (it does not restore the
-removed built-in YAML highlighter). `:giallo-stop-server` stops the shared server.
+```kak
+docassemble-disable
+```
+
+Disabling opts this buffer out of automatic detection until `docassemble-enable`
+or an explicit `set-option buffer filetype docassemble`. A direct change to
+another filetype also tears down Docassemble without immediately re-claiming
+YAML. No unrelated buffer is affected. Restored settings are buffer-local
+snapshots (not re-inherited from subsequently changed global defaults).
+
+Automatic activation follows renamed paths on the next display, write or reload;
+Kakoune has no rename hook. Explicit activation survives renames.
+Reloading and repeated activation do not add duplicate hooks/highlighters.
+To unload, disable active buffers, then `remove-hooks global docassemble`.
+
+## Themes and troubleshooting
+
+Giallo maps TextMate scopes through its theme to generated `giallo_*` faces,
+independent of Kakoune's standard colour scheme. The example uses
+`catppuccin-frappe`; no custom Kakoune face definitions are needed. Switching
+filetype lets Kakoune tear down/recreate its normal YAML window highlighter;
+this plugin does not manually remove it.
+
+If there is no colour, check `giallo-kak --version`, the configured grammar path,
+and `:giallo-debug`; stop a stale server with `:giallo-stop-server`. Ensure the
+upstream integration was loaded first. With giallo missing or failing, filetype
+and editing settings still apply; after fixing installation, run
+`:docassemble-disable` then `:docassemble-enable` to retry.
+
+The sample covers YAML, embedded Python, Mako, Jinja and JavaScript. Try
+`kakoune/fixtures/unicode.yml` with explicit activation for accents/emoji. Edits
+need not be saved. After a pause, `:giallo-force-update` can refresh delayed
+colours; giallo's macOS clock fallback can delay updates within one second.
+The upstream shared server is not stopped when just one buffer is disabled.
 
 ## Develop and check
 
-Canonical sources remain `grammars/textmate/*.json`. This package changes only
-registration metadata: unique `name`s and injection `injectTo`, plus the YAML
-packaging filename. Rules, scopes and selectors are unchanged. Do not edit
-`kakoune/grammars/` by hand:
+Canonical sources remain `grammars/textmate/*.json`; do not edit generated
+`kakoune/grammars/` files. Packaging changes only registration metadata:
 
 ```sh
-mise run //kakoune:grammar:sync
-mise run //kakoune:check
+MISE_EXPERIMENTAL=1 mise run //kakoune:grammar:sync
+MISE_EXPERIMENTAL=1 mise run //kakoune:check
 ```
 
-The check always verifies packaging staleness, metadata-only adaptation, lint
-and formatting. With `kak` and `giallo-kak` on PATH it also runs a bounded
-headless test in fresh temporary HOME directories: shared boundaries, per-
-injection omission controls, unsaved Unicode content and removal of an embedded
-region. Otherwise it prints **SKIP** and exits successfully. Optional executable
-overrides: `KAKOUNE_BIN` and `GIALLO_KAK_BIN` (paths or PATH names).
-The normal root check includes this task; no tools are downloaded by the probe.
-In environments requiring mise's monorepo feature flag, prefix commands with
-`MISE_EXPERIMENTAL=1`.
+Checks always run formatting/lint, packaging staleness and the plugin's own
+shell decision block against [shared detection cases](../fixtures/detection/README.md).
+With `kak` installed, deterministic headless tests exercise the actual hooks,
+settings restoration, filetype/rename/reload lifecycle, repeated sourcing,
+plain YAML isolation and missing/failing giallo (no server required).
+Without Kakoune those tests print **SKIP** and succeed.
 
-This is a small giallo-only smoke check, **not** cross-engine scope parity or a
-visual/theme equivalence test. Large-buffer chunking, interactive idle timing,
-and other editor/LSP integration are outside this prototype's proof.
+With both `kak` and `giallo-kak`, the live smoke check automatically activates a
+nested `.yaml` through this plugin, and retains all shared-boundary,
+per-injection omission, unsaved Unicode and removal assertions. Otherwise it
+prints **SKIP** and exits successfully. Optional executable overrides:
+`KAKOUNE_BIN` / `GIALLO_KAK_BIN` (paths or PATH names).
+The root check includes these fast tasks; no tools are downloaded by probes.
+
+The clean-HOME installation route and explicit activation were also exercised
+with the normal giallo theme. Visual equivalence, interactive idle timing and
+large-buffer behaviour remain manual, not cross-engine parity guarantees.

@@ -14,7 +14,12 @@
 [tasks.lint]
     description = "Lint the generator and validate the pack manifest (and TOML)"
     depends     = ["//:lint:toml"]
-    run         = ["ruff check", "bash -n validate.sh", "./validate.sh"]
+    run         = [
+        "ruff check",
+        "bash -n validate.sh",
+        "./validate.sh",
+        "uv run --no-project python scripts/check_detection.py",
+    ]
 
 [tasks."grammar:check"]
     description = "Fail if the committed grammar is invalid or stale"

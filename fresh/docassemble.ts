@@ -10,7 +10,9 @@
  * Qualifying files are the interviews of a docassemble package: any `.yml`
  * file under a `data/questions/` directory (subdirectories included), which
  * is where docassemble itself looks for them
- * (`<package>:data/questions/<file>.yml`).
+ * (`<package>:data/questions/<file>.yml`). Shared policy cases live in
+ * `fixtures/detection/paths.json`; Kakoune also accepts `.yaml`, while this
+ * plugin deliberately retains Fresh's existing `.yml`-only detection.
  *
  * Interviews kept elsewhere are still supported through the ordinary Fresh
  * config route: add globs under `languages.docassemble.filenames` and Fresh

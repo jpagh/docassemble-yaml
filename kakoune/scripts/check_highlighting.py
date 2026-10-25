@@ -22,7 +22,8 @@ class Session:
         self.home = home
         self.kak = kak
         self.name = "da21-" + uuid.uuid4().hex[:8]
-        self.buffer = home / "sample.yml"
+        self.buffer = home / "pkg/data/questions/sub/dir/sample.yaml"
+        self.buffer.parent.mkdir(parents=True)
         self.buffer.write_bytes((ROOT / "grammars/fixtures/sample.yml").read_bytes())
         config = home / ".config/giallo.kak"
         config.mkdir(parents=True)
@@ -86,9 +87,8 @@ class Session:
         self.send(
             f"source {quote(self.rc)}\n"
             "set-option global giallo_auto_enable false\n"
-            "set-option buffer giallo_lang docassemble\n"
             "set-option buffer giallo_theme docassemble-probe\n"
-            "giallo-enable"
+            f"source {quote(ROOT / 'kakoune/rc/docassemble.kak')}"
         )
         self.wait_for(lambda: self.color(5, 1) == "FF0000")
         # Let upstream's asynchronous initial handshakes settle before one explicit
@@ -232,7 +232,9 @@ def main():
     print(subprocess.check_output([kak, "-version"], text=True).strip())
     print(subprocess.check_output([giallo, "--version"], text=True).strip())
     check(str(Path(kak).resolve()), str(Path(giallo).resolve()))
-    print("PASS: giallo shared boundaries, injection controls, unsaved Unicode buffer")
+    print(
+        "PASS: plugin activation, giallo shared boundaries, injection controls, unsaved Unicode buffer"
+    )
 
 
 if __name__ == "__main__":
