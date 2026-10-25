@@ -109,6 +109,10 @@ The LSP uses a flat "over-offer" model: it indexes every Python module in your p
 
 The [`fresh/`](https://github.com/jpagh/docassemble-yaml/tree/main/fresh) bundle adds Docassemble syntax highlighting, interview detection, and LSP wiring for the [Fresh](https://github.com/sinelaw/fresh) terminal editor. It launches this server as `docassemble-lsp lsp`; see [`fresh/README.md`](https://github.com/jpagh/docassemble-yaml/blob/main/fresh/README.md) for installation and configuration.
 
+### Kakoune
+
+The [`kakoune/`](https://github.com/jpagh/docassemble-yaml/tree/main/kakoune) bundle provides Docassemble detection, giallo highlighting and optional kakoune-lsp v22 stdio wiring. See [`kakoune/README.md`](https://github.com/jpagh/docassemble-yaml/blob/main/kakoune/README.md) for [installation](https://github.com/jpagh/docassemble-yaml/blob/main/kakoune/README.md#install), [LSP configuration](https://github.com/jpagh/docassemble-yaml/blob/main/kakoune/README.md#optional-diagnostics-completion-and-hover), [troubleshooting](https://github.com/jpagh/docassemble-yaml/blob/main/kakoune/README.md#lsp-troubleshooting), and the [version-pinned support matrix](https://github.com/jpagh/docassemble-yaml/blob/main/kakoune/README.md#verified-support-matrix). Cross-file navigation, formatting and a quick-fix edit are exercised with the committed demo package; UI boundaries, the formatting final-newline limitation and optional semantic tokens are documented explicitly.
+
 ## Project Documentation
 
 The internal architecture and implementation roadmap live under `docs/` in the repository:

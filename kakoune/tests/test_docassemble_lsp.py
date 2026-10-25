@@ -7,6 +7,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 import tomllib
 import unittest
@@ -22,6 +23,52 @@ GIALLO = shutil.which(os.environ.get("GIALLO_KAK_BIN", "giallo-kak"))
 SERVER = shutil.which(os.environ.get("DOCASSEMBLE_LSP_BIN", "docassemble-lsp"))
 PLUGIN = ROOT / "kakoune/rc/docassemble-lsp.kak"
 FIXTURE = ROOT / "lsp/tests/fixtures/demo_package"
+
+
+class JsonClient:
+    """Real off-screen Kakoune window: observe rendered faces, not terminal pixels."""
+
+    def __init__(self, kak, name, env):
+        self.events = []
+        self.errors = []
+        self.process = subprocess.Popen(
+            [kak, "-c", name, "-ui", "json", "-e", "rename-client probe"],
+            env=env,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            text=True,
+        )
+        self.reader = threading.Thread(target=self.read, daemon=True)
+        self.reader.start()
+        self.process.stdin.write(
+            json.dumps({"jsonrpc": "2.0", "method": "resize", "params": [40, 120]})
+            + "\n"
+        )
+        self.process.stdin.flush()
+
+    def read(self):
+        for line in self.process.stdout:
+            if line.strip():
+                try:
+                    self.events.append(json.loads(line))
+                except json.JSONDecodeError:
+                    self.errors.append(line)
+
+    def close(self):
+        self.process.terminate()
+        self.process.wait(timeout=5)
+        self.process.stdin.close()
+        self.reader.join(timeout=5)
+        self.process.stdout.close()
+
+
+def process_alive(pid):
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    return True
 
 
 @unittest.skipUnless(KAK and KAK_LSP, "SKIP: LSP wiring requires kak and kak-lsp v22")
@@ -92,10 +139,12 @@ class DocassembleLspTests(unittest.TestCase):
 
     def run_kak(self, commands):
         response = self.home / (uuid.uuid4().hex + ".response")
-        if hasattr(self, "buffer"):
+        if hasattr(self, "buffer") and not hasattr(self, "ui"):
             commands = (
                 f"evaluate-commands -buffer {quote(self.buffer)} %{{ {commands} }}"
             )
+        if hasattr(self, "ui"):
+            commands = f"evaluate-commands -client probe %{{ {commands} }}"
         self.send(
             f"try %{{ {commands}\necho -to-file {quote(response)} ok }} "
             f"catch %{{ echo -to-file {quote(response)} %val{{error}} }}"
@@ -186,6 +235,224 @@ class DocassembleLspTests(unittest.TestCase):
         except subprocess.TimeoutExpired:
             self.process.kill()
             self.process.wait()
+
+    def attach_window(self):
+        self.ui = JsonClient(KAK, self.name, self.env)
+        self.addCleanup(self.ui.close)
+        self.wait_for(lambda: any(e["method"] == "draw" for e in self.ui.events))
+        # Requests are explicit, not dependent on an off-screen window's idle hooks.
+        self.run_kak("remove-hooks global lsp\nremove-hooks global lsp-breadcrumbs")
+
+    def request(self, method, commands):
+        count = len(self.response(method))
+        self.run_kak(commands)
+        self.wait_for(lambda: len(self.response(method)) > count)
+        response = self.response(method)[-1]
+        self.assertNotIn("error", response)
+        return response["result"]
+
+    def current_file(self):
+        output = self.home / "current-file"
+        self.run_kak(f"echo -to-file {quote(output)} %val{{buffile}}")
+        return output.read_text().strip()
+
+    def buffer_text(self):
+        output = self.home / "buffer-content"
+        self.run_kak(f"evaluate-commands -no-hooks %{{ write -force {quote(output)} }}")
+        return output.read_text()
+
+    @unittest.skipUnless(SERVER, "SKIP: real protocol test requires docassemble-lsp")
+    def test_cross_file_workflows_spaces_and_shutdown(self):
+        package = self.home / "demo package with spaces"
+        shutil.copytree(FIXTURE, package)
+        questions = package / "docassemble/demo/data/questions"
+        main = questions / "main.yml"
+        self.attach_window()
+        # Opening a Python definition target must not require unrelated pylsp.
+        self.run_kak("remove-hooks global lsp-filetype-python")
+        self.open(main)
+        self.wait_for(lambda: self.response("initialize"))
+        initialize = next(
+            e["message"]
+            for e in self.messages()
+            if e["message"].get("method") == "initialize"
+        )
+        self.assertEqual(initialize["params"]["rootUri"], package.as_uri())
+        for line, column, target, target_line in (
+            (16, 38, questions / "x_events.yml", 15),
+            (11, 8, package / "docassemble/demo/workflow.py", 0),
+        ):
+            self.open(main)
+            result = self.request(
+                "textDocument/definition",
+                f"select {line}.{column},{line}.{column}\nlsp-definition",
+            )
+            self.assertTrue(
+                any(
+                    loc.get("targetUri", loc.get("uri")) == target.as_uri()
+                    and loc.get("targetSelectionRange", loc.get("range"))["start"][
+                        "line"
+                    ]
+                    == target_line
+                    for loc in result
+                ),
+                result,
+            )
+            self.wait_for(lambda target=target: self.current_file() == str(target))
+        self.open(questions / "x_events.yml")
+        references = self.request(
+            "textDocument/references", "select 16.12,16.12\nlsp-references"
+        )
+        self.assertIn(main.as_uri(), {loc["uri"] for loc in references})
+        self.assertTrue(
+            any(
+                loc["uri"] == main.as_uri() and loc["range"]["start"]["line"] == 21
+                for loc in references
+            )
+        )
+        # Read the real client's capability listing, not an inferred feature list.
+        self.wait_for(lambda: self.current_file() != str(questions / "x_events.yml"))
+        self.open(questions / "x_events.yml")
+        self.run_kak("lsp-capabilities")
+        self.wait_for(
+            lambda: any(
+                e["method"] == "info_show" and "LSP commands supported" in str(e)
+                for e in self.ui.events
+            )
+        )
+        listing = str(
+            next(
+                e
+                for e in reversed(self.ui.events)
+                if e["method"] == "info_show" and "LSP commands supported" in str(e)
+            )
+        )
+        for command in (
+            "lsp-definition",
+            "lsp-references",
+            "lsp-formatting",
+            "lsp-code-actions",
+            "lsp-semantic-tokens",
+        ):
+            self.assertIn(command, listing)
+        self.assertNotIn("lsp-range-formatting", listing)
+        self.assertNotIn("lsp-document-link", listing)
+        self.assertNotIn("lsp-on-type-formatting", listing)
+        self.assertFalse(
+            initialize["params"]["capabilities"]["workspace"]["workspaceFolders"]
+        )
+        lifecycle = next(
+            e["message"] for e in self.messages() if e["direction"] == "process"
+        )
+        command = subprocess.check_output(
+            ["ps", "-p", str(lifecycle["clientPid"]), "-o", "command="], text=True
+        )
+        self.assertIn("kak-lsp", command)
+        pids = list(lifecycle.values())
+        self.assertTrue(all(process_alive(pid) for pid in pids))
+        self.run_kak("lsp-exit")
+        self.wait_for(lambda: all(not process_alive(pid) for pid in pids))
+        self.assertTrue(
+            any(e["message"].get("method") == "exit" for e in self.messages())
+        )
+        self.send("kill!")
+        self.assertEqual(self.process.wait(timeout=5), 0)
+        self.assertEqual(self.ui.process.wait(timeout=5), 0)
+        self.assertEqual(self.ui.errors, [])
+        self.assertNotEqual(self.send("nop", check=False).returncode, 0)
+
+    @unittest.skipUnless(SERVER, "SKIP: real protocol test requires docassemble-lsp")
+    def test_formatting_and_code_action_apply_unsaved_edits(self):
+        path = self.home / "package with spaces/data/questions/edit.yml"
+        path.parent.mkdir(parents=True)
+        original = "code: |\n  total=1+2\n"
+        path.write_text(original)
+        self.attach_window()
+        self.open(path)
+        self.wait_for(lambda: self.response("initialize"))
+        result = self.request("textDocument/formatting", "lsp-formatting-sync")
+        self.assertTrue(result)
+        self.wait_for(lambda: "total = 1 + 2" in self.buffer_text())
+        # The server range excludes the original final newline; its replacement
+        # includes one. Assert the actual edit semantics, including the extra LF.
+        edit = result[0]
+        self.assertEqual(edit["range"]["end"], {"line": 1, "character": 11})
+        self.assertEqual(self.buffer_text(), edit["newText"] + "\n")
+        self.assertEqual(path.read_text(), original)
+        self.replace("question: Hello\nfields:\n  - field: user_name\n")
+        self.wait_for(lambda: "E415" in json.dumps(self.messages()))
+        actions = self.request(
+            "textDocument/codeAction", "select 3.5,3.5\nlsp-code-actions-sync quickfix"
+        )
+        self.assertEqual(len(actions), 1, actions)
+        self.assertIn("edit", actions[0])
+        expected = "question: Hello\nfields:\n  - field: user_name\n    label: \n"
+        self.wait_for(lambda: self.buffer_text() == expected)
+        self.assertEqual(path.read_text(), original)
+        self.assertEqual(self.ui.errors, [])
+
+    @unittest.skipUnless(
+        SERVER and GIALLO, "SKIP: semantic interaction requires server and giallo-kak"
+    )
+    def test_optional_semantic_tokens_preserve_giallo_faces(self):
+        config = self.home / ".config/giallo.kak"
+        shutil.copytree(ROOT / "kakoune/grammars", config / "grammars")
+        (config / "themes").mkdir()
+        shutil.copy(ROOT / "kakoune/fixtures/scope-probe.json", config / "themes")
+        (config / "config.toml").write_text(
+            'themes_path = "~/.config/giallo.kak/themes"\n'
+            + (ROOT / "kakoune/config.toml").read_text()
+        )
+        (self.home / "bin/giallo-kak").symlink_to(GIALLO)
+        rc = self.home / "giallo.kak"
+        rc.write_bytes(
+            subprocess.check_output([GIALLO, "init"], env=self.env, timeout=5)
+        )
+        self.attach_window()
+        self.run_kak(
+            f"source {quote(rc)}\nset-option global giallo_auto_enable false\n"
+            "set-option global giallo_theme docassemble-probe"
+        )
+        self.addCleanup(self.run_kak, "giallo-stop-server")
+        path = self.home / "data/questions/sample.yml"
+        path.parent.mkdir(parents=True)
+        shutil.copy(ROOT / "grammars/fixtures/sample.yml", path)
+        self.open(path)
+        self.wait_for(lambda: "giallo_" in self.option("giallo_hl_ranges"))
+        time.sleep(0.3)  # Same upstream bootstrap settling as Session.start().
+        self.run_kak("set-option buffer giallo_last_update_ms 0\ngiallo-force-update")
+        self.wait_for(lambda: "46." in self.option("giallo_hl_ranges"))
+        self.assertNotIn("|", self.option("lsp_semantic_tokens_ranges"))
+        self.assertFalse(self.response("textDocument/semanticTokens/full"))
+        before = self.option("giallo_hl_ranges")
+        self.wait_for(lambda: self.rendered_keyword_color() == "rgb:00ffff")
+        result = self.request("textDocument/semanticTokens/full", "lsp-semantic-tokens")
+        self.assertEqual(result["data"], [])
+        legend = self.response("initialize")[0]["result"]["capabilities"][
+            "semanticTokensProvider"
+        ]["legend"]
+        self.assertEqual(legend, {"tokenTypes": [], "tokenModifiers": []})
+        self.assertNotIn("|", self.option("lsp_semantic_tokens_ranges"))
+        self.assertEqual(self.option("giallo_hl_ranges"), before)
+        draws = sum(e["method"] == "draw" for e in self.ui.events)
+        self.run_kak("select 1.2,1.2")
+        self.wait_for(
+            lambda: sum(e["method"] == "draw" for e in self.ui.events) > draws
+        )
+        self.assertEqual(self.rendered_keyword_color(), "rgb:00ffff")
+        self.assertEqual(self.ui.errors, [])
+        # No overlapping semantic face exists in this server version. This is
+        # non-interference evidence, not a safe precedence rule for future tokens.
+
+    def rendered_keyword_color(self):
+        draws = [e for e in self.ui.events if e["method"] == "draw"]
+        if not draws:
+            return None
+        for line in draws[-1]["params"][0]:
+            for atom in line:
+                if "return" in atom["contents"]:
+                    return atom["face"]["fg"]
+        return None
 
     @unittest.skipUnless(SERVER, "SKIP: real protocol test requires docassemble-lsp")
     def test_fixture_root_and_language_id(self):

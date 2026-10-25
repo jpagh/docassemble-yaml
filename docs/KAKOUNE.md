@@ -5,8 +5,9 @@ Status: automatic/explicit filetype activation verified with **Kakoune 2026.05.2
 on macOS arm64. Installable example: [`kakoune/`](../kakoune/README.md).
 Optional stdio LSP integration is verified with **kakoune-lsp 22.0.0** (binary
 `kak-lsp`) and **docassemble-lsp 26.10.0**. The separate [cross-engine harness](../tools/scope-parity/README.md) compares
-canonical rules against giallo and retains Fresh compatibility parity; no support
-matrix is included here.
+canonical rules against giallo and retains Fresh compatibility parity. The
+[verified support matrix](../kakoune/README.md#verified-support-matrix) separates
+verified workflows, unavailable client capabilities and known limitations.
 
 ## Detection and buffer lifecycle
 
@@ -402,3 +403,76 @@ convergence, not tokenizer parity or incremental reparsing inside giallo.
 `MISE_EXPERIMENTAL=1 mise run //kakoune:check` runs this path with tools installed,
 or loudly skips without them; main `check` includes it. Rust comparisons and
 diagnostic-theme inversion/negative controls run only in the scoped parity gate.
+
+## Cross-file workflows and support matrix (#25)
+
+The [support matrix](../kakoune/README.md#verified-support-matrix) is the user-facing
+contract for Kakoune 2026.05.21, kakoune-lsp 22.0.0, docassemble-lsp 26.10.0 and
+(optional) giallo-kak 0.4.0 / giallo 0.5.2 on macOS arm64. Installation,
+configuration and [troubleshooting](../kakoune/README.md#lsp-troubleshooting) live
+beside it. No server/grammar changes or external package checkout are involved.
+
+`test_cross_file_workflows_spaces_and_shutdown` copies the committed
+`lsp/tests/fixtures/demo_package` into a temporary **space-containing** package
+path. The recorder proves package-root initialization and real cross-file
+responses: `workflow_reset` in `main.yml` resolves to `x_events.yml:16`;
+`case_title` resolves to `workflow.py:1`. A real off-screen Kakoune JSON UI
+window also opens each definition target. References requested from the event
+definition include the action-button use in `main.yml:22`. The checks assert
+response locations, not interactive reference-menu selection. They synchronize
+on the opened target/result buffer before issuing the next request, avoiding
+races with asynchronous navigation. Off-screen window idle hooks are disabled;
+requests are explicit, not a latency measurement.
+
+The same test captures the **actual `lsp-capabilities` info output**. Navigation,
+formatting, code actions and semantic-token commands appear. Range formatting
+is absent because the server lacks it. Document links and automatic on-type
+formatting have no v22 command/hook implementation or listing entry, even though
+v22's initialize payload includes generic capability structures for them; those
+structures are not evidence of usable client workflows. The recorded initialize
+request also explicitly declares `workspaceFolders=false`. Separate package
+instances are verified, not dynamic multi-root workspace-folder support.
+
+The stdio recorder records its PID, the server PID and parent kak-lsp PID. After
+`lsp-exit`, all three must be gone before the test terminates Kakoune; Kakoune
+must then exit 0 and reject another connection. v22 sends **`exit` directly**,
+without a `shutdown` request/response handshake. This check proves process
+cleanup, not a protocol handshake that the client does not perform.
+
+`test_formatting_and_code_action_apply_unsaved_edits` uses real synchronous
+client commands, asserting returned edits **and exact buffer contents**, while
+the original file stays untouched. Formatting changes `total=1+2` to
+`total = 1 + 2`. A discovered limitation is retained, not masked: the server's
+edit range excludes the original trailing newline while replacement text has
+one, so applying it leaves an extra blank line. This test asserts that extra LF;
+it does not certify canonical-output equality or formatting idempotence. No
+server fix is needed to verify/document the workflow, so none is included.
+At a missing field label, `lsp-code-actions-sync quickfix` returns a single E415
+quick fix and applies its `WorkspaceEdit`, inserting `label: `. Selection among
+multiple actions and the asynchronous interactive menu remain manual.
+
+### Semantic tokens: non-interference, not established precedence
+
+`test_optional_semantic_tokens_preserve_giallo_faces` enables real giallo and
+kak-lsp highlighters in the same buffer. Before any explicit semantic request,
+there is no semantic-token request or face range. After `lsp-semantic-tokens`,
+the real server returns `data=[]` and advertises empty token-type/modifier
+legends. `lsp_semantic_tokens_ranges` contains no `range|face` entries (its
+numeric timestamp is not a token). All `giallo_hl_ranges` remain identical and
+Kakoune's actual JSON UI draw still assigns `rgb:00ffff` to Python `return`
+with the diagnostic theme. Thus giallo faces reach the rendered buffer both
+before and after the request; no semantic face overrides them **in this server
+version because none is emitted**. See `core/semantic_tokens.py` for the server's
+intentional empty-token policy.
+
+This cannot establish precedence for overlapping nonempty tokens. No automatic
+semantic-token hook is installed, no behavioural default changes, and tokens
+remain optional/off by default. A future nonempty legend/data requires a new
+overlap test before automatic requests can be recommended. Neither invented
+server tokens nor synthetic ranges are presented as real protocol evidence.
+
+All new checks extend the existing `//kakoune:lsp:test` family, already included
+in `//kakoune:check` and GUI-free root `check`. Missing editor/server binaries
+produce explicit skips; no check downloads tools. The committed demo package
+is never edited. Root and [language-server Editors](../lsp/README.md#kakoune)
+documentation link to the installation/configuration/troubleshooting bundle.

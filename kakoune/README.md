@@ -218,6 +218,82 @@ filetype detection and manual commands (its missing-giallo failure is caught).
 For **highlighting without LSP**, omit the LSP file entirely. Neither component
 sources the other.
 
+## Verified support matrix
+
+Every row below is pinned to **Kakoune 2026.05.21, kakoune-lsp 22.0.0,
+docassemble-lsp 26.10.0**, on macOS arm64; highlighting rows also use
+**giallo-kak 0.4.0 (66d0731), giallo 0.5.2**. Other versions/platforms are
+not certified. Evidence is in `tests/test_docassemble_lsp.py`,
+`scripts/check_highlighting.py` and the [investigation](../docs/KAKOUNE.md#cross-file-workflows-and-support-matrix-25).
+The real `:lsp-capabilities` listing is captured and asserted, not inferred
+from the server's feature list.
+
+### Verified functionality
+
+| Functionality | What the automated check proves |
+|---|---|
+| Filetype and giallo | Automatic/explicit activation, YAML and embedded-language ranges, unsaved Unicode and edit convergence. |
+| Diagnostics, completion, hover | Saved/unsaved diagnostic faces, completion JSON containing `question`, hover documentation. No visual menu/popup claim. |
+| Cross-file definitions | `:lsp-definition` on `workflow_reset` in `main.yml` reaches `x_events.yml:16`; `case_title` reaches `workflow.py:1`. Both real response targets **and opened buffers** are asserted. |
+| Cross-file references | `:lsp-references` at `x_events.yml:16` returns `main.yml` uses, including its action button. Real response locations are asserted; interactive result selection is not. |
+| Package roots and spaces | A temporary copy of the committed demo package under `demo package with spaces` initializes at the package root, not `data/questions`. Executable paths with spaces/apostrophes are also covered. |
+| Formatting | `:lsp-formatting-sync` applies a real server edit to an unsaved buffer (`total=1+2` becomes `total = 1 + 2`); disk bytes stay unchanged. See the final-newline limitation below. |
+| Quick fixes | `:lsp-code-actions-sync quickfix` at a missing field label returns one E415 action and applies its `WorkspaceEdit`; exact resulting buffer bytes are asserted. Multi-action interactive menu selection is not tested. |
+| Shutdown | After `:lsp-exit`, the actual kak-lsp, stdio recorder and server PIDs disappear. Kakoune then exits with status 0 and rejects further connections. v22 sends `exit` directly, not a `shutdown` request/response handshake. |
+| Optional semantic-token request | With both highlighters enabled, `:lsp-semantic-tokens` returns empty data/legend and no semantic face ranges. giallo ranges remain identical and a JSON UI draw still renders Python `return` cyan in the probe theme. This is non-interference, **not overlap precedence**. |
+
+### Client capabilities kak-lsp does not provide
+
+| Capability | Tested boundary |
+|---|---|
+| Dynamic multi-root workspace folders | The actual initialize request has `workspace.workspaceFolders=false`. Keep separate package roots/server instances (`single_instance=false`), rather than claiming VS Code-style workspace-folder support. |
+| Automatic on-type formatting | No on-type formatting command/hook or capability-list entry in v22. Use explicit whole-document formatting. Its initialize payload contains a generic `onTypeFormatting` structure; that alone does not prove an implemented workflow. |
+| Clickable LSP document links | No document-link command or capability-list entry in v22, despite a generic `documentLink` initialize structure. Use definition navigation for supported paths/symbols instead; clickable link UI is not claimed. |
+
+### Known limitations
+
+| Limitation | Consequence / workaround |
+|---|---|
+| Formatting final newline | The server's whole-document edit ends **before** the original final LF but its replacement includes an LF. The verified client application therefore leaves an extra blank line for the tested buffer. The test asserts this exact result; byte-for-byte canonical formatter output/idempotence is not claimed. Remove the blank line manually if needed. No server patch is bundled here. |
+| Semantic-token precedence unestablished | This server version deliberately emits **no** semantic tokens (empty legend and data). There is no overlapping semantic face to compare against `buffer/giallo`; future nonempty tokens require a new overlap test. This wiring installs no semantic-token hook: leave requests off by default with giallo. Explicit requests are optional and currently have no visible effect. |
+| Unexercised client UI | Completion/hover appearance, choosing among multiple code actions/references, interactive idle latency and large-buffer behaviour remain manual. A JSON UI window verifies rendered keyword faces, not terminal pixel appearance. |
+| Server range formatting unavailable | v22 has `lsp-range-formatting`, but this server does not advertise range formatting, so it is absent from the captured capability listing. Use whole-document formatting. |
+| giallo updates / root priority | Initial FIFO handshakes can overlap and macOS rate-limit timing can delay refreshes. Root markers are priority-ordered, not nearest-among-all. See troubleshooting and the root rule above. |
+
+### Try the committed cross-file package
+
+No external package checkout is needed. From the repository root, open
+`lsp/tests/fixtures/demo_package/docassemble/demo/data/questions/main.yml`
+after the setup above. At line 16, put the cursor on `workflow_reset` and run
+`:lsp-definition`; at line 11, try `case_title`. At `x_events.yml:16`,
+`:lsp-references` finds the uses in `main.yml`. `:lsp-capabilities` shows the
+commands available from this server. Copy the package first before trying
+formatting or edits; the fixture of record is read-only for checks.
+
+### LSP troubleshooting
+
+- **No highlighting:** check the grammar path, upstream init order and
+  `:giallo-debug`; see [themes and troubleshooting](#themes-and-troubleshooting).
+- **No diagnostics:** confirm `filetype=docassemble`,
+  `lsp_language_id=docassemble`, a single `[docassemble]` in `lsp_servers`, and
+  that `lsp-enable` was called. Run `:lsp-did-open` / `:lsp-did-change`, then
+  inspect `*debug*`. Remove competing generic YAML hooks and restart if one
+  already launched a different server.
+- **Wrong root / missing cross-file results:** check the root-marker priority
+  [above](#roots-disabling-and-independent-operation), unset
+  `KAK_LSP_FORCE_PROJECT_ROOT` / `KAK_LSP_PROJECT_ROOT_DOCASSEMBLE*`, or set
+  explicit `root` in the buffer's server table. Open the demo package, not just
+  an isolated copied interview. Restart with `:lsp-restart` after fixing root
+  configuration.
+- **Missing server:** install `docassemble-lsp` on the editor's PATH or use an
+  absolute executable override, then `:docassemble-lsp-enable`. `*debug*` gives
+  the retry instructions; highlighting remains independent.
+- **Semantic-token choice:** do not add automatic `lsp-semantic-tokens` hooks
+  with giallo. On the pinned server, explicit requests produce no ranges; that
+  is expected, not a broken giallo setup. For custom hooks/server versions,
+  remove the hook and clear stale ranges with
+  `set-option buffer lsp_semantic_tokens_ranges` before comparing colours.
+
 ## Develop and check
 
 Canonical sources remain `grammars/textmate/*.json`; do not edit generated
@@ -241,7 +317,11 @@ per-injection omission, unsaved Unicode and removal assertions. Otherwise it
 prints **SKIP** and exits successfully. Optional executable overrides:
 `KAKOUNE_BIN` / `GIALLO_KAK_BIN` (paths or PATH names).
 `//kakoune:lsp:test` additionally tests real kak-lsp/server stdio, package-root
-initialization, saved/unsaved diagnostics and completion/hover responses. It
+initialization, saved/unsaved diagnostics and completion/hover responses,
+cross-file YAML/Python navigation, references, formatting and quick-fix edits,
+space-containing workspaces, PID-checked shutdown and optional semantic-token /
+giallo non-interference. The last uses a real off-screen JSON UI window; its
+idle hooks are disabled and requests are explicit for deterministic checks. It
 loudly skips when tools are absent. Optional overrides: `KAK_LSP_BIN` /
 `DOCASSEMBLE_LSP_BIN`; with giallo present it also proves highlighting survives a
 missing server. The root check includes these fast tasks; no tools are downloaded

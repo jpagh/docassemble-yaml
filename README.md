@@ -8,8 +8,10 @@ optional support for the Fresh and Kakoune terminal editors.
 - **`vscode/`** — VS Code extension (same version as lsp/)
 - **`fresh/`** — Fresh language pack (syntax highlighting + LSP wiring); see
   [`docs/FRESH.md`](docs/FRESH.md) for the investigation and setup
-- **`kakoune/`** — automatic/explicit Docassemble filetype and giallo.kak highlighting; see
-  [`docs/KAKOUNE.md`](docs/KAKOUNE.md) for evidence and limitations
+- **`kakoune/`** — Docassemble filetype, giallo.kak highlighting and optional LSP workflows;
+  see [`kakoune/README.md`](kakoune/README.md) for installation, configuration,
+  troubleshooting and the support matrix, and [`docs/KAKOUNE.md`](docs/KAKOUNE.md)
+  for evidence
 
 ## Install
 

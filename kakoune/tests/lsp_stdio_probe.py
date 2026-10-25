@@ -14,6 +14,20 @@ def main():
         stdout=subprocess.PIPE,
     )
     lock = threading.Lock()
+    with open(os.environ["DOCASSEMBLE_TEST_LOG"], "a") as log:
+        log.write(
+            json.dumps(
+                {
+                    "direction": "process",
+                    "message": {
+                        "serverPid": process.pid,
+                        "recorderPid": os.getpid(),
+                        "clientPid": os.getppid(),
+                    },
+                }
+            )
+            + "\n"
+        )
 
     def relay(source, target, direction):
         while True:
