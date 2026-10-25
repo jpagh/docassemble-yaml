@@ -85,15 +85,8 @@
     run         = "node scripts/check-no-metadata.mjs"
 
 [tasks.check]
-    description = "Check formatting, lint, build, and test (mock)"
-    depends     = [
-        "format:check",
-        "lint",
-        "build",
-        "test",
-        "test:unit",
-        "check:metadata"
-    ]
+    description = "Check formatting, lint, build, and unit tests (no extension host)"
+    depends     = ["format:check", "lint", "build", "test:unit", "check:metadata"]
 
 [tasks.watch]
     description = "Watch TypeScript"
@@ -101,5 +94,5 @@
     run         = "tsc -w -p ./"
 
 [tasks.gate]
-    description = "Full pre-release gate for VSCode: format-check, lint, real-LSP tests"
-    depends     = ["format:check", "lint", "test:real-lsp"]
+    description = "Full pre-release gate: mocked and real-LSP extension-host suites"
+    depends     = ["format:check", "lint", "check:metadata", "test", "test:real-lsp"]

@@ -70,13 +70,19 @@ The `bundled/` directory is git-ignored and regenerated on every build. The buil
 
 ## Validation
 
+`mise run //vscode:check` is UI-free: formatting, lint, build, Node unit tests,
+and metadata checks. The extension-host suites launch a real VS Code window on
+macOS, so they run in the release gate rather than in the standard check:
+
 - `mise run //vscode:test` runs the default extension-host smoke suite.
 - `mise run //vscode:test:real-lsp` runs the opt-in extension-host real-server path.
+- `mise run //vscode:gate` runs both suites (plus format/lint/metadata), and the
+  root `mise run gate` includes it.
 - The extension-host suite includes an Enter/on-type regression test that verifies the client sends `textDocument/onTypeFormatting` and applies the returned edit.
 
 ### Headless tests
 
-Tests pass `--headless` on all platforms by default. On Linux and Windows the VS Code window is fully suppressed. On macOS the window still appears because headless extension tests are not supported there ([microsoft/vscode-test#290](https://github.com/microsoft/vscode-test/issues/290)).
+Tests pass `--headless` on all platforms by default. On Linux and Windows the VS Code window is fully suppressed. On macOS the window still appears because headless extension tests are not supported there ([microsoft/vscode-test#290](https://github.com/microsoft/vscode-test/issues/290)). That is why these suites are gated behind `//vscode:gate` and never run from `//vscode:check` or the root `mise run check`.
 
 To opt out and show the window for debugging, set:
 
