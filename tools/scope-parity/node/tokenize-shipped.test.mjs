@@ -1,19 +1,6 @@
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
-import { fileURLToPath } from "node:url";
 import { test } from "node:test";
-
-const tokenizer = fileURLToPath(new URL("./tokenize.mjs", import.meta.url));
-const fixture = fileURLToPath(new URL("../../../grammars/fixtures/sample.yml", import.meta.url));
-const categories = fileURLToPath(new URL("../categories.json", import.meta.url));
-
-function tokenize(...options) {
-  return JSON.parse(
-    execFileSync(process.execPath, [tokenizer, fixture, categories, "--scopes", ...options], {
-      encoding: "utf8",
-    }),
-  );
-}
+import { tokenize } from "./tokenize-test-helper.mjs";
 
 test("shipped TextMate grammars tokenize the shared corpus without compatibility rewrites", () => {
   const result = tokenize();

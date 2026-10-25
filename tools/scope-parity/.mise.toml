@@ -15,6 +15,7 @@
         "cargo fmt --check",
         "node --check node/tokenize.mjs",
         "node --check node/compatibility-reference.mjs",
+        "node --check node/tokenize-test-helper.mjs",
         "node --check node/tokenize-shipped.test.mjs",
         "node --check node/tokenize-compatibility.test.mjs",
         "ruff format --check compare.py lint.py",
